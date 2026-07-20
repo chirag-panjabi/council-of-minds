@@ -76,9 +76,10 @@ function statusForTransportError(error: unknown): ValidationResponse {
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { provider: string } },
+  { params }: { params: Promise<{ provider: string }> },
 ) {
-  const access = validateCloudProxyAccess(req, params.provider);
+  const resolvedParams = await params;
+  const access = validateCloudProxyAccess(req, resolvedParams.provider);
   if (!access.success) {
     return NextResponse.json(
       { status: 'provider_error', retryable: false, code: access.error.code },

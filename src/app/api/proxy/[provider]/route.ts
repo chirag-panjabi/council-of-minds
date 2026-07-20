@@ -6,10 +6,11 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: { provider: string } }
+  { params }: { params: Promise<{ provider: string }> }
 ) {
   try {
-    const access = validateCloudProxyAccess(req, params.provider);
+    const resolvedParams = await params;
+    const access = validateCloudProxyAccess(req, resolvedParams.provider);
     if (!access.success) {
       return NextResponse.json({ error: access.error.error }, { status: access.error.status });
     }

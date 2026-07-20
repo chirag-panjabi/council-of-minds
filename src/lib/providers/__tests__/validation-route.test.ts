@@ -29,7 +29,7 @@ describe('cloud validation proxy route', () => {
   it('validates OpenAI through the proxy with a GET model request', async () => {
     vi.mocked(global.fetch).mockResolvedValueOnce(new Response('{}', { status: 200 }));
 
-    const response = await POST(requestFor('openai'), { params: { provider: 'openai' } });
+    const response = await POST(requestFor('openai'), { params: Promise.resolve({ provider: 'openai' }) });
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({ status: 'valid', retryable: false });
@@ -52,7 +52,7 @@ describe('cloud validation proxy route', () => {
       { status: upstreamStatus },
     ));
 
-    const response = await POST(requestFor('gemini'), { params: { provider: 'gemini' } });
+    const response = await POST(requestFor('gemini'), { params: Promise.resolve({ provider: 'gemini' }) });
 
     expect(response.status).toBe(upstreamStatus);
     await expect(response.json()).resolves.toEqual({ status, retryable });
@@ -61,7 +61,7 @@ describe('cloud validation proxy route', () => {
   it('normalizes a network failure as a retryable connectivity error', async () => {
     vi.mocked(global.fetch).mockRejectedValueOnce(new TypeError('socket failure key-for-test-only'));
 
-    const response = await POST(requestFor('anthropic'), { params: { provider: 'anthropic' } });
+    const response = await POST(requestFor('anthropic'), { params: Promise.resolve({ provider: 'anthropic' }) });
 
     expect(response.status).toBe(503);
     await expect(response.json()).resolves.toEqual({
@@ -71,7 +71,7 @@ describe('cloud validation proxy route', () => {
   });
 
   it('reuses proxy access controls and rejects a local provider', async () => {
-    const response = await POST(requestFor('ollama'), { params: { provider: 'ollama' } });
+    const response = await POST(requestFor('ollama'), { params: Promise.resolve({ provider: 'ollama' }) });
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({

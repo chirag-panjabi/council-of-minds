@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, use } from 'react';
 import PersonaForm from '../../PersonaForm';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
 import { personaRepository } from '../../../../lib/db/repositories/persona';
 import { LocalPersona } from '../../../../lib/schemas/persona';
 
-export default function EditPersonaPage({ params }: { params: { id: string } }) {
+export default function EditPersonaPage(props: { params: Promise<{ id: string }> }) {
+  const params = use(props.params);
   const [persona, setPersona] = useState<LocalPersona | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

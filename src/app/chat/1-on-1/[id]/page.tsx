@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Bot, AlertCircle, Shield, ShieldOff, Settings } from 'lucide-react';
 import { useSessionResolver } from '../../../../lib/hooks/useSessionResolver';
@@ -13,11 +13,11 @@ import { SessionSettingsModal } from '../../../../components/chat/SessionSetting
 import { getProviderCapabilities } from '../../../../lib/providers/registry';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function OneOnOneChatPage(props: PageProps) {
-  const params = props.params;
+  const params = use(props.params);
   const router = useRouter();
   const { session, isLoading } = useSessionResolver(params.id, '1-on-1');
   const messagesEndRef = useRef<HTMLDivElement>(null);

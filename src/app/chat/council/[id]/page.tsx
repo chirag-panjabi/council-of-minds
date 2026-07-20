@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shield, ShieldOff, AlertCircle, Play, Square, FastForward, CheckCircle, Settings } from 'lucide-react';
 import { useSessionResolver } from '../../../../lib/hooks/useSessionResolver';
@@ -12,11 +12,11 @@ import { AutoPilotConfirmModal } from '../../../../components/council/AutoPilotC
 import { CouncilSettingsModal } from '../../../../components/council/CouncilSettingsModal';
 
 interface PageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
 export default function CouncilChatPage(props: PageProps) {
-  const params = props.params;
+  const params = use(props.params);
   const router = useRouter();
   const { session, isLoading } = useSessionResolver(params.id, 'council');
   const [activeSession, setActiveSession] = useState(session);

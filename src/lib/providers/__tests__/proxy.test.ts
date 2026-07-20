@@ -91,7 +91,7 @@ describe('Cloud Proxy API Route', () => {
 
   it('should reject requests that fail the origin check', async () => {
     const req = createMockRequest({ origin: 'http://evil.com', host: 'localhost:3000' });
-    const res = await POST(req, { params: { provider: 'openai' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'openai' }) });
     
     expect(res.status).toBe(403);
     const body = await res.json();
@@ -104,7 +104,7 @@ describe('Cloud Proxy API Route', () => {
       host: 'localhost:3000',
       contentLength: '6000000' // 6MB
     });
-    const res = await POST(req, { params: { provider: 'openai' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'openai' }) });
     
     expect(res.status).toBe(413);
     const body = await res.json();
@@ -116,7 +116,7 @@ describe('Cloud Proxy API Route', () => {
       origin: 'http://localhost:3000',
       host: 'localhost:3000'
     });
-    const res = await POST(req, { params: { provider: 'unknown' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'unknown' }) });
     
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -128,7 +128,7 @@ describe('Cloud Proxy API Route', () => {
       origin: 'http://localhost:3000',
       host: 'localhost:3000'
     });
-    const res = await POST(req, { params: { provider: 'ollama' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'ollama' }) });
     
     expect(res.status).toBe(400);
     const body = await res.json();
@@ -155,7 +155,7 @@ describe('Cloud Proxy API Route', () => {
       body: JSON.stringify({ model: 'gpt-4o' })
     });
     
-    const res = await POST(req, { params: { provider: 'openai' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'openai' }) });
     
     expect(global.fetch).toHaveBeenCalledWith(
       'https://api.openai.com/v1/chat/completions',
@@ -181,7 +181,7 @@ describe('Cloud Proxy API Route', () => {
       body: 'invalid-json'
     });
     
-    const res = await POST(req, { params: { provider: 'openai' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'openai' }) });
     expect(res.status).toBe(400);
     const body = await res.json();
     expect(body.error).toBe('Invalid JSON payload');
@@ -197,7 +197,7 @@ describe('Cloud Proxy API Route', () => {
       body: JSON.stringify({ model: 'gpt-4' })
     });
     
-    const res = await POST(req, { params: { provider: 'openai' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'openai' }) });
     expect(res.status).toBe(499);
     const body = await res.json();
     expect(body.code).toBe('request_cancelled');
@@ -213,7 +213,7 @@ describe('Cloud Proxy API Route', () => {
       body: JSON.stringify({ model: 'gpt-4' })
     });
     
-    const res = await POST(req, { params: { provider: 'openai' } });
+    const res = await POST(req, { params: Promise.resolve({ provider: 'openai' }) });
     expect(res.status).toBe(504);
     const body = await res.json();
     expect(body.code).toBe('gateway_timeout');
