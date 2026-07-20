@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace for structured 1-on-1 and sequential multi-persona AI conversations. It runs entirely in your browser, keeping your data and API keys secure and local.
+Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace where you can bring your dilemmas and get different perspectives on them through structured 1-on-1 and sequential multi-persona AI conversations. It runs entirely in your browser, keeping your data and API keys secure and local.
 
 ## 🌟 Why Council of Minds?
 
@@ -15,6 +15,7 @@ Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace for struc
 
 Council of Minds is designed for structured reflection, strategic work, and creative exploration. Here are some ways you can use it:
 
+- **Philosophical Council:** Bring a life dilemma (e.g., changing careers) and explore it through clearly fictionalized Stoic, Marxist, and Buddhist perspectives.
 - **Startup Red-Teaming:** A founder uses *Skeptical VC*, *Early Adopter*, and *Pragmatic CTO* personas to expose gaps in a business plan sequentially.
 - **Echo-Chamber Busting:** Ask a *Devil's Advocate* or *Contrarian* persona to challenge a strongly held political or social belief while reviewing claims critically.
 - **Software Architecture Review:** A developer has contrasting personas critique the trade-offs of a proposed system, then validates conclusions through normal engineering review.
