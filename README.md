@@ -1,6 +1,15 @@
 # Council of Minds
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
 Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace for structured 1-on-1 and sequential multi-persona AI conversations. It runs entirely in your browser, keeping your data and API keys secure and local.
+
+## 🛠 Built With
+
+- **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
+- **UI & Styling:** [React](https://reactjs.org/), [Tailwind CSS](https://tailwindcss.com/)
+- **Local Storage:** [Dexie.js](https://dexie.org/) (IndexedDB wrapper)
+- **Testing:** [Vitest](https://vitest.dev/) (Unit), [Playwright](https://playwright.dev/) (E2E)
 
 ## 🚀 Getting Started
 
@@ -28,7 +37,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the application. The app relies on IndexedDB for local storage, so there is no external database to configure.
 
-## 🛠 Usage & Setup
+## ⚙️ Usage & Setup
 
 ### Bring Your Own Key (BYOK)
 Council of Minds is completely stateless. It does not store your API keys on any external server. 
@@ -53,6 +62,14 @@ If you prefer running local models, you can connect to your local Ollama instanc
 ## 🔒 Privacy Summary
 
 Durable application data belongs in the browser. Cloud requests, including their required API keys and submitted content, transit the stateless proxy and selected provider; the proxy must not persist or log them. Local Ollama requests go directly to the configured loopback server.
+
+## 🤝 Contributing
+
+We welcome contributions from the community! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct, the development workflow, and the strict BYOK architectural constraints you must follow before submitting a Pull Request.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 📚 Documentation
 
