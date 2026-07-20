@@ -6,7 +6,7 @@ Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace where you
 
 ## 🌟 Why Council of Minds?
 
-- **Stop Paying Multiple Subscriptions:** Access the world's most powerful AI models (GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro) from a single interface. Just plug in your API keys and pay pennies per chat instead of $60/month in multiple subscriptions.
+- **Stop Paying Multiple Subscriptions:** Access the world's most powerful AI models from top providers like OpenAI, Anthropic, and Google all from a single interface. Just plug in your API keys and pay per use instead of managing multiple costly monthly subscriptions.
 - **Absolute Privacy & Security:** 100% Local-First. Your chats, personas, and API keys are stored entirely in your browser using IndexedDB. Our backend is a completely stateless proxy. We see nothing, we store nothing, and we train on nothing.
 - **Infinite Customization:** Craft custom AI Personas with tailored system prompts. Export your creations as a simple string and share them instantly with the community.
 - **Zero Lock-in & Open Source:** Free forever. If you want to modify the UI, add a new model, or tweak the logic, you have full access to the source code.
