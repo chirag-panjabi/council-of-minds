@@ -51,6 +51,10 @@ By participating in this project, you are expected to uphold a welcoming and res
    git commit -m "feat: description of your feature"
    ```
 
+## Suggestions & Bug Reports
+
+If you want to suggest a new feature, report a bug, or propose an architectural change, please **open an Issue** or start a thread in **GitHub Discussions** first. We highly encourage discussing major changes before writing any code to ensure it aligns with the project's vision.
+
 ## Pull Request Process
 
 1. Push your branch to your fork on GitHub.

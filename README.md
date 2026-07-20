@@ -63,6 +63,11 @@ If you prefer running local models, you can connect to your local Ollama instanc
 
 Durable application data belongs in the browser. Cloud requests, including their required API keys and submitted content, transit the stateless proxy and selected provider; the proxy must not persist or log them. Local Ollama requests go directly to the configured loopback server.
 
+## 💬 Feedback & Suggestions
+
+Have a feature idea, suggestion, or found a bug? We'd love to hear from you!
+Please open an [Issue](https://github.com/chirag-panjabi/council-of-minds-v2/issues) or start a conversation in [GitHub Discussions](https://github.com/chirag-panjabi/council-of-minds-v2/discussions).
+
 ## 🤝 Contributing
 
 We welcome contributions from the community! Please read our [Contributing Guidelines](CONTRIBUTING.md) for details on our code of conduct, the development workflow, and the strict BYOK architectural constraints you must follow before submitting a Pull Request.
