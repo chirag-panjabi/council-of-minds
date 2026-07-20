@@ -33,8 +33,8 @@ By participating in this project, you are expected to uphold a welcoming and res
 
 We love hearing your ideas! If you want to suggest a new feature, report a bug, or propose an architectural change:
 
-- **Bug Reports & Technical Features:** Please [open an Issue](https://github.com/chirag-panjabi/council-of-minds-v2/issues) on GitHub. Provide as much detail as possible to help us reproduce the issue or understand the feature request.
-- **Discussions & Feedback:** Start a thread in [GitHub Discussions](https://github.com/chirag-panjabi/council-of-minds-v2/discussions) (if enabled) to discuss major changes before writing any code.
+- **Bug Reports & Technical Features:** Please [open an Issue](https://github.com/chirag-panjabi/council-of-minds/issues) on GitHub. Provide as much detail as possible to help us reproduce the issue or understand the feature request.
+- **Discussions & Feedback:** Start a thread in [GitHub Discussions](https://github.com/chirag-panjabi/council-of-minds/discussions) (if enabled) to discuss major changes before writing any code.
 - **Community & Personas:** Join us on our [Reddit Community (r/CouncilOfMinds)](https://www.reddit.com/r/CouncilOfMinds/) to share your custom personas, chat about AI, and get community feedback.
 
 ## Getting Started
@@ -48,8 +48,8 @@ We love hearing your ideas! If you want to suggest a new feature, report a bug, 
 1. **Fork the repository** on GitHub.
 2. **Clone your fork** locally:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/council-of-minds-v2.git
-   cd council-of-minds-v2
+   git clone https://github.com/YOUR_USERNAME/council-of-minds.git
+   cd council-of-minds
    ```
 3. **Install dependencies**:
    ```bash
