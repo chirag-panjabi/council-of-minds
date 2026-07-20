@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bot, User, AlertCircle, RefreshCw, Edit2, Check, X, File as FileIcon } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type { Message } from '../../lib/schemas/message';
 import type { Attachment } from '../../lib/schemas/attachment';
 import { attachmentRepository } from '../../lib/db/repositories/attachment';
@@ -163,10 +165,12 @@ export function ChatMessage({ message, isLast, assistantState, onRetry, onEdit, 
                   </div>
                 )}
                 <div className={cn(
-                  "prose prose-sm md:prose-base max-w-none break-words whitespace-pre-wrap",
+                  "prose prose-sm md:prose-base max-w-none break-words",
                   isUser ? "prose-invert text-white" : "dark:prose-invert"
                 )}>
-                  {message.content}
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {message.content}
+                  </ReactMarkdown>
                   {isGenerating && (
                     <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" aria-hidden="true" />
                   )}
