@@ -13,9 +13,15 @@ Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace for struc
 
 ## 💡 Example Use Cases
 
-- **The Developer Workflow:** Set up a 'Software Architect' persona (using GPT-4o) to plan your architecture, and a 'Senior Developer' persona (using Claude 3.5 Sonnet) to write the code. Have them review each other's work sequentially.
-- **The Content Engine:** Create an 'SEO Strategist' to outline topics, a 'Copywriter' to draft the post, and an 'Editor' to polish the final draft. 
-- **The Brainstorming Partner:** Combine an 'Optimist' and a 'Pessimist' persona to evaluate your business ideas from multiple opposing perspectives.
+Council of Minds is designed for structured reflection, strategic work, and creative exploration. Here are some ways you can use it:
+
+- **Startup Red-Teaming:** A founder uses *Skeptical VC*, *Early Adopter*, and *Pragmatic CTO* personas to expose gaps in a business plan sequentially.
+- **Echo-Chamber Busting:** Ask a *Devil's Advocate* or *Contrarian* persona to challenge a strongly held political or social belief while reviewing claims critically.
+- **Software Architecture Review:** A developer has contrasting personas critique the trade-offs of a proposed system, then validates conclusions through normal engineering review.
+- **Historical Debates:** A teacher uses multiple historical viewpoints to discuss a modern policy question.
+- **Prompt Isolation Testing:** A prompt engineer runs controlled variations independently through the sequenced Council flow to compare results.
+
+> **Note:** For a full list of use cases and important boundaries, please refer to our [Use Cases Documentation](docs/use_cases.md).
 
 ## 🛠 Built With
 
