@@ -22,8 +22,8 @@ Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace for struc
 Clone the repository and install the dependencies:
 
 ```bash
-git clone https://github.com/chirag-panjabi/council-of-minds-v2.git
-cd council-of-minds-v2
+git clone https://github.com/chirag-panjabi/council-of-minds.git
+cd council-of-minds
 npm install
 ```
 
@@ -74,7 +74,7 @@ It's the perfect place to:
 ## 💬 Feedback & Suggestions
 
 Have a feature idea, suggestion, or found a bug? We'd love to hear from you!
-Please open an [Issue](https://github.com/chirag-panjabi/council-of-minds-v2/issues) or start a conversation in [GitHub Discussions](https://github.com/chirag-panjabi/council-of-minds-v2/discussions).
+Please open an [Issue](https://github.com/chirag-panjabi/council-of-minds/issues) or start a conversation in [GitHub Discussions](https://github.com/chirag-panjabi/council-of-minds/discussions).
 
 ## 🤝 Contributing
 
