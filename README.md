@@ -63,6 +63,14 @@ If you prefer running local models, you can connect to your local Ollama instanc
 
 Durable application data belongs in the browser. Cloud requests, including their required API keys and submitted content, transit the stateless proxy and selected provider; the proxy must not persist or log them. Local Ollama requests go directly to the configured loopback server.
 
+## 🌐 Community
+
+Join our community on Reddit at [r/CouncilOfMinds](https://www.reddit.com/r/CouncilOfMinds)! 
+It's the perfect place to:
+- **Share Personas:** Export your custom AI personas (as Base64 strings) and import others.
+- **Exchange Rosters:** Discuss the best combinations of personas to tackle specific problems.
+- **Learn:** Share tips on prompt engineering and local model configurations.
+
 ## 💬 Feedback & Suggestions
 
 Have a feature idea, suggestion, or found a bug? We'd love to hear from you!
