@@ -106,21 +106,21 @@ describe('useCouncilOrchestrator', () => {
     } as any);
   });
 
-  it('initializes to setup state when no messages exist', async () => {
+  it('initializes to ready state when no messages exist', async () => {
     const { result } = renderHook(() => useCouncilOrchestrator(mockSession));
     
-    // Initially setup
-    expect(result.current.councilState).toBe('setup');
+    // Initially ready
+    expect(result.current.councilState).toBe('ready');
     
     await waitFor(() => {
       expect(messageRepository.getForSession).toHaveBeenCalledWith('session-id');
     });
     
-    expect(result.current.councilState).toBe('setup');
+    expect(result.current.councilState).toBe('ready');
     expect(result.current.turnCount).toBe(0);
   });
 
-  it('transitions to paused after submitting a central prompt', async () => {
+  it('transitions to paused after submitting a central prompt and generating', async () => {
     const { result } = renderHook(() => useCouncilOrchestrator(mockSession));
     
     await waitFor(() => {
@@ -134,8 +134,11 @@ describe('useCouncilOrchestrator', () => {
       await result.current.submitCentralPrompt('Hello council');
     });
 
-    expect(result.current.councilState).toBe('paused');
-    expect(result.current.messages).toHaveLength(1);
+    // submitCentralPrompt will automatically call startNextTurn and then the stream will finish and go to paused.
+    await waitFor(() => {
+      expect(result.current.councilState).toBe('paused');
+    });
+    expect(result.current.messages).toHaveLength(2);
     expect(result.current.messages[0].content).toBe('Hello council');
     expect(messageRepository.save).toHaveBeenCalled();
   });
@@ -180,6 +183,12 @@ describe('useCouncilOrchestrator', () => {
       await result.current.submitCentralPrompt('Hello council');
     });
 
+    // submitCentralPrompt automatically triggers the first turn
+    await waitFor(() => {
+      expect(result.current.councilState).toBe('paused');
+    });
+
+    // start a second turn manually
     await act(async () => {
       await result.current.startNextTurn();
     });
@@ -189,9 +198,10 @@ describe('useCouncilOrchestrator', () => {
       expect(result.current.councilState).toBe('paused');
     });
     
-    expect(result.current.messages).toHaveLength(2);
-    expect(result.current.turnCount).toBe(1);
+    expect(result.current.messages).toHaveLength(3);
+    expect(result.current.turnCount).toBe(2);
     expect(result.current.messages[1].content).toContain('test answer');
+    expect(result.current.messages[2].content).toBe('');
   });
 
   it('enforces turn cap', async () => {
@@ -231,10 +241,7 @@ describe('useCouncilOrchestrator', () => {
       await result.current.submitCentralPrompt('Start');
     });
 
-    // Turn 1
-    await act(async () => {
-      await result.current.startNextTurn();
-    });
+    // Turn 1 completes automatically because of submitCentralPrompt
     await waitFor(() => {
       expect(result.current.councilState).toBe('paused');
     });

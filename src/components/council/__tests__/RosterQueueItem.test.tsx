@@ -48,8 +48,8 @@ describe('RosterQueueItem', () => {
     render(<RosterQueueItem {...defaultProps} />);
     expect(screen.getByText('Test Persona')).toBeInTheDocument();
     expect(screen.getByText('A test persona')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('openai')).toBeInTheDocument();
-    expect(screen.getByDisplayValue('gpt-4o')).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Select Provider' })).toHaveValue('openai');
+    expect(screen.getByRole('combobox', { name: 'Select Model' })).toHaveValue('gpt-4o');
   });
 
   it('calls onMoveEarlier when Move Earlier button is clicked', () => {
@@ -99,7 +99,7 @@ describe('RosterQueueItem', () => {
     expect(defaultProps.onModelChange).toHaveBeenCalledWith('anthropic', 'gpt-4o');
 
     const modelSelect = screen.getByLabelText('Select Model');
-    fireEvent.change(modelSelect, { target: { value: 'claude-3-5-sonnet' } });
-    expect(defaultProps.onModelChange).toHaveBeenCalledWith('openai', 'claude-3-5-sonnet');
+    fireEvent.change(modelSelect, { target: { value: 'gpt-4-turbo' } });
+    expect(defaultProps.onModelChange).toHaveBeenCalledWith('openai', 'gpt-4-turbo');
   });
 });
