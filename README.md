@@ -4,6 +4,19 @@
 
 Council of Minds is a local-first, Bring-Your-Own-Key (BYOK) workspace for structured 1-on-1 and sequential multi-persona AI conversations. It runs entirely in your browser, keeping your data and API keys secure and local.
 
+## 🌟 Why Council of Minds?
+
+- **Stop Paying Multiple Subscriptions:** Access the world's most powerful AI models (GPT-4o, Claude 3.5 Sonnet, Gemini 1.5 Pro) from a single interface. Just plug in your API keys and pay pennies per chat instead of $60/month in multiple subscriptions.
+- **Absolute Privacy & Security:** 100% Local-First. Your chats, personas, and API keys are stored entirely in your browser using IndexedDB. Our backend is a completely stateless proxy. We see nothing, we store nothing, and we train on nothing.
+- **Infinite Customization:** Craft custom AI Personas with tailored system prompts. Export your creations as a simple string and share them instantly with the community.
+- **Zero Lock-in & Open Source:** Free forever. If you want to modify the UI, add a new model, or tweak the logic, you have full access to the source code.
+
+## 💡 Example Use Cases
+
+- **The Developer Workflow:** Set up a 'Software Architect' persona (using GPT-4o) to plan your architecture, and a 'Senior Developer' persona (using Claude 3.5 Sonnet) to write the code. Have them review each other's work sequentially.
+- **The Content Engine:** Create an 'SEO Strategist' to outline topics, a 'Copywriter' to draft the post, and an 'Editor' to polish the final draft. 
+- **The Brainstorming Partner:** Combine an 'Optimist' and a 'Pessimist' persona to evaluate your business ideas from multiple opposing perspectives.
+
 ## 🛠 Built With
 
 - **Framework:** [Next.js 14](https://nextjs.org/) (App Router)
