@@ -52,8 +52,24 @@ export class FrameworkDatabase extends Dexie {
 
     this.on('ready', async () => {
       const existing = await this.personas.toArray();
-      const existingIds = new Set(existing.map((p) => p.id));
-      const missing = DEFAULT_PERSONAS.filter((p) => !existingIds.has(p.id));
+      
+      // Clean up duplicates caused by previous non-deterministic ID generation
+      const newDefaultsByName = new Map(DEFAULT_PERSONAS.map(p => [p.name, p]));
+      const toDelete = existing.filter(p => {
+        const newDef = newDefaultsByName.get(p.name);
+        return newDef && newDef.id !== p.id && newDef.instructions === p.instructions;
+      });
+
+      if (toDelete.length > 0) {
+        await this.personas.bulkDelete(toDelete.map(p => p.id));
+      }
+
+      // Calculate missing personas using remaining ones
+      const remainingIds = new Set(
+        existing.filter(p => !toDelete.includes(p)).map(p => p.id)
+      );
+      
+      const missing = DEFAULT_PERSONAS.filter((p) => !remainingIds.has(p.id));
       if (missing.length > 0) {
         await this.personas.bulkAdd(missing);
       }
