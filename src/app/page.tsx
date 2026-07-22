@@ -8,7 +8,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { hasConfiguredProvider } from '@/lib/providers/setup';
 import { settingsStore } from '@/lib/storage/settings';
 import { sessionRepository } from '@/lib/db/repositories/session';
-import { ArrowLeft, ArrowRight, MessageSquare, Users, BookOpen } from 'lucide-react';
+import { MessageSquare, Users, BookOpen } from 'lucide-react';
 
 export default function Home() {
   const router = useRouter();
@@ -36,24 +36,6 @@ export default function Home() {
 
   return (
     <div className="flex h-full flex-col gap-8 pb-8">
-      {/* Top Bar with Navigation Controls */}
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() => router.back()}
-          className="rounded p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          aria-label="Go back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <button
-          onClick={() => router.forward()}
-          className="rounded p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
-          aria-label="Go forward"
-        >
-          <ArrowRight className="h-5 w-5" />
-        </button>
-      </div>
-
       <section className="mx-auto flex w-full max-w-4xl flex-col gap-10">
         <div className="space-y-4">
           <h1 className="text-4xl font-bold tracking-tight">Think with a council of perspectives.</h1>
