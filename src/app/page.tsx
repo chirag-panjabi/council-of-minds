@@ -59,16 +59,16 @@ export default function DashboardPage() {
           <h1 className="font-display text-4xl md:text-6xl text-[var(--color-ink)] leading-none tracking-tight">
             Cognitive Studio & Dilemma Debater
           </h1>
-          <p className="text-sm text-[var(--color-ink-muted)] font-body max-w-2xl">
+          <p className="text-sm text-[var(--color-ink-muted)] font-body max-w-2xl leading-relaxed">
             Synthesize competing perspectives, challenge mental models, and resolve complex personal and strategic decisions.
           </p>
         </header>
 
         {/* Generation Gate Banner if no key configured */}
         {!hasProviderKey && (
-          <div className="p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)] rounded-[var(--radius-md)] flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="w-5 h-5 text-[var(--color-warning)] shrink-0" />
+          <div className="p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)] rounded-[var(--radius-md)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[var(--color-warning)] shrink-0 mt-0.5" />
               <div>
                 <div className="text-sm font-semibold text-[var(--color-ink)]">
                   Read-Only Mode — No API Provider Configured
@@ -95,7 +95,7 @@ export default function DashboardPage() {
                 </span>
                 <h2 className="font-display text-2xl text-[var(--color-ink)]">Persona Groups Overview</h2>
               </div>
-              <Link href="/personas" className="btn-hallmark text-xs gap-1">
+              <Link href="/personas/groups" className="btn-hallmark text-xs gap-1">
                 <Plus className="w-3.5 h-3.5" /> Group Editor
               </Link>
             </div>
@@ -107,29 +107,33 @@ export default function DashboardPage() {
                 <p className="text-xs text-[var(--color-ink-faint)] max-w-sm mx-auto">
                   Combine Stoic, VC, Socratic, and CTO personas into custom Councils to deconstruct dilemmas.
                 </p>
-                <Link href="/personas" className="btn-hallmark text-xs inline-flex">
+                <Link href="/personas/groups" className="btn-hallmark text-xs inline-flex">
                   Create First Group
                 </Link>
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {groups.map((group) => (
-                  <div key={group.id} className="p-4 bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-3">
-                    <div className="flex items-center justify-between">
-                      <h3 className="font-display text-lg text-[var(--color-ink)]">{group.name}</h3>
-                      <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
+                  <div key={group.id} className="p-4 bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-3 flex flex-col justify-between">
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <h3 className="font-display text-lg text-[var(--color-ink)]">{group.name}</h3>
+                        <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
+                      </div>
+                      <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2 leading-relaxed">{group.description}</p>
                     </div>
-                    <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2">{group.description}</p>
+
                     <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border-hairline)]">
                       <span className="text-[10px] font-mono text-[var(--color-ink-faint)]">
                         {group.personaIds.length} Personas
                       </span>
-                      <button
-                        onClick={() => router.push(`/personas`)}
-                        className="text-xs text-[var(--color-accent)] font-semibold hover:underline inline-flex items-center gap-1"
+                      <Link
+                        href="/personas/groups"
+                        aria-label={`Open roster editor for ${group.name}`}
+                        className="text-xs text-[var(--color-accent)] font-semibold hover:underline inline-flex items-center gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded px-1"
                       >
                         Launch Council <ArrowRight className="w-3 h-3" />
-                      </button>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -144,7 +148,7 @@ export default function DashboardPage() {
                 02 // Local Metrics
               </span>
               <h2 className="font-display text-2xl text-[var(--color-ink)]">Token Consumption</h2>
-              <p className="text-xs text-[var(--color-ink-muted)] mt-1">
+              <p className="text-xs text-[var(--color-ink-muted)] mt-1 leading-relaxed">
                 Extracted directly from SSE payloads. Zero remote telemetry.
               </p>
             </div>
@@ -155,13 +159,13 @@ export default function DashboardPage() {
                 <div className="font-display text-4xl text-[var(--color-ink)] mt-1">{totalTokens.toLocaleString()}</div>
               </div>
 
-              <div className="flex justify-between text-xs text-[var(--color-ink-muted)] px-1">
+              <div className="flex justify-between text-xs text-[var(--color-ink-muted)] px-1 font-mono">
                 <span>Active Personas: {personas.length}</span>
                 <span>Saved Groups: {groups.length}</span>
               </div>
             </div>
 
-            <Link href="/analytics" className="btn-hallmark text-xs w-full text-center">
+            <Link href="/analytics" className="btn-hallmark text-xs w-full justify-center">
               View Detailed Analytics
             </Link>
           </div>
@@ -172,7 +176,7 @@ export default function DashboardPage() {
               03 // Quick Start
             </span>
             <h2 className="font-display text-2xl text-[var(--color-ink)]">1-on-1 Perspective</h2>
-            <p className="text-xs text-[var(--color-ink-muted)]">
+            <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
               Consult an individual persona for focused reflection.
             </p>
 
@@ -180,8 +184,10 @@ export default function DashboardPage() {
               {personas.slice(0, 4).map((p) => (
                 <button
                   key={p.id}
+                  type="button"
                   onClick={() => handleStart1On1(p.id)}
-                  className="w-full p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] text-left hover:border-[var(--color-accent)] transition-colors flex items-center justify-between group"
+                  aria-label={`Start 1-on-1 session with ${p.name}`}
+                  className="w-full p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] text-left hover:border-[var(--color-accent)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] transition-colors flex items-center justify-between group"
                 >
                   <div>
                     <div className="text-sm font-semibold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors">
@@ -189,7 +195,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="text-xs text-[var(--color-ink-muted)]">{p.role}</div>
                   </div>
-                  <ArrowRight className="w-4 h-4 text-[var(--color-ink-faint)] group-hover:text-[var(--color-accent)] transition-colors" />
+                  <ArrowRight className="w-4 h-4 text-[var(--color-ink-faint)] group-hover:text-[var(--color-accent)] transition-colors shrink-0" />
                 </button>
               ))}
             </div>
@@ -216,10 +222,11 @@ export default function DashboardPage() {
                   <Link
                     key={chat.id}
                     href={chat.type === 'council' ? `/chat/council/${chat.id}` : `/chat/1-on-1/${chat.id}`}
-                    className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] flex items-center justify-between hover:border-[var(--color-ink-muted)] transition-colors"
+                    aria-label={`Open session ${chat.title}`}
+                    className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] flex items-center justify-between hover:border-[var(--color-ink-muted)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] transition-colors"
                   >
                     <div className="flex items-center gap-3">
-                      <MessageSquare className="w-4 h-4 text-[var(--color-accent)]" />
+                      <MessageSquare className="w-4 h-4 text-[var(--color-accent)] shrink-0" />
                       <div>
                         <div className="text-sm font-medium text-[var(--color-ink)]">{chat.title}</div>
                         <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
@@ -227,7 +234,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-[var(--color-ink-faint)]" />
+                    <ArrowRight className="w-4 h-4 text-[var(--color-ink-faint)] shrink-0" />
                   </Link>
                 ))}
               </div>
@@ -236,10 +243,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Ft1 Mast-headed Footer */}
-        <footer className="border-t border-[var(--color-border-hairline)] pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-[var(--color-ink-faint)] gap-4">
+        <footer className="border-t border-[var(--color-border-hairline)] pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-[var(--color-ink-faint)] gap-4 font-mono">
           <div>Council of Minds © 2026 — Local-First Open Source Architecture</div>
           <div className="flex items-center gap-4">
             <Link href="/personas" className="hover:underline">Library</Link>
+            <Link href="/personas/groups" className="hover:underline">Groups</Link>
             <Link href="/analytics" className="hover:underline">Analytics</Link>
             <Link href="/settings" className="hover:underline">Settings</Link>
           </div>
