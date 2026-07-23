@@ -5,7 +5,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Search, Plus, Grid, List, Tag, Share2, Upload, Trash2, Edit2, Play, Copy, Check, Star } from 'lucide-react';
+import { Search, Plus, Grid, List, Share2, Upload, Trash2, Edit2, Play, Copy, Check, Star, Shield, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 
 /* Hallmark · genre: editorial · macrostructure: 11-catalogue · theme: studio · nav: N1b */
@@ -71,18 +71,13 @@ export default function PersonaLibraryPage() {
     return !p.isArchived;
   });
 
+  const handleClearFilters = () => {
+    setSearch('');
+    setSelectedCategory('all');
+    setSelectedTag(null);
+  };
+
   const handleExport = (persona: Persona) => {
-    const exportData = {
-      version: 'framework-engine.persona/v1',
-      persona: {
-        name: persona.name,
-        role: persona.role,
-        description: persona.description,
-        systemPrompt: persona.systemPrompt,
-        defaultModel: persona.defaultModel,
-        tags: persona.tags,
-      },
-    };
     setExportPersona(persona);
   };
 
@@ -196,8 +191,8 @@ export default function PersonaLibraryPage() {
 
         {/* Search, Filter Pills & View Controls */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex flex-1 items-center gap-3">
-            <div className="relative flex-1 max-w-md">
+          <div className="flex flex-1 items-center gap-3 min-w-0">
+            <div className="relative flex-1 max-w-md shrink-0">
               <Search className="w-4 h-4 text-[var(--color-ink-muted)] absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
                 type="text"
@@ -208,7 +203,8 @@ export default function PersonaLibraryPage() {
               />
             </div>
 
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+            {/* Tag Filter Strip with Overflow Styling */}
+            <div className="flex items-center gap-1.5 overflow-x-auto py-1 max-w-full">
               <button
                 onClick={() => setSelectedTag(null)}
                 className={`px-3 py-1 rounded-full text-xs font-mono transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
@@ -259,22 +255,32 @@ export default function PersonaLibraryPage() {
 
         {/* Persona Cards Catalogue */}
         {filteredPersonas.length === 0 ? (
-          <div className="p-12 border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)] text-center space-y-3">
+          <div className="p-12 border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)] text-center space-y-4">
             <div className="font-display text-xl text-[var(--color-ink)]">No personas match your query</div>
             <p className="text-xs text-[var(--color-ink-muted)] max-w-sm mx-auto">
-              Try adjusting your search terms, clearing tag filters, or create a custom persona.
+              Try adjusting your search terms, resetting tag filters, or creating a custom persona.
             </p>
-            <Link
-              href="/personas/new"
-              className="btn-hallmark text-xs inline-flex items-center gap-1 bg-[var(--color-accent)] text-white"
-            >
-              <Plus className="w-3.5 h-3.5" /> Create New Persona
-            </Link>
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                onClick={handleClearFilters}
+                className="btn-hallmark text-xs gap-1.5 bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink)] hover:border-[var(--color-accent)]"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Clear Search & Filters
+              </button>
+              <Link
+                href="/personas/new"
+                className="btn-hallmark text-xs inline-flex items-center gap-1 bg-[var(--color-accent)] text-white"
+              >
+                <Plus className="w-3.5 h-3.5" /> Create Custom Persona
+              </Link>
+            </div>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPersonas.map((persona) => {
               const isFav = favoriteIds.includes(persona.id);
+              const isSystemPersona = persona.id.startsWith('persona-');
+
               return (
                 <div
                   key={persona.id}
@@ -287,9 +293,16 @@ export default function PersonaLibraryPage() {
                           {persona.name.charAt(0)}
                         </div>
                         <div>
-                          <h3 className="font-display text-lg text-[var(--color-ink)] leading-tight">
-                            {persona.name}
-                          </h3>
+                          <div className="flex items-center gap-1.5">
+                            <h3 className="font-display text-lg text-[var(--color-ink)] leading-tight">
+                              {persona.name}
+                            </h3>
+                            {isSystemPersona && (
+                              <span className="px-1.5 py-0.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] flex items-center gap-0.5" title="Default System Persona">
+                                <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> System
+                              </span>
+                            )}
+                          </div>
                           <div className="text-xs font-mono text-[var(--color-ink-muted)]">{persona.role}</div>
                         </div>
                       </div>
@@ -340,7 +353,7 @@ export default function PersonaLibraryPage() {
                       >
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
-                      {!persona.id.startsWith('persona-') && (
+                      {!isSystemPersona && (
                         <button
                           onClick={() => handleDelete(persona.id, persona.name)}
                           aria-label={`Delete ${persona.name}`}
@@ -367,6 +380,8 @@ export default function PersonaLibraryPage() {
           <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] divide-y divide-[var(--color-border-hairline)] overflow-hidden">
             {filteredPersonas.map((persona) => {
               const isFav = favoriteIds.includes(persona.id);
+              const isSystemPersona = persona.id.startsWith('persona-');
+
               return (
                 <div
                   key={persona.id}
@@ -391,6 +406,11 @@ export default function PersonaLibraryPage() {
                       <div className="font-display text-base text-[var(--color-ink)] flex items-center gap-2">
                         <span>{persona.name}</span>
                         <span className="text-xs font-mono text-[var(--color-ink-muted)] font-normal">({persona.role})</span>
+                        {isSystemPersona && (
+                          <span className="px-1.5 py-0.5 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] flex items-center gap-0.5">
+                            <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> System
+                          </span>
+                        )}
                       </div>
                       <p className="text-xs text-[var(--color-ink-muted)] truncate">{persona.description}</p>
                     </div>
