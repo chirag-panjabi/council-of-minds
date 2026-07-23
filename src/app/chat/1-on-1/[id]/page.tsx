@@ -6,8 +6,9 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { ChatMessage, Persona } from '@/types';
-import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download, Paperclip, EyeOff, FileText, UploadCloud } from 'lucide-react';
+import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download, Paperclip, EyeOff, UploadCloud, Layers, UserCheck } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
+import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -17,19 +18,34 @@ export default function OneOnOneChatPage() {
 
   const chatSession = useLiveQuery(() => db.chats.get(chatId), [chatId]);
   const dbMessages = useLiveQuery(() => db.messages.where('chatId').equals(chatId).sortBy('timestamp'), [chatId]) || [];
+  
+  const [activePersonaId, setActivePersonaId] = useState<string | undefined>(chatSession?.personaId);
+  
+  useEffect(() => {
+    if (chatSession?.personaId && !activePersonaId) {
+      setActivePersonaId(chatSession.personaId);
+    }
+  }, [chatSession]);
+
   const persona = useLiveQuery(
-    () => (chatSession?.personaId ? db.personas.get(chatSession.personaId) : undefined),
-    [chatSession]
+    () => (activePersonaId ? db.personas.get(activePersonaId) : undefined),
+    [activePersonaId]
   );
 
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
+  const [contextRetention, setContextRetention] = useState<'stateless' | 'summary' | 'hybrid' | 'infinite'>(
+    chatSession?.contextRetention || 'hybrid'
+  );
   const [isStreaming, setIsStreaming] = useState(false);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
 
   // Incognito Mode Memory State
   const [isIncognito, setIsIncognito] = useState(false);
   const [incognitoMessages, setIncognitoMessages] = useState<ChatMessage[]>([]);
+
+  // Persona Selector Modal State for Mid-Chat Swapping
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
   // Multimodal File Attachments Staging
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
@@ -57,13 +73,27 @@ export default function OneOnOneChatPage() {
     setExpandedReasoningIds((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
   };
 
+  const handleSwapPersona = (newPersona: Persona) => {
+    setActivePersonaId(newPersona.id);
+    if (!isIncognito) {
+      db.chats.update(chatId, { personaId: newPersona.id, updatedAt: Date.now() });
+    }
+  };
+
+  const handleChangeContextRetention = (retention: 'stateless' | 'summary' | 'hybrid' | 'infinite') => {
+    setContextRetention(retention);
+    if (!isIncognito) {
+      db.chats.update(chatId, { contextRetention: retention });
+    }
+  };
+
   // Staging File Handlers
   const handleFileSelect = (files: FileList | File[]) => {
     const fileArray = Array.from(files);
     const validFiles: StagedFile[] = [];
 
     fileArray.forEach((file) => {
-      if (stagedFiles.length + validFiles.length >= 5) return; // Max 5 files
+      if (stagedFiles.length + validFiles.length >= 5) return;
 
       const isImage = file.type.startsWith('image/');
       const isText = file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv');
@@ -99,7 +129,6 @@ export default function OneOnOneChatPage() {
     setStagedFiles((prev) => prev.filter((f) => f.id !== id));
   };
 
-  // Drag and Drop Window Handlers
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
@@ -123,6 +152,7 @@ export default function OneOnOneChatPage() {
 
     let mdContent = `# ${chatSession?.title || '1-on-1 Dialogue Transcript'}${isIncognito ? ' (Incognito Session)' : ''}\n\n`;
     mdContent += `**Persona:** ${persona?.name || 'Unknown'} (${persona?.role || ''})\n`;
+    mdContent += `**Context Strategy:** ${contextRetention.toUpperCase()}\n`;
     mdContent += `**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n`;
 
     activeMessages.forEach((msg) => {
@@ -149,7 +179,6 @@ export default function OneOnOneChatPage() {
 
     let userContent = input.trim();
 
-    // Append text files to prompt
     stagedFiles.forEach((sf) => {
       if (sf.textContent) {
         userContent += `\n\n[Attached File: ${sf.name}]\n${sf.textContent}`;
@@ -173,11 +202,9 @@ export default function OneOnOneChatPage() {
     }
 
     setInput('');
-    const currentStaged = [...stagedFiles];
     setStagedFiles([]);
-
-    // Prepare assistant response
     setIsStreaming(true);
+
     const assistantMsgId = 'msg-' + (Date.now() + 1);
     const assistantMessageObj: ChatMessage = {
       id: assistantMsgId,
@@ -198,7 +225,15 @@ export default function OneOnOneChatPage() {
       const provider = 'openai';
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
-      const apiMessages = [...activeMessages, userMessageObj].map((m) => ({
+      // Context Retention Pruning
+      let sendHistory = [...activeMessages, userMessageObj];
+      if (contextRetention === 'stateless') {
+        sendHistory = [userMessageObj];
+      } else if (contextRetention === 'summary' && sendHistory.length > 6) {
+        sendHistory = sendHistory.slice(-6);
+      }
+
+      const apiMessages = sendHistory.map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -275,6 +310,16 @@ export default function OneOnOneChatPage() {
         onDrop={handleDrop}
         className="flex flex-col h-screen bg-[var(--color-paper)] relative"
       >
+        {/* Persona Selector Modal for Mid-Chat Persona Swapping */}
+        <PersonaSelectorModal
+          isOpen={isSelectorOpen}
+          onClose={() => setIsSelectorOpen(false)}
+          mode="single"
+          title="Swap Persona Mid-Dialogue"
+          selectedPersonaIds={persona ? [persona.id] : []}
+          onSelectPersona={handleSwapPersona}
+        />
+
         {/* Drag and Drop Overlay */}
         {isDragging && (
           <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-3 pointer-events-none">
@@ -284,43 +329,51 @@ export default function OneOnOneChatPage() {
           </div>
         )}
 
-        {/* Header Bar with Model Selector, Incognito Toggle & Export */}
+        {/* Header Bar */}
         <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)] flex items-center justify-center font-display text-sm text-[var(--color-accent)] font-semibold shrink-0">
+          {/* Persona Avatar Trigger (Click to Swap Persona) */}
+          <button
+            onClick={() => setIsSelectorOpen(true)}
+            aria-label="Click to swap active persona"
+            className="flex items-center gap-3 group text-left focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded p-1 transition-colors hover:bg-[var(--color-paper)]"
+            title="Click to swap persona mid-dialogue"
+          >
+            <div className="w-8 h-8 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)] flex items-center justify-center font-display text-sm text-[var(--color-accent)] font-semibold shrink-0 group-hover:scale-105 transition-transform">
               {persona?.name.charAt(0) || 'P'}
             </div>
             <div>
               <div className="font-display text-lg text-[var(--color-ink)] flex items-center gap-2">
-                {persona?.name || '1-on-1 Session'}
+                <span>{persona?.name || '1-on-1 Session'}</span>
+                <UserCheck className="w-3.5 h-3.5 text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
                 {isIncognito && (
                   <span className="px-2 py-0.5 bg-[var(--color-warning)]/15 text-[var(--color-warning)] border border-[var(--color-warning)]/30 rounded text-[10px] font-mono font-semibold flex items-center gap-1">
-                    <EyeOff className="w-3 h-3" /> Incognito (Memory Only)
+                    <EyeOff className="w-3 h-3" /> Incognito
                   </span>
                 )}
               </div>
-              <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">{persona?.role}</div>
+              <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">{persona?.role} (Click to swap)</div>
             </div>
-          </div>
+          </button>
 
           <div className="flex items-center gap-2">
-            {/* Incognito Mode Toggle */}
-            <button
-              onClick={() => {
-                setIsIncognito(!isIncognito);
-                if (!isIncognito && incognitoMessages.length === 0) {
-                  setIncognitoMessages([...dbMessages]);
-                }
-              }}
-              aria-label="Toggle Incognito Conversation Mode"
-              className={`btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                isIncognito ? 'bg-[var(--color-warning)]/20 text-[var(--color-warning)] border-[var(--color-warning)]/40 font-semibold' : ''
-              }`}
-              title="Toggle Memory-Only Incognito Mode"
+            {/* Context Retention Strategy Selector */}
+            <div
+              className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]"
+              title="Context Retention Strategy"
             >
-              <EyeOff className="w-3.5 h-3.5" />
-              {isIncognito ? 'Incognito On' : 'Incognito'}
-            </button>
+              <Layers className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+              <select
+                value={contextRetention}
+                onChange={(e) => handleChangeContextRetention(e.target.value as any)}
+                aria-label="Select context retention strategy"
+                className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer uppercase"
+              >
+                <option value="hybrid">Context: Hybrid</option>
+                <option value="infinite">Context: Infinite</option>
+                <option value="summary">Context: Summary</option>
+                <option value="stateless">Context: Stateless</option>
+              </select>
+            </div>
 
             {/* Model Selector */}
             <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]">
@@ -338,6 +391,24 @@ export default function OneOnOneChatPage() {
                 <option value="ollama-local">Ollama Local</option>
               </select>
             </div>
+
+            {/* Incognito Mode Toggle */}
+            <button
+              onClick={() => {
+                setIsIncognito(!isIncognito);
+                if (!isIncognito && incognitoMessages.length === 0) {
+                  setIncognitoMessages([...dbMessages]);
+                }
+              }}
+              aria-label="Toggle Incognito Conversation Mode"
+              className={`btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isIncognito ? 'bg-[var(--color-warning)]/20 text-[var(--color-warning)] border-[var(--color-warning)]/40 font-semibold' : ''
+              }`}
+              title="Toggle Memory-Only Incognito Mode"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              {isIncognito ? 'Incognito On' : 'Incognito'}
+            </button>
 
             {/* Export Session Transcript Button */}
             <button
@@ -425,7 +496,7 @@ export default function OneOnOneChatPage() {
         {/* Multimodal Attachment Staging Bar */}
         <AttachmentStaging stagedFiles={stagedFiles} onRemoveFile={handleRemoveStagedFile} />
 
-        {/* Input Bar with Paperclip & Morphing Send/Stop Button */}
+        {/* Input Bar */}
         <form onSubmit={handleSend} className="p-4 border-t border-[var(--color-border-hairline)] bg-[var(--color-paper-2)]">
           <div className="max-w-3xl mx-auto relative flex items-center gap-2">
             <button
