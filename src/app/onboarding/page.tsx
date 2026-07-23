@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Key, ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
 
@@ -74,7 +74,7 @@ export default function OnboardingPage() {
     <div className="min-h-screen bg-[var(--color-paper)] text-[var(--color-ink)] flex flex-col justify-between p-6 md:p-12">
       {/* N9 Edge-Aligned Minimal Navigation Header */}
       <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
-        <div className="font-display text-xl font-normal tracking-tight">Council of Minds</div>
+        <div className="font-display text-2xl font-normal tracking-tight">Council of Minds</div>
         <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
           Onboarding Letter & Architecture Setup
         </div>
@@ -83,20 +83,24 @@ export default function OnboardingPage() {
       {/* 12 · Letter Macrostructure Body */}
       <main className="max-w-2xl mx-auto my-12 space-y-8">
         <div className="space-y-4">
-          <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
-            Dear Thinker,
+          <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
+            <span>Dear Thinker,</span>
+            <span className="text-[var(--color-ink-muted)] font-normal">July 2026 • Letter No. 01</span>
           </div>
           <h1 className="font-display text-4xl md:text-5xl font-normal text-[var(--color-ink)] leading-tight">
             Welcome to a local-first studio for multi-perspective clarity.
           </h1>
-          <p className="text-base text-[var(--color-ink-muted)] leading-relaxed">
+          <p className="text-base text-[var(--color-ink-muted)] leading-relaxed font-body">
             Council of Minds separates knowledge frameworks from prompt behaviors so you can watch competing personas debate complex personal and strategic dilemmas.
           </p>
+          <div className="text-xs font-mono text-[var(--color-ink-muted)] pt-1 italic">
+            — The Council Architects
+          </div>
         </div>
 
         {/* Privacy & Security Disclosure Banner */}
         <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)] font-mono">
             <ShieldCheck className="w-4 h-4 text-[var(--color-accent)]" />
             Local Storage & Privacy Guarantee
           </div>
@@ -115,10 +119,10 @@ export default function OnboardingPage() {
           {/* Provider Selection */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
             {[
-              { id: 'openai', label: 'OpenAI', link: 'https://platform.openai.com/api-keys' },
-              { id: 'anthropic', label: 'Anthropic', link: 'https://console.anthropic.com/settings/keys' },
-              { id: 'gemini', label: 'Google Gemini', link: 'https://aistudio.google.com/app/apikey' },
-              { id: 'ollama', label: 'Ollama (Local)', link: 'https://ollama.com' },
+              { id: 'openai', label: 'OpenAI' },
+              { id: 'anthropic', label: 'Anthropic' },
+              { id: 'gemini', label: 'Google Gemini' },
+              { id: 'ollama', label: 'Ollama (Local)' },
             ].map((p) => (
               <button
                 key={p.id}
@@ -127,7 +131,7 @@ export default function OnboardingPage() {
                   setSelectedProvider(p.id as any);
                   setValidationError(null);
                 }}
-                className={`px-3 py-2 text-xs font-medium border rounded-[var(--radius-sm)] transition-all ${
+                className={`btn-hallmark text-xs justify-center transition-colors ${
                   selectedProvider === p.id
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold'
                     : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
@@ -169,7 +173,8 @@ export default function OnboardingPage() {
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-2.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                  className="absolute right-3 top-2.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none"
+                  aria-label={showKey ? 'Hide key' : 'Show key'}
                 >
                   {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
@@ -210,7 +215,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={handleValidateAndSave}
               disabled={isValidating}
-              className="btn-hallmark btn-hallmark-primary gap-2"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-2"
             >
               {isValidating ? 'Validating Key...' : 'Validate & Save'}
               <ArrowRight className="w-4 h-4" />
@@ -220,7 +225,7 @@ export default function OnboardingPage() {
       </main>
 
       {/* Ft6 Letter Close Footer */}
-      <footer className="border-t border-[var(--color-border-hairline)] pt-4 flex flex-col md:flex-row items-center justify-between text-xs text-[var(--color-ink-faint)]">
+      <footer className="border-t border-[var(--color-border-hairline)] pt-4 flex flex-col md:flex-row items-center justify-between text-xs text-[var(--color-ink-faint)] font-mono">
         <div>Council of Minds — 100% Client-Side Open Source Architecture</div>
         <div>Store it locally, proxy it statelessly, make it beautiful.</div>
       </footer>
