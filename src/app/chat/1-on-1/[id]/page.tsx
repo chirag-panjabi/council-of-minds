@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { ChatMessage, Persona } from '@/types';
-import { Send, Square, ChevronDown, ChevronRight, User, Brain, Paperclip, Cpu } from 'lucide-react';
+import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -43,6 +43,31 @@ export default function OneOnOneChatPage() {
 
   const toggleReasoning = (msgId: string) => {
     setExpandedReasoningIds((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
+  };
+
+  const handleExportTranscript = () => {
+    if (messages.length === 0) return;
+
+    let mdContent = `# ${chatSession?.title || '1-on-1 Dialogue Transcript'}\n\n`;
+    mdContent += `**Persona:** ${persona?.name || 'Unknown'} (${persona?.role || ''})\n`;
+    mdContent += `**Date:** ${new Date(chatSession?.createdAt || Date.now()).toLocaleDateString()}\n\n---\n\n`;
+
+    messages.forEach((msg) => {
+      const sender = msg.role === 'user' ? 'You' : persona?.name || 'Assistant';
+      mdContent += `### ${sender} (${new Date(msg.timestamp).toLocaleTimeString()})\n\n`;
+      if (msg.reasoning) {
+        mdContent += `> **Thought Process:**\n> ${msg.reasoning.replace(/\n/g, '\n> ')}\n\n`;
+      }
+      mdContent += `${msg.content}\n\n`;
+    });
+
+    const blob = new Blob([mdContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-1on1-${persona?.name.toLowerCase().replace(/\s+/g, '-') || 'session'}-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleSend = async (e?: React.FormEvent) => {
@@ -117,7 +142,6 @@ export default function OneOnOneChatPage() {
           const chunk = decoder.decode(value);
           fullContent += chunk;
 
-          // Check if chunk contains reasoning tokens <think>...</think>
           let reasoningText = undefined;
           let mainContent = fullContent;
 
@@ -145,7 +169,7 @@ export default function OneOnOneChatPage() {
   return (
     <Shell>
       <div className="flex flex-col h-screen bg-[var(--color-paper)]">
-        {/* Header Bar with Live Model Selector Dropdown */}
+        {/* Header Bar with Live Model Selector Dropdown & Export Transcript */}
         <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)] flex items-center justify-center font-display text-sm text-[var(--color-accent)] font-semibold shrink-0">
@@ -175,9 +199,16 @@ export default function OneOnOneChatPage() {
               </select>
             </div>
 
-            <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)] hidden sm:block">
-              1-on-1 Workbench
-            </div>
+            {/* Export Session Transcript Button */}
+            <button
+              onClick={handleExportTranscript}
+              disabled={messages.length === 0}
+              aria-label="Export Session Transcript as Markdown"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+              title="Export Session Transcript (.md)"
+            >
+              <Download className="w-3.5 h-3.5" /> Export (.md)
+            </button>
           </div>
         </header>
 

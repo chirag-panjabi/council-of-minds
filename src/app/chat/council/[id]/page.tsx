@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, UserCheck, RefreshCw, Cpu } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, UserCheck, RefreshCw, Cpu, Download } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -38,6 +38,33 @@ export default function CouncilChatPage() {
 
   const toggleReasoning = (msgId: string) => {
     setExpandedReasoningIds((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
+  };
+
+  const handleExportTranscript = () => {
+    if (messages.length === 0) return;
+
+    let mdContent = `# ${chatSession?.title || 'Council Debate Transcript'}\n\n`;
+    mdContent += `**Roster Group:** ${group?.name || 'Council'}\n`;
+    mdContent += `**Members:** ${councilPersonas.map((p) => p.name).join(', ')}\n`;
+    mdContent += `**Date:** ${new Date(chatSession?.createdAt || Date.now()).toLocaleDateString()}\n\n---\n\n`;
+
+    messages.forEach((msg) => {
+      const msgPersona = personas.find((p) => p.id === msg.personaId);
+      const sender = msg.role === 'user' ? 'You' : msg.role === 'synthesizer' ? 'Council Moderator (Synthesizer)' : msgPersona?.name || 'Council Member';
+      mdContent += `### ${sender} (${new Date(msg.timestamp).toLocaleTimeString()})\n\n`;
+      if (msg.reasoning) {
+        mdContent += `> **Thought Process:**\n> ${msg.reasoning.replace(/\n/g, '\n> ')}\n\n`;
+      }
+      mdContent += `${msg.content}\n\n`;
+    });
+
+    const blob = new Blob([mdContent], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `transcript-council-${group?.name.toLowerCase().replace(/\s+/g, '-') || 'debate'}-${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const handleSendUserMessage = async (e?: React.FormEvent) => {
@@ -211,7 +238,7 @@ export default function CouncilChatPage() {
   return (
     <Shell>
       <div className="flex flex-col h-screen bg-[var(--color-paper)]">
-        {/* Header Bar with Council Model Selector */}
+        {/* Header Bar with Council Model Selector & Export Transcript */}
         <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-display text-lg text-[var(--color-ink)]">{group?.name || 'Council Debate'}</div>
@@ -238,6 +265,17 @@ export default function CouncilChatPage() {
                 <option value="ollama-local">Ollama Local</option>
               </select>
             </div>
+
+            {/* Export Session Transcript Button */}
+            <button
+              onClick={handleExportTranscript}
+              disabled={messages.length === 0}
+              aria-label="Export Session Transcript as Markdown"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+              title="Export Session Transcript (.md)"
+            >
+              <Download className="w-3.5 h-3.5" /> Export (.md)
+            </button>
 
             <button
               onClick={handleRunAutoPilotRound}

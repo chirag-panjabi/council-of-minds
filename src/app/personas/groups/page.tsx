@@ -7,7 +7,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { PersonaGroup } from '@/types';
-import { ArrowLeft, Sparkles, Plus, Check, Trash2, Play, Copy, Search } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Check, Trash2, Play, Copy, Search, Send } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 14-narrative-workflow · theme: riso · nav: N1b · footer: Ft4 */
 
@@ -24,6 +24,10 @@ export default function PersonaGroupsPage() {
   const [synthesizerPersonaId, setSynthesizerPersonaId] = useState<string>('');
   const [personaSearchQuery, setPersonaSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  // Quick Dilemma Launcher Modal State
+  const [selectedGroupForDebate, setSelectedGroupForDebate] = useState<PersonaGroup | null>(null);
+  const [initialDilemmaPrompt, setInitialDilemmaPrompt] = useState('');
 
   const handleStartCreate = () => {
     setEditingGroupId(null);
@@ -97,16 +101,35 @@ export default function PersonaGroupsPage() {
     handleStartCreate();
   };
 
-  const handleLaunchCouncilDebate = async (group: PersonaGroup) => {
+  const handleOpenDebateModal = (group: PersonaGroup) => {
+    setSelectedGroupForDebate(group);
+    setInitialDilemmaPrompt('');
+  };
+
+  const handleConfirmLaunchDebate = async () => {
+    if (!selectedGroupForDebate) return;
+
     const newChatId = 'chat-' + Date.now();
     await db.chats.add({
       id: newChatId,
-      title: `${group.name} Debate`,
+      title: `${selectedGroupForDebate.name} Debate`,
       type: 'council',
-      groupId: group.id,
+      groupId: selectedGroupForDebate.id,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
+
+    if (initialDilemmaPrompt.trim()) {
+      await db.messages.add({
+        id: 'msg-' + Date.now(),
+        chatId: newChatId,
+        role: 'user',
+        content: initialDilemmaPrompt.trim(),
+        timestamp: Date.now(),
+      });
+    }
+
+    setSelectedGroupForDebate(null);
     router.push(`/chat/council/${newChatId}`);
   };
 
@@ -227,7 +250,7 @@ export default function PersonaGroupsPage() {
                         Edit Roster
                       </button>
                       <button
-                        onClick={() => handleLaunchCouncilDebate(group)}
+                        onClick={() => handleOpenDebateModal(group)}
                         aria-label={`Launch Council debate for ${group.name}`}
                         className="btn-hallmark btn-hallmark-primary text-xs flex-1 gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                       >
@@ -391,6 +414,45 @@ export default function PersonaGroupsPage() {
             </button>
           </div>
         </form>
+
+        {/* Quick Dilemma Topic Launcher Modal */}
+        {selectedGroupForDebate && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 space-y-4">
+              <h3 className="font-display text-xl text-[var(--color-ink)]">
+                Launch Council Debate: {selectedGroupForDebate.name}
+              </h3>
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                State an optional initial dilemma or dilemma prompt to pre-fill the debate stream.
+              </p>
+
+              <textarea
+                rows={3}
+                value={initialDilemmaPrompt}
+                onChange={(e) => setInitialDilemmaPrompt(e.target.value)}
+                placeholder="e.g. Should we pivot from B2B enterprise to local open source developer tool?"
+                className="w-full p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+              />
+
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedGroupForDebate(null)}
+                  className="text-xs text-[var(--color-ink-muted)] underline"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmLaunchDebate}
+                  className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                >
+                  <Play className="w-3.5 h-3.5 fill-current" /> Start Debate Workbench
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Ft4 Dense Colophon Footer */}
         <footer className="border-t border-[var(--color-border-hairline)] pt-4 text-xs font-mono text-[var(--color-ink-faint)] flex justify-between">

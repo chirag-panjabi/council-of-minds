@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { useUIStore } from '@/lib/stores/useUIStore';
@@ -12,10 +12,10 @@ import {
   Plus,
   Settings,
   BarChart2,
-  HelpCircle,
   ChevronLeft,
   Search,
   Sparkles,
+  ShieldCheck,
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -99,9 +99,9 @@ export function Sidebar() {
               Persona Groups
             </span>
             <Link
-              href="/personas/new"
+              href="/personas/groups"
               className="text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] p-0.5"
-              title="Create New Persona"
+              title="Manage Roster Groups"
             >
               <Plus className="w-3.5 h-3.5" />
             </Link>
@@ -115,7 +115,7 @@ export function Sidebar() {
               groups.map((group) => (
                 <Link
                   key={group.id}
-                  href={`/personas`}
+                  href="/personas/groups"
                   className="flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] rounded-[var(--radius-sm)] transition-colors"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-[var(--color-accent)]" />
@@ -154,11 +154,11 @@ export function Sidebar() {
         </div>
       </nav>
 
-      {/* Footer Navigation (Settings & Analytics) */}
+      {/* Footer Navigation (Analytics, Privacy, Settings) */}
       <div className="p-3 border-t border-[var(--color-border-hairline)] space-y-1">
         <Link
           href="/analytics"
-          className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
+          className={`flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
             pathname === '/analytics'
               ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
               : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
@@ -168,8 +168,19 @@ export function Sidebar() {
           Analytics
         </Link>
         <Link
+          href="/privacy"
+          className={`flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
+            pathname === '/privacy'
+              ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
+              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
+          }`}
+        >
+          <ShieldCheck className="w-4 h-4" />
+          Privacy Memo
+        </Link>
+        <Link
           href="/settings"
-          className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
+          className={`flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
             pathname === '/settings'
               ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
               : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'

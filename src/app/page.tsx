@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { Sparkles, MessageSquare, Users, AlertCircle, ArrowRight, Plus, Search } from 'lucide-react';
+import { Sparkles, MessageSquare, Users, AlertCircle, ArrowRight, Plus, Search, Trash2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 01-bento-grid · theme: specimen · nav: N6 · footer: Ft1 */
@@ -52,6 +52,16 @@ export default function DashboardPage() {
     });
 
     router.push(`/chat/1-on-1/${newChatId}`);
+  };
+
+  const handleDeleteChat = async (e: React.MouseEvent, chatId: string, chatTitle: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (confirm(`Are you sure you want to delete session "${chatTitle}"?`)) {
+      await db.chats.delete(chatId);
+      await db.messages.where('chatId').equals(chatId).delete();
+    }
   };
 
   return (
@@ -245,23 +255,35 @@ export default function DashboardPage() {
             ) : (
               <div className="space-y-2">
                 {recentChats.map((chat) => (
-                  <Link
+                  <div
                     key={chat.id}
-                    href={chat.type === 'council' ? `/chat/council/${chat.id}` : `/chat/1-on-1/${chat.id}`}
-                    aria-label={`Open session ${chat.title}`}
-                    className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] flex items-center justify-between hover:border-[var(--color-ink-muted)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] transition-colors"
+                    className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] flex items-center justify-between hover:border-[var(--color-ink-muted)] transition-colors group"
                   >
-                    <div className="flex items-center gap-3">
+                    <Link
+                      href={chat.type === 'council' ? `/chat/council/${chat.id}` : `/chat/1-on-1/${chat.id}`}
+                      aria-label={`Open session ${chat.title}`}
+                      className="flex items-center gap-3 flex-1 min-w-0 pr-3 focus:outline-none"
+                    >
                       <MessageSquare className="w-4 h-4 text-[var(--color-accent)] shrink-0" />
-                      <div>
-                        <div className="text-sm font-medium text-[var(--color-ink)]">{chat.title}</div>
+                      <div className="truncate">
+                        <div className="text-sm font-medium text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors truncate">
+                          {chat.title}
+                        </div>
                         <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
                           {chat.type.toUpperCase()} • Updated {new Date(chat.updatedAt).toLocaleTimeString()}
                         </div>
                       </div>
-                    </div>
-                    <ArrowRight className="w-4 h-4 text-[var(--color-ink-faint)] shrink-0" />
-                  </Link>
+                    </Link>
+
+                    <button
+                      onClick={(e) => handleDeleteChat(e, chat.id, chat.title)}
+                      aria-label={`Delete session ${chat.title}`}
+                      className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-error)] focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] rounded shrink-0 transition-colors"
+                      title="Delete Session"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

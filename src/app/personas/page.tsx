@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Plus, Grid, List, Download, Upload, Edit3, ArrowRight, Search } from 'lucide-react';
+import { Plus, Grid, List, Download, Upload, Edit3, ArrowRight, Search, CheckCircle2, Copy } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 11-catalogue · theme: atelier · nav: N1b · footer: Ft4 */
@@ -24,6 +24,7 @@ export default function PersonaLibraryPage() {
   const [exportCode, setExportCode] = useState('');
   const [importCode, setImportCode] = useState('');
   const [importStatus, setImportStatus] = useState<string | null>(null);
+  const [copyStatus, setCopyStatus] = useState(false);
 
   const personas = useLiveQuery(() => db.personas.where('isArchived').equals(0).toArray()) || [];
 
@@ -70,6 +71,15 @@ export default function PersonaLibraryPage() {
     const b64 = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(jsonStr))) : '';
     setExportCode(b64);
     setIsExportModalOpen(true);
+    setCopyStatus(false);
+  };
+
+  const handleCopyCode = () => {
+    if (typeof window !== 'undefined') {
+      navigator.clipboard.writeText(exportCode);
+      setCopyStatus(true);
+      setTimeout(() => setCopyStatus(false), 2000);
+    }
   };
 
   const handleImport = async (collisionStrategy: 'replace' | 'duplicate' | 'skip') => {
@@ -338,7 +348,14 @@ export default function PersonaLibraryPage() {
                 value={exportCode}
                 className="w-full h-32 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)] select-all focus:outline-none"
               />
-              <div className="flex justify-end">
+              <div className="flex items-center justify-between">
+                <button
+                  onClick={handleCopyCode}
+                  className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                >
+                  {copyStatus ? <CheckCircle2 className="w-3.5 h-3.5 text-white" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copyStatus ? 'Copied Code!' : 'Copy to Clipboard'}
+                </button>
                 <button
                   onClick={() => setIsExportModalOpen(false)}
                   className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
