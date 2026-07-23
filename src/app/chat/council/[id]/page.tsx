@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, UserCheck } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, UserCheck, RefreshCw } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -27,7 +27,6 @@ export default function CouncilChatPage() {
   const [input, setInput] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [autoPilotActive, setAutoPilotActive] = useState(false);
-  const [autoPilotRound, setAutoPilotRound] = useState(0);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -135,6 +134,17 @@ export default function CouncilChatPage() {
     }
   };
 
+  const handleRunAutoPilotRound = async () => {
+    if (isStreaming || councilPersonas.length === 0) return;
+    setAutoPilotActive(true);
+
+    for (const p of councilPersonas) {
+      await handleRequestReplyFromPersona(p);
+    }
+
+    setAutoPilotActive(false);
+  };
+
   const handleSynthesize = async () => {
     if (isStreaming || councilPersonas.length === 0) return;
 
@@ -201,7 +211,7 @@ export default function CouncilChatPage() {
     <Shell>
       <div className="flex flex-col h-screen bg-[var(--color-paper)]">
         {/* Header Bar */}
-        <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex items-center justify-between">
+        <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-display text-lg text-[var(--color-ink)]">{group?.name || 'Council Debate'}</div>
             <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
@@ -212,9 +222,20 @@ export default function CouncilChatPage() {
           {/* Moderator Controls */}
           <div className="flex items-center gap-2">
             <button
+              onClick={handleRunAutoPilotRound}
+              disabled={isStreaming || autoPilotActive}
+              aria-label="Run Auto-Pilot Round-Robin Debate"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${autoPilotActive ? 'animate-spin text-[var(--color-accent)]' : ''}`} />
+              {autoPilotActive ? 'Debating...' : 'Auto-Pilot Round'}
+            </button>
+
+            <button
               onClick={handleSynthesize}
               disabled={isStreaming}
-              className="btn-hallmark text-xs gap-1"
+              aria-label="Synthesize Council Debate"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Sparkles className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Synthesize Debate
             </button>
@@ -231,9 +252,10 @@ export default function CouncilChatPage() {
               key={p.id}
               onClick={() => handleRequestReplyFromPersona(p)}
               disabled={isStreaming}
-              className="px-2.5 py-1 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] hover:border-[var(--color-accent)] transition-colors shrink-0 flex items-center gap-1.5"
+              aria-label={`Request reply from ${p.name}`}
+              className="px-2.5 py-1 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] hover:border-[var(--color-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] transition-colors shrink-0 flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              <span className="w-2 h-2 rounded-full bg-[var(--color-accent)]" />
+              <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] shrink-0" />
               <span className="font-medium text-[var(--color-ink)]">@{p.name}</span>
             </button>
           ))}
@@ -245,7 +267,7 @@ export default function CouncilChatPage() {
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
               <Brain className="w-10 h-10 text-[var(--color-accent)] opacity-60" />
               <h2 className="font-display text-2xl text-[var(--color-ink)]">Council Ready for Debate</h2>
-              <p className="text-xs text-[var(--color-ink-muted)]">
+              <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
                 State your dilemma below to trigger a multi-perspective discussion among council members.
               </p>
             </div>
@@ -280,8 +302,11 @@ export default function CouncilChatPage() {
                     {msg.reasoning && (
                       <div className="think-accordion my-2 text-left">
                         <button
+                          type="button"
                           onClick={() => toggleReasoning(msg.id)}
-                          className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-mono text-[var(--color-think-ink)] hover:bg-black/5"
+                          aria-expanded={Boolean(expandedReasoningIds[msg.id])}
+                          aria-label="Toggle thought process reasoning"
+                          className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-mono text-[var(--color-think-ink)] hover:bg-black/5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
                         >
                           <span className="flex items-center gap-1.5 font-semibold">
                             <Brain className="w-3.5 h-3.5 text-[var(--color-accent)]" />
@@ -290,7 +315,7 @@ export default function CouncilChatPage() {
                           {expandedReasoningIds[msg.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                         </button>
                         {expandedReasoningIds[msg.id] && (
-                          <div className="p-3 text-xs leading-relaxed border-t border-[var(--color-think-border)] whitespace-pre-wrap">
+                          <div className="p-3 text-xs leading-relaxed border-t border-[var(--color-think-border)] whitespace-pre-wrap font-mono">
                             {msg.reasoning}
                           </div>
                         )}
@@ -302,8 +327,8 @@ export default function CouncilChatPage() {
                         msg.role === 'user'
                           ? 'bg-[var(--color-ink)] text-[var(--color-paper)] inline-block text-left'
                           : msg.role === 'synthesizer'
-                          ? 'bg-[var(--color-accent-subtle)] border border-[var(--color-accent)] text-[var(--color-ink)]'
-                          : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink)]'
+                          ? 'bg-[var(--color-accent-subtle)] border border-[var(--color-accent)] text-[var(--color-ink)] font-body'
+                          : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink)] font-body'
                       }`}
                     >
                       {msg.content}
@@ -330,12 +355,13 @@ export default function CouncilChatPage() {
               }}
               placeholder="State a dilemma for the Council to debate..."
               rows={2}
-              className="w-full pr-12 pl-4 py-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] resize-none"
+              className="w-full pr-12 pl-4 py-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] resize-none"
             />
             <button
               type="submit"
               disabled={!input.trim() && !isStreaming}
-              className="absolute right-3 p-2 bg-[var(--color-accent)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-hover)] transition-colors disabled:opacity-40"
+              aria-label="Send message to Council"
+              className="absolute right-3 p-2 bg-[var(--color-accent)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
             >
               <Send className="w-4 h-4" />
             </button>
