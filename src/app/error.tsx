@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
-import { AlertOctagon, RotateCcw, Home } from 'lucide-react';
+import { AlertOctagon, RotateCcw, Home, ShieldAlert } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 09-specimen-error · theme: monochroma · nav: N1a · footer: Ft6 */
 
@@ -17,6 +17,14 @@ export default function ErrorBoundary({
   useEffect(() => {
     console.error('Unhandled App Runtime Error:', error);
   }, [error]);
+
+  const handleEmergencySessionReset = () => {
+    if (typeof window !== 'undefined') {
+      // Clear non-key transient items in localStorage
+      sessionStorage.clear();
+      window.location.href = '/';
+    }
+  };
 
   return (
     <Shell>
@@ -50,6 +58,13 @@ export default function ErrorBoundary({
               className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
               <RotateCcw className="w-4 h-4" /> Try Execution Again
+            </button>
+            <button
+              onClick={handleEmergencySessionReset}
+              aria-label="Emergency Clear Session & Reload"
+              className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/40 hover:bg-[var(--color-error)]/10 gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-error)]"
+            >
+              <ShieldAlert className="w-4 h-4" /> Clear Session & Reload
             </button>
             <Link
               href="/"

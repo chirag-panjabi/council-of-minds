@@ -1,12 +1,48 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
-import { ShieldCheck, Lock, Cpu, AlertTriangle, ArrowLeft } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/lib/db';
+import { ShieldCheck, Lock, Cpu, AlertTriangle, ArrowLeft, Download, Database, CheckCircle2 } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 02-long-document · theme: newsprint · nav: N1a · footer: Ft1 */
 
 export default function PrivacyPage() {
+  const [backupStatus, setBackupStatus] = useState<string | null>(null);
+
+  const personasCount = useLiveQuery(() => db.personas.count()) || 0;
+  const groupsCount = useLiveQuery(() => db.groups.count()) || 0;
+  const chatsCount = useLiveQuery(() => db.chats.count()) || 0;
+  const messagesCount = useLiveQuery(() => db.messages.count()) || 0;
+  const usageCount = useLiveQuery(() => db.usage.count()) || 0;
+
+  const handleExportBackup = async () => {
+    const backupData = {
+      schema: 'framework-engine.backup/v1',
+      timestamp: Date.now(),
+      personas: await db.personas.toArray(),
+      groups: await db.groups.toArray(),
+      chats: await db.chats.toArray(),
+      messages: await db.messages.toArray(),
+      attachments: await db.attachments.toArray(),
+      usage: await db.usage.toArray(),
+    };
+
+    const jsonStr = JSON.stringify(backupData, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `council-of-minds-privacy-export-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+
+    setBackupStatus('Export complete!');
+    setTimeout(() => setBackupStatus(null), 3000);
+  };
+
   return (
     <Shell>
       <div className="p-6 md:p-12 max-w-3xl mx-auto space-y-10">
@@ -39,7 +75,7 @@ export default function PrivacyPage() {
           </div>
 
           {/* Section 1: Local Data Sovereignty */}
-          <section className="space-y-3">
+          <section className="space-y-4">
             <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-accent)] font-mono uppercase tracking-wider">
               <ShieldCheck className="w-4 h-4" /> 1.0 Local Data Sovereignty
             </div>
@@ -50,6 +86,49 @@ export default function PrivacyPage() {
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
               There is zero server-side database (no PostgreSQL, MongoDB, or cloud backup buckets). If you clear your browser cache or reset site data, your local information is purged unless you export a <code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">.json</code> database backup from Settings.
             </p>
+
+            {/* Live Storage Footprint Diagnostic Card */}
+            <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-3 not-prose">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-accent)] font-semibold uppercase tracking-wider">
+                  <Database className="w-4 h-4" /> Active Local Storage Diagnostic
+                </div>
+                {backupStatus && (
+                  <span className="text-[10px] font-mono text-[var(--color-accent)] flex items-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> {backupStatus}
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                <div className="p-2.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)]">Personas</div>
+                  <div className="text-base font-semibold text-[var(--color-ink)]">{personasCount}</div>
+                </div>
+                <div className="p-2.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)]">Groups</div>
+                  <div className="text-base font-semibold text-[var(--color-ink)]">{groupsCount}</div>
+                </div>
+                <div className="p-2.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)]">Sessions</div>
+                  <div className="text-base font-semibold text-[var(--color-ink)]">{chatsCount}</div>
+                </div>
+                <div className="p-2.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)]">Messages</div>
+                  <div className="text-base font-semibold text-[var(--color-ink)]">{messagesCount}</div>
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <button
+                  onClick={handleExportBackup}
+                  aria-label="Export Local Data Backup"
+                  className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                >
+                  <Download className="w-3.5 h-3.5" /> 1-Click Export Backup (.json)
+                </button>
+              </div>
+            </div>
           </section>
 
           <div className="hairline-divider" />
