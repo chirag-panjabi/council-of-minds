@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, UserCheck, RefreshCw } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, UserCheck, RefreshCw, Cpu } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -25,6 +25,7 @@ export default function CouncilChatPage() {
   const councilPersonas = personas.filter((p) => group?.personaIds.includes(p.id));
 
   const [input, setInput] = useState('');
+  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
   const [isStreaming, setIsStreaming] = useState(false);
   const [autoPilotActive, setAutoPilotActive] = useState(false);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
@@ -89,7 +90,7 @@ export default function CouncilChatPage() {
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          model: targetPersona.defaultModel || 'gpt-4o',
+          model: selectedModel || targetPersona.defaultModel || 'gpt-4o',
           systemPrompt: `You are participating in a Council Debate. ${targetPersona.systemPrompt}`,
           messages: apiMessages,
         }),
@@ -178,7 +179,7 @@ export default function CouncilChatPage() {
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          model: 'gpt-4o',
+          model: selectedModel || 'gpt-4o',
           systemPrompt: synthPrompt,
           messages: apiMessages,
         }),
@@ -210,7 +211,7 @@ export default function CouncilChatPage() {
   return (
     <Shell>
       <div className="flex flex-col h-screen bg-[var(--color-paper)]">
-        {/* Header Bar */}
+        {/* Header Bar with Council Model Selector */}
         <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="font-display text-lg text-[var(--color-ink)]">{group?.name || 'Council Debate'}</div>
@@ -219,8 +220,25 @@ export default function CouncilChatPage() {
             </div>
           </div>
 
-          {/* Moderator Controls */}
-          <div className="flex items-center gap-2">
+          {/* Council Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Live Council Model Selector */}
+            <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]">
+              <Cpu className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+              <select
+                value={selectedModel}
+                onChange={(e) => setSelectedModel(e.target.value)}
+                aria-label="Select Council execution model"
+                className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
+              >
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4o-mini">GPT-4o Mini</option>
+                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                <option value="ollama-local">Ollama Local</option>
+              </select>
+            </div>
+
             <button
               onClick={handleRunAutoPilotRound}
               disabled={isStreaming || autoPilotActive}

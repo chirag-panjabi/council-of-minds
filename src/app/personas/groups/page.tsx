@@ -7,7 +7,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { PersonaGroup } from '@/types';
-import { ArrowLeft, Sparkles, Plus, Check, Trash2, Play, Copy } from 'lucide-react';
+import { ArrowLeft, Sparkles, Plus, Check, Trash2, Play, Copy, Search } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 14-narrative-workflow · theme: riso · nav: N1b · footer: Ft4 */
 
@@ -22,6 +22,7 @@ export default function PersonaGroupsPage() {
   const [description, setDescription] = useState('');
   const [selectedPersonaIds, setSelectedPersonaIds] = useState<string[]>([]);
   const [synthesizerPersonaId, setSynthesizerPersonaId] = useState<string>('');
+  const [personaSearchQuery, setPersonaSearchQuery] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   const handleStartCreate = () => {
@@ -30,6 +31,7 @@ export default function PersonaGroupsPage() {
     setDescription('');
     setSelectedPersonaIds(personas.slice(0, 3).map((p) => p.id));
     setSynthesizerPersonaId(personas[0]?.id || '');
+    setPersonaSearchQuery('');
   };
 
   const handleStartEdit = (group: PersonaGroup) => {
@@ -38,6 +40,7 @@ export default function PersonaGroupsPage() {
     setDescription(group.description);
     setSelectedPersonaIds(group.personaIds);
     setSynthesizerPersonaId(group.synthesizerPersonaId || group.personaIds[0] || '');
+    setPersonaSearchQuery('');
   };
 
   const handleDuplicateGroup = async (group: PersonaGroup) => {
@@ -112,6 +115,13 @@ export default function PersonaGroupsPage() {
       await db.groups.delete(groupId);
     }
   };
+
+  const filteredPersonas = personas.filter(
+    (p) =>
+      personaSearchQuery.trim() === '' ||
+      p.name.toLowerCase().includes(personaSearchQuery.toLowerCase()) ||
+      p.role.toLowerCase().includes(personaSearchQuery.toLowerCase())
+  );
 
   return (
     <Shell>
@@ -278,46 +288,63 @@ export default function PersonaGroupsPage() {
             </div>
           </div>
 
-          {/* Phase 2.0 — Member Selection */}
+          {/* Phase 2.0 — Member Selection with Search Filter */}
           <div className="space-y-4 pt-4 border-t border-[var(--color-border-hairline)]">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-2 text-xs font-mono font-semibold uppercase tracking-widest text-[var(--color-accent)]">
                 <span className="w-5 h-5 rounded-full bg-[var(--color-accent)] text-white flex items-center justify-center text-[10px]">2</span>
                 Phase 2.0 — Member Selection ({selectedPersonaIds.length} Selected)
               </div>
-              <span className="text-[10px] font-mono text-[var(--color-ink-muted)]">Select at least 2 personas</span>
+
+              {/* Persona Search Input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={personaSearchQuery}
+                  onChange={(e) => setPersonaSearchQuery(e.target.value)}
+                  placeholder="Filter candidate personas..."
+                  className="pl-7 pr-3 py-1 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded font-mono text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+                />
+                <Search className="w-3 h-3 text-[var(--color-ink-muted)] absolute left-2 top-2" />
+              </div>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 max-h-72 overflow-y-auto pr-1">
-              {personas.map((p) => {
-                const isSelected = selectedPersonaIds.includes(p.id);
-                return (
-                  <div
-                    key={p.id}
-                    role="checkbox"
-                    aria-checked={isSelected}
-                    tabIndex={0}
-                    onClick={() => handleTogglePersonaSelect(p.id)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleTogglePersonaSelect(p.id);
-                      }
-                    }}
-                    className={`p-3 border rounded-[var(--radius-md)] cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] ${
-                      isSelected
-                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-medium'
-                        : 'border-[var(--color-border)] bg-[var(--color-paper)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="font-display text-base font-normal text-[var(--color-ink)]">{p.name}</div>
-                      {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)] shrink-0" />}
+              {filteredPersonas.length === 0 ? (
+                <div className="col-span-full p-4 text-center text-xs text-[var(--color-ink-muted)] font-mono italic">
+                  No candidate personas match search query.
+                </div>
+              ) : (
+                filteredPersonas.map((p) => {
+                  const isSelected = selectedPersonaIds.includes(p.id);
+                  return (
+                    <div
+                      key={p.id}
+                      role="checkbox"
+                      aria-checked={isSelected}
+                      tabIndex={0}
+                      onClick={() => handleTogglePersonaSelect(p.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleTogglePersonaSelect(p.id);
+                        }
+                      }}
+                      className={`p-3 border rounded-[var(--radius-md)] cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] ${
+                        isSelected
+                          ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-medium'
+                          : 'border-[var(--color-border)] bg-[var(--color-paper)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="font-display text-base font-normal text-[var(--color-ink)]">{p.name}</div>
+                        {isSelected && <Check className="w-4 h-4 text-[var(--color-accent)] shrink-0" />}
+                      </div>
+                      <div className="text-xs text-[var(--color-ink-muted)]">{p.role}</div>
                     </div>
-                    <div className="text-xs text-[var(--color-ink-muted)]">{p.role}</div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
           </div>
 

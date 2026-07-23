@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy } from 'lucide-react';
+import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -26,8 +26,13 @@ export default function EditPersonaPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  // Export Base64 State
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportCode, setExportCode] = useState('');
+
   // Live Test Sandbox State
   const [testPrompt, setTestPrompt] = useState('');
+  const [testModel, setTestModel] = useState('gpt-4o');
   const [testResponse, setTestResponse] = useState('');
   const [isTesting, setIsTesting] = useState(false);
 
@@ -41,6 +46,7 @@ export default function EditPersonaPage() {
         setDescription(p.description);
         setSystemPrompt(p.systemPrompt);
         setDefaultModel(p.defaultModel || 'gpt-4o');
+        setTestModel(p.defaultModel || 'gpt-4o');
         setTagsInput(p.tags?.join(', ') || '');
         setIsArchived(p.isArchived || false);
       }
@@ -70,6 +76,25 @@ export default function EditPersonaPage() {
     setIsSaving(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleExportShareCode = () => {
+    if (!persona) return;
+    const schemaObj = {
+      schema: 'framework-engine.persona/v1',
+      persona: {
+        name,
+        role,
+        description,
+        systemPrompt,
+        defaultModel,
+        tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+      },
+    };
+    const jsonStr = JSON.stringify(schemaObj);
+    const b64 = typeof window !== 'undefined' ? btoa(unescape(encodeURIComponent(jsonStr))) : '';
+    setExportCode(b64);
+    setIsExportModalOpen(true);
   };
 
   const handleDuplicate = async () => {
@@ -117,7 +142,7 @@ export default function EditPersonaPage() {
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          model: defaultModel,
+          model: testModel,
           systemPrompt,
           messages: [{ role: 'user', content: testPrompt }],
         }),
@@ -188,6 +213,15 @@ export default function EditPersonaPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportShareCode}
+                  aria-label="Export Share Code"
+                  className="btn-hallmark text-xs gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                  title="Export Share Code"
+                >
+                  <Download className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Export
+                </button>
                 <button
                   type="button"
                   onClick={handleDuplicate}
@@ -337,7 +371,20 @@ export default function EditPersonaPage() {
                 <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
                   <Brain className="w-4 h-4" /> Test Prompt Sandbox
                 </div>
-                <span className="text-[10px] font-mono text-[var(--color-ink-muted)]">Live Verification</span>
+                <div className="flex items-center gap-1 bg-[var(--color-paper)] border border-[var(--color-border)] px-1.5 py-0.5 rounded">
+                  <Cpu className="w-3 h-3 text-[var(--color-accent)]" />
+                  <select
+                    value={testModel}
+                    onChange={(e) => setTestModel(e.target.value)}
+                    className="bg-transparent text-[10px] font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
+                  >
+                    <option value="gpt-4o">GPT-4o</option>
+                    <option value="gpt-4o-mini">GPT-4o Mini</option>
+                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
+                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
+                    <option value="ollama-local">Ollama Local</option>
+                  </select>
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -368,6 +415,33 @@ export default function EditPersonaPage() {
             </div>
           </div>
         </div>
+
+        {/* Base64 Export Modal */}
+        {isExportModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+            <div className="w-full max-w-lg bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 space-y-4">
+              <h3 className="font-display text-xl text-[var(--color-ink)]">
+                Export Share Code: {name}
+              </h3>
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                Copy this Base64 string (`framework-engine.persona/v1`) to share your persona directives with others.
+              </p>
+              <textarea
+                readOnly
+                value={exportCode}
+                className="w-full h-32 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)] select-all focus:outline-none"
+              />
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Ft6 Letter Close Footer */}
         <footer className="border-t border-[var(--color-border-hairline)] pt-4 text-xs font-mono text-[var(--color-ink-faint)] flex justify-between">

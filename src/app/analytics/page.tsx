@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { ShieldCheck, Cpu, Zap, Activity, Filter } from 'lucide-react';
+import { ShieldCheck, Cpu, Zap, Activity, Filter, Trash2, Search } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: almanac · nav: N1a · footer: Ft7 */
 
@@ -13,6 +13,8 @@ export default function AnalyticsPage() {
   const chats = useLiveQuery(() => db.chats.toArray()) || [];
 
   const [selectedModelFilter, setSelectedModelFilter] = useState<string>('all');
+  const [logSearchQuery, setLogSearchQuery] = useState('');
+  const [clearStatus, setClearStatus] = useState<string | null>(null);
 
   const totalPromptTokens = usageRecords.reduce((acc, u) => acc + u.promptTokens, 0);
   const totalCompletionTokens = usageRecords.reduce((acc, u) => acc + u.completionTokens, 0);
@@ -39,9 +41,19 @@ export default function AnalyticsPage() {
   const availableModels = Array.from(new Set(usageRecords.map((u) => u.model)));
 
   // Filtered records
-  const filteredRecords = selectedModelFilter === 'all'
-    ? usageRecords
-    : usageRecords.filter((u) => u.model.toLowerCase().includes(selectedModelFilter.toLowerCase()));
+  const filteredRecords = usageRecords.filter((u) => {
+    const matchesModel = selectedModelFilter === 'all' || u.model.toLowerCase().includes(selectedModelFilter.toLowerCase());
+    const matchesQuery = logSearchQuery.trim() === '' || u.model.toLowerCase().includes(logSearchQuery.toLowerCase()) || String(u.promptTokens + u.completionTokens).includes(logSearchQuery);
+    return matchesModel && matchesQuery;
+  });
+
+  const handleClearTelemetry = async () => {
+    if (confirm('Are you sure you want to clear token usage telemetry logs? (Saved chats and personas will be preserved).')) {
+      await db.usage.clear();
+      setClearStatus('Telemetry logs cleared successfully!');
+      setTimeout(() => setClearStatus(null), 3000);
+    }
+  };
 
   return (
     <Shell>
@@ -56,6 +68,12 @@ export default function AnalyticsPage() {
             Extracted directly from SSE streaming headers. 100% stored in local IndexedDB.
           </p>
         </header>
+
+        {clearStatus && (
+          <div className="p-3 bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 rounded text-xs font-mono">
+            {clearStatus}
+          </div>
+        )}
 
         {/* 04 · Stat-Led Hero Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
@@ -100,48 +118,71 @@ export default function AnalyticsPage() {
 
         {/* Tabular Usage Breakdown & Filter Control */}
         <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[var(--color-border-hairline)] pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-hairline)] pb-4">
             <div>
               <h2 className="font-display text-2xl text-[var(--color-ink)]">Execution Log & Token Breakdown</h2>
               <p className="text-xs text-[var(--color-ink-muted)]">Real-time SSE token telemetry per request.</p>
             </div>
 
-            {/* Model Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-              <span className="text-[10px] font-mono uppercase text-[var(--color-ink-muted)] shrink-0 flex items-center gap-1">
-                <Filter className="w-3 h-3 text-[var(--color-accent)]" /> Filter:
-              </span>
+            <div className="flex flex-wrap items-center gap-3">
+              {/* Search Log Input */}
+              <div className="relative">
+                <input
+                  type="text"
+                  value={logSearchQuery}
+                  onChange={(e) => setLogSearchQuery(e.target.value)}
+                  placeholder="Filter logs..."
+                  className="pl-7 pr-3 py-1 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded font-mono text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+                />
+                <Search className="w-3 h-3 text-[var(--color-ink-muted)] absolute left-2 top-2" />
+              </div>
+
+              {/* Clear Telemetry Button */}
               <button
-                onClick={() => setSelectedModelFilter('all')}
-                aria-label="Filter all models"
-                className={`px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] border transition-all focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                  selectedModelFilter === 'all'
+                onClick={handleClearTelemetry}
+                aria-label="Clear Telemetry Logs"
+                className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/30 hover:bg-[var(--color-error)]/10 gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] shrink-0"
+              >
+                <Trash2 className="w-3.5 h-3.5" /> Clear Logs
+              </button>
+            </div>
+          </div>
+
+          {/* Model Filter Pills */}
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            <span className="text-[10px] font-mono uppercase text-[var(--color-ink-muted)] shrink-0 flex items-center gap-1">
+              <Filter className="w-3 h-3 text-[var(--color-accent)]" /> Filter:
+            </span>
+            <button
+              onClick={() => setSelectedModelFilter('all')}
+              aria-label="Filter all models"
+              className={`px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] border transition-all focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                selectedModelFilter === 'all'
+                  ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-semibold'
+                  : 'bg-[var(--color-paper)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)]'
+              }`}
+            >
+              All
+            </button>
+            {availableModels.map((m) => (
+              <button
+                key={m}
+                onClick={() => setSelectedModelFilter(m)}
+                aria-label={`Filter by ${m}`}
+                className={`px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] border transition-all focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] shrink-0 ${
+                  selectedModelFilter === m
                     ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-semibold'
                     : 'bg-[var(--color-paper)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)]'
                 }`}
               >
-                All
+                {m}
               </button>
-              {availableModels.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setSelectedModelFilter(m)}
-                  aria-label={`Filter by ${m}`}
-                  className={`px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] border transition-all focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] shrink-0 ${
-                    selectedModelFilter === m
-                      ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-semibold'
-                      : 'bg-[var(--color-paper)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)]'
-                  }`}
-                >
-                  {m}
-                </button>
-              ))}
-            </div>
+            ))}
           </div>
 
           {filteredRecords.length === 0 ? (
             <div className="p-8 text-center text-xs text-[var(--color-ink-muted)] italic">
-              No usage records match the selected model filter.
+              No usage records match the selected model filter or query.
             </div>
           ) : (
             <div className="overflow-x-auto">

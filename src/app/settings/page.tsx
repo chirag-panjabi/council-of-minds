@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
-import { ShieldAlert, Trash2, Eye, EyeOff, Save, Download, Upload, Cpu, CheckCircle2 } from 'lucide-react';
+import { ShieldAlert, Trash2, Eye, EyeOff, Save, Download, Upload, Cpu, CheckCircle2, AlertCircle, Play } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: almanac · nav: N1a · footer: Ft7 */
 
@@ -15,6 +15,9 @@ export default function SettingsPage() {
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [ollamaEnabled, setOllamaEnabled] = useState(false);
   const [showKeys, setShowKeys] = useState(false);
+
+  // Connection Ping Test Badges
+  const [testResults, setTestResults] = useState<Record<string, { status: 'testing' | 'success' | 'error'; message: string }>>({});
 
   // System Prompt Personal Profile
   const [systemProfile, setSystemProfile] = useState('');
@@ -47,6 +50,46 @@ export default function SettingsPage() {
 
     setSaveStatus('Settings saved successfully!');
     setTimeout(() => setSaveStatus(null), 3000);
+  };
+
+  const handleTestConnection = async (provider: 'openai' | 'anthropic' | 'gemini' | 'ollama') => {
+    setTestResults((prev) => ({ ...prev, [provider]: { status: 'testing', message: 'Testing connection...' } }));
+
+    try {
+      let apiKey = '';
+      let model = 'gpt-4o-mini';
+
+      if (provider === 'openai') apiKey = openaiKey.trim();
+      else if (provider === 'anthropic') {
+        apiKey = anthropicKey.trim();
+        model = 'claude-3-5-sonnet';
+      } else if (provider === 'gemini') {
+        apiKey = geminiKey.trim();
+        model = 'gemini-1.5-pro';
+      } else if (provider === 'ollama') {
+        model = 'ollama-local';
+      }
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-provider': provider,
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          model,
+          systemPrompt: 'Respond strictly with "OK".',
+          messages: [{ role: 'user', content: 'Ping' }],
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      setTestResults((prev) => ({ ...prev, [provider]: { status: 'success', message: 'Connection Verified!' } }));
+    } catch (err: any) {
+      setTestResults((prev) => ({ ...prev, [provider]: { status: 'error', message: err.message || 'Connection failed.' } }));
+    }
   };
 
   const handleExportBackup = async () => {
@@ -131,7 +174,7 @@ export default function SettingsPage() {
           </div>
           <h1 className="font-display text-4xl text-[var(--color-ink)]">System Settings</h1>
           <p className="text-xs text-[var(--color-ink-muted)]">
-            Manage provider credentials, system prompt injections, and local data retention boundaries.
+            Manage provider credentials, test active connections, and configure data retention boundaries.
           </p>
         </header>
 
@@ -164,8 +207,25 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-4">
+            {/* OpenAI */}
             <div className="space-y-1">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">OpenAI API Key</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">OpenAI API Key</label>
+                <div className="flex items-center gap-2">
+                  {testResults.openai && (
+                    <span className={`text-[10px] font-mono flex items-center gap-1 ${testResults.openai.status === 'success' ? 'text-[var(--color-accent)]' : 'text-[var(--color-error)]'}`}>
+                      {testResults.openai.status === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {testResults.openai.message}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleTestConnection('openai')}
+                    className="text-[10px] font-mono text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)] focus:outline-none"
+                  >
+                    Test Connection
+                  </button>
+                </div>
+              </div>
               <input
                 type={showKeys ? 'text' : 'password'}
                 value={openaiKey}
@@ -175,8 +235,25 @@ export default function SettingsPage() {
               />
             </div>
 
+            {/* Anthropic */}
             <div className="space-y-1">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Anthropic API Key</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Anthropic API Key</label>
+                <div className="flex items-center gap-2">
+                  {testResults.anthropic && (
+                    <span className={`text-[10px] font-mono flex items-center gap-1 ${testResults.anthropic.status === 'success' ? 'text-[var(--color-accent)]' : 'text-[var(--color-error)]'}`}>
+                      {testResults.anthropic.status === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {testResults.anthropic.message}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleTestConnection('anthropic')}
+                    className="text-[10px] font-mono text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)] focus:outline-none"
+                  >
+                    Test Connection
+                  </button>
+                </div>
+              </div>
               <input
                 type={showKeys ? 'text' : 'password'}
                 value={anthropicKey}
@@ -186,8 +263,25 @@ export default function SettingsPage() {
               />
             </div>
 
+            {/* Gemini */}
             <div className="space-y-1">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Google Gemini API Key</label>
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Google Gemini API Key</label>
+                <div className="flex items-center gap-2">
+                  {testResults.gemini && (
+                    <span className={`text-[10px] font-mono flex items-center gap-1 ${testResults.gemini.status === 'success' ? 'text-[var(--color-accent)]' : 'text-[var(--color-error)]'}`}>
+                      {testResults.gemini.status === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {testResults.gemini.message}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleTestConnection('gemini')}
+                    className="text-[10px] font-mono text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)] focus:outline-none"
+                  >
+                    Test Connection
+                  </button>
+                </div>
+              </div>
               <input
                 type={showKeys ? 'text' : 'password'}
                 value={geminiKey}
@@ -203,15 +297,29 @@ export default function SettingsPage() {
                 <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-ink-muted)]">
                   <Cpu className="w-4 h-4 text-[var(--color-accent)]" /> Ollama Local Engine Connection
                 </div>
-                <label className="flex items-center gap-2 cursor-pointer text-xs font-mono">
-                  <input
-                    type="checkbox"
-                    checked={ollamaEnabled}
-                    onChange={(e) => setOllamaEnabled(e.target.checked)}
-                    className="accent-[var(--color-accent)]"
-                  />
-                  <span>Enable Local Engine</span>
-                </label>
+                <div className="flex items-center gap-3">
+                  {testResults.ollama && (
+                    <span className={`text-[10px] font-mono flex items-center gap-1 ${testResults.ollama.status === 'success' ? 'text-[var(--color-accent)]' : 'text-[var(--color-error)]'}`}>
+                      {testResults.ollama.status === 'success' ? <CheckCircle2 className="w-3 h-3" /> : <AlertCircle className="w-3 h-3" />}
+                      {testResults.ollama.message}
+                    </span>
+                  )}
+                  <button
+                    onClick={() => handleTestConnection('ollama')}
+                    className="text-[10px] font-mono text-[var(--color-accent)] underline hover:text-[var(--color-accent-hover)] focus:outline-none"
+                  >
+                    Test Connection
+                  </button>
+                  <label className="flex items-center gap-2 cursor-pointer text-xs font-mono">
+                    <input
+                      type="checkbox"
+                      checked={ollamaEnabled}
+                      onChange={(e) => setOllamaEnabled(e.target.checked)}
+                      className="accent-[var(--color-accent)]"
+                    />
+                    <span>Enable Local Engine</span>
+                  </label>
+                </div>
               </div>
               <input
                 type="text"
