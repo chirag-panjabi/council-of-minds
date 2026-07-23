@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -70,6 +70,20 @@ export default function EditPersonaPage() {
     setIsSaving(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleDuplicate = async () => {
+    if (!persona) return;
+    const newPersonaId = 'persona-' + Date.now();
+    const duplicatedPersona: Persona = {
+      ...persona,
+      id: newPersonaId,
+      name: `${persona.name} (Copy)`,
+      createdAt: Date.now(),
+    };
+
+    await db.personas.add(duplicatedPersona);
+    router.push(`/personas/${newPersonaId}/edit`);
   };
 
   const handleToggleArchive = async () => {
@@ -145,7 +159,11 @@ export default function EditPersonaPage() {
       <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8">
         {/* N1b Navigation Header */}
         <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
-          <Link href="/personas" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
+          <Link
+            href="/personas"
+            aria-label="Back to Persona Library"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" /> Back to Persona Library
           </Link>
           <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
@@ -163,7 +181,7 @@ export default function EditPersonaPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Pane: Persona Editor Form (7 cols) */}
           <form onSubmit={handleSave} className="lg:col-span-7 space-y-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6">
-            <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-3">
+            <div className="flex flex-wrap items-center justify-between border-b border-[var(--color-border-hairline)] pb-3 gap-2">
               <div>
                 <h1 className="font-display text-2xl text-[var(--color-ink)]">Edit: {name}</h1>
                 <div className="text-xs font-mono text-[var(--color-ink-muted)]">Modify persona directives & rules</div>
@@ -172,8 +190,18 @@ export default function EditPersonaPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={handleDuplicate}
+                  aria-label="Duplicate Persona"
+                  className="btn-hallmark text-xs gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                  title="Duplicate Persona"
+                >
+                  <Copy className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Duplicate
+                </button>
+                <button
+                  type="button"
                   onClick={handleToggleArchive}
-                  className={`btn-hallmark text-xs gap-1 ${isArchived ? 'bg-[var(--color-warning)]/10 text-[var(--color-warning)]' : ''}`}
+                  aria-label={isArchived ? 'Unarchive Persona' : 'Archive Persona'}
+                  className={`btn-hallmark text-xs gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${isArchived ? 'bg-[var(--color-warning)]/10 text-[var(--color-warning)]' : ''}`}
                   title={isArchived ? 'Unarchive Persona' : 'Archive Persona'}
                 >
                   <Archive className="w-3.5 h-3.5" />
@@ -182,7 +210,8 @@ export default function EditPersonaPage() {
                 <button
                   type="button"
                   onClick={handleDelete}
-                  className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/30 hover:bg-[var(--color-error)]/10"
+                  aria-label="Delete Persona"
+                  className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/30 hover:bg-[var(--color-error)]/10 focus:outline-none focus:ring-1 focus:ring-[var(--color-error)]"
                   title="Delete Persona"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -198,7 +227,7 @@ export default function EditPersonaPage() {
                   required
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-medium"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-medium focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
 
@@ -208,7 +237,7 @@ export default function EditPersonaPage() {
                   type="text"
                   value={role}
                   onChange={(e) => setRole(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)]"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
             </div>
@@ -219,7 +248,7 @@ export default function EditPersonaPage() {
                 type="text"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)]"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
             </div>
 
@@ -229,7 +258,7 @@ export default function EditPersonaPage() {
                 <select
                   value={defaultModel}
                   onChange={(e) => setDefaultModel(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)]"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 >
                   <option value="gpt-4o">OpenAI GPT-4o</option>
                   <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
@@ -245,7 +274,7 @@ export default function EditPersonaPage() {
                   type="text"
                   value={tagsInput}
                   onChange={(e) => setTagsInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
             </div>
@@ -260,7 +289,7 @@ export default function EditPersonaPage() {
                 rows={8}
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
-                className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
+                className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
             </div>
 
@@ -268,7 +297,7 @@ export default function EditPersonaPage() {
               <button
                 type="submit"
                 disabled={isSaving}
-                className="btn-hallmark btn-hallmark-primary text-xs gap-1.5"
+                className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" /> {isSaving ? 'Saving Changes...' : 'Save Changes'}
               </button>
@@ -317,13 +346,14 @@ export default function EditPersonaPage() {
                   value={testPrompt}
                   onChange={(e) => setTestPrompt(e.target.value)}
                   placeholder={`Ask ${name || 'persona'} a test question to verify directives...`}
-                  className="w-full p-2.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono"
+                  className="w-full p-2.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
                 <button
                   type="button"
                   onClick={handleRunTest}
                   disabled={isTesting || !testPrompt.trim()}
-                  className="btn-hallmark text-xs w-full justify-center gap-1.5"
+                  aria-label="Run Test Generation"
+                  className="btn-hallmark text-xs w-full justify-center gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
                 >
                   <Send className="w-3.5 h-3.5 text-[var(--color-accent)]" />
                   {isTesting ? 'Generating Test Output...' : 'Run Test Generation'}
