@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Plus, Grid, List, Download, Upload, Edit3, ArrowRight, Sparkles } from 'lucide-react';
+import { Plus, Grid, List, Download, Upload, Edit3, ArrowRight, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 11-catalogue · theme: atelier · nav: N1b · footer: Ft4 */
@@ -15,6 +15,7 @@ export default function PersonaLibraryPage() {
   const router = useRouter();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
   // Base64 Import/Export Modal State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -25,14 +26,19 @@ export default function PersonaLibraryPage() {
   const [importStatus, setImportStatus] = useState<string | null>(null);
 
   const personas = useLiveQuery(() => db.personas.where('isArchived').equals(0).toArray()) || [];
-  const groups = useLiveQuery(() => db.groups.toArray()) || [];
 
   // Extract all unique tags
   const allTags = Array.from(new Set(personas.flatMap((p) => p.tags || [])));
 
-  const filteredPersonas = selectedTag
-    ? personas.filter((p) => p.tags?.includes(selectedTag))
-    : personas;
+  const filteredPersonas = personas.filter((p) => {
+    const matchesTag = selectedTag ? p.tags?.includes(selectedTag) : true;
+    const matchesSearch = searchQuery.trim() === '' ||
+      p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+    return matchesTag && matchesSearch;
+  });
 
   const handleStart1On1 = async (persona: Persona) => {
     const newChatId = 'chat-' + Date.now();
@@ -132,18 +138,36 @@ export default function PersonaLibraryPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsImportModalOpen(true)}
-              className="btn-hallmark text-xs gap-1.5"
+              aria-label="Import persona share code"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
               <Upload className="w-3.5 h-3.5" /> Import Code
             </button>
-            <Link href="/personas/new" className="btn-hallmark btn-hallmark-primary text-xs gap-1.5">
+            <Link
+              href="/personas/new"
+              aria-label="Create new persona"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
               <Plus className="w-3.5 h-3.5" /> + New Persona
             </Link>
           </div>
         </header>
 
-        {/* Dynamic Tag Filter Menu & View Toggles */}
-        <div className="flex flex-wrap items-center justify-between gap-4 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)]">
+        {/* Dynamic Search & Tag Filter Bar */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)]">
+          {/* Live Search Input */}
+          <div className="relative flex-1 max-w-md">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search by name, role, or description..."
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
+            />
+            <Search className="w-3.5 h-3.5 text-[var(--color-ink-muted)] absolute left-2.5 top-2" />
+          </div>
+
+          {/* Tag Pills */}
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setSelectedTag(null)}
@@ -170,7 +194,8 @@ export default function PersonaLibraryPage() {
             ))}
           </div>
 
-          <div className="flex items-center border border-[var(--color-border)] rounded-[var(--radius-sm)] p-0.5 bg-[var(--color-paper)]">
+          {/* Grid/List View Toggle */}
+          <div className="flex items-center border border-[var(--color-border)] rounded-[var(--radius-sm)] p-0.5 bg-[var(--color-paper)] shrink-0">
             <button
               onClick={() => setViewMode('grid')}
               aria-label="Switch to grid view"
@@ -195,7 +220,7 @@ export default function PersonaLibraryPage() {
         {/* 11 · Catalogue Grid/List Surface */}
         {filteredPersonas.length === 0 ? (
           <div className="p-12 text-center border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)]">
-            <div className="text-sm text-[var(--color-ink-muted)]">No personas match the selected filter.</div>
+            <div className="text-sm text-[var(--color-ink-muted)]">No personas match the selected search or tag filter.</div>
           </div>
         ) : viewMode === 'grid' ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -247,7 +272,8 @@ export default function PersonaLibraryPage() {
 
                   <button
                     onClick={() => handleStart1On1(persona)}
-                    className="w-full btn-hallmark text-xs justify-between"
+                    aria-label={`Start 1-on-1 dialogue with ${persona.name}`}
+                    className="w-full btn-hallmark text-xs justify-between focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                   >
                     <span>Start 1-on-1</span>
                     <ArrowRight className="w-3.5 h-3.5" />
@@ -270,7 +296,7 @@ export default function PersonaLibraryPage() {
                 <div className="flex items-center gap-2">
                   <Link
                     href={`/personas/${persona.id}/edit`}
-                    className="btn-hallmark text-xs p-2"
+                    className="btn-hallmark text-xs p-2 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                     aria-label={`Edit ${persona.name}`}
                     title="Edit Persona"
                   >
@@ -278,7 +304,7 @@ export default function PersonaLibraryPage() {
                   </Link>
                   <button
                     onClick={() => handleExport(persona)}
-                    className="btn-hallmark text-xs p-2"
+                    className="btn-hallmark text-xs p-2 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                     aria-label={`Export ${persona.name}`}
                     title="Export Share Code"
                   >
@@ -286,7 +312,8 @@ export default function PersonaLibraryPage() {
                   </button>
                   <button
                     onClick={() => handleStart1On1(persona)}
-                    className="btn-hallmark btn-hallmark-primary text-xs"
+                    aria-label={`Start Chat with ${persona.name}`}
+                    className="btn-hallmark btn-hallmark-primary text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                   >
                     Start Chat
                   </button>
@@ -314,7 +341,7 @@ export default function PersonaLibraryPage() {
               <div className="flex justify-end">
                 <button
                   onClick={() => setIsExportModalOpen(false)}
-                  className="btn-hallmark text-xs"
+                  className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                 >
                   Close
                 </button>
@@ -349,19 +376,19 @@ export default function PersonaLibraryPage() {
                 <div className="grid grid-cols-3 gap-2">
                   <button
                     onClick={() => handleImport('replace')}
-                    className="btn-hallmark text-xs"
+                    className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                   >
                     Replace
                   </button>
                   <button
                     onClick={() => handleImport('duplicate')}
-                    className="btn-hallmark btn-hallmark-primary text-xs"
+                    className="btn-hallmark btn-hallmark-primary text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                   >
                     Duplicate (Copy)
                   </button>
                   <button
                     onClick={() => handleImport('skip')}
-                    className="btn-hallmark text-xs"
+                    className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                   >
                     Skip
                   </button>

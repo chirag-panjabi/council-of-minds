@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { Sparkles, MessageSquare, Users, AlertCircle, ArrowRight, Plus } from 'lucide-react';
+import { Sparkles, MessageSquare, Users, AlertCircle, ArrowRight, Plus, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 01-bento-grid · theme: specimen · nav: N6 · footer: Ft1 */
@@ -13,6 +13,7 @@ import { useRouter } from 'next/navigation';
 export default function DashboardPage() {
   const router = useRouter();
   const [hasProviderKey, setHasProviderKey] = useState(true);
+  const [quickPersonaSearch, setQuickPersonaSearch] = useState('');
 
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
   const personas = useLiveQuery(() => db.personas.where('isArchived').equals(0).toArray()) || [];
@@ -29,6 +30,12 @@ export default function DashboardPage() {
   }, []);
 
   const totalTokens = usageRecords.reduce((acc, u) => acc + u.promptTokens + u.completionTokens, 0);
+
+  const filteredQuickPersonas = personas.filter(
+    (p) =>
+      p.name.toLowerCase().includes(quickPersonaSearch.toLowerCase()) ||
+      p.role.toLowerCase().includes(quickPersonaSearch.toLowerCase())
+  );
 
   const handleStart1On1 = async (personaId: string) => {
     const persona = personas.find((p) => p.id === personaId);
@@ -170,34 +177,53 @@ export default function DashboardPage() {
             </Link>
           </div>
 
-          {/* Tile 3: Quick 1-on-1 Personas Launcher */}
+          {/* Tile 3: Quick 1-on-1 Personas Launcher with Search Filter */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
-            <span className="font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
-              03 // Quick Start
-            </span>
-            <h2 className="font-display text-2xl text-[var(--color-ink)]">1-on-1 Perspective</h2>
-            <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
-              Consult an individual persona for focused reflection.
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
+                  03 // Quick Start
+                </span>
+                <h2 className="font-display text-2xl text-[var(--color-ink)]">1-on-1 Perspective</h2>
+              </div>
+            </div>
+
+            {/* Quick Filter Search Input */}
+            <div className="relative">
+              <input
+                type="text"
+                value={quickPersonaSearch}
+                onChange={(e) => setQuickPersonaSearch(e.target.value)}
+                placeholder="Filter personas..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
+              />
+              <Search className="w-3.5 h-3.5 text-[var(--color-ink-muted)] absolute left-2.5 top-2" />
+            </div>
 
             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {personas.slice(0, 4).map((p) => (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => handleStart1On1(p.id)}
-                  aria-label={`Start 1-on-1 session with ${p.name}`}
-                  className="w-full p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] text-left hover:border-[var(--color-accent)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] transition-colors flex items-center justify-between group"
-                >
-                  <div>
-                    <div className="text-sm font-semibold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors">
-                      {p.name}
+              {filteredQuickPersonas.length === 0 ? (
+                <div className="p-3 text-center text-xs text-[var(--color-ink-muted)] italic font-mono">
+                  No matching persona found.
+                </div>
+              ) : (
+                filteredQuickPersonas.slice(0, 6).map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => handleStart1On1(p.id)}
+                    aria-label={`Start 1-on-1 session with ${p.name}`}
+                    className="w-full p-2.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] text-left hover:border-[var(--color-accent)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] transition-colors flex items-center justify-between group"
+                  >
+                    <div>
+                      <div className="text-xs font-semibold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors">
+                        {p.name}
+                      </div>
+                      <div className="text-[10px] text-[var(--color-ink-muted)]">{p.role}</div>
                     </div>
-                    <div className="text-xs text-[var(--color-ink-muted)]">{p.role}</div>
-                  </div>
-                  <ArrowRight className="w-4 h-4 text-[var(--color-ink-faint)] group-hover:text-[var(--color-accent)] transition-colors shrink-0" />
-                </button>
-              ))}
+                    <ArrowRight className="w-3.5 h-3.5 text-[var(--color-ink-faint)] group-hover:text-[var(--color-accent)] transition-colors shrink-0" />
+                  </button>
+                ))
+              )}
             </div>
           </div>
 

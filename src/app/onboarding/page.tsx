@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
 
@@ -12,6 +12,7 @@ export default function OnboardingPage() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
+  const [systemProfile, setSystemProfile] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -55,6 +56,10 @@ export default function OnboardingPage() {
         localStorage.setItem(`framework-engine:api-key:${selectedProvider}`, apiKey.trim());
       }
 
+      if (systemProfile.trim()) {
+        localStorage.setItem('framework-engine:system-profile', systemProfile.trim());
+      }
+
       // Route to Dashboard
       localStorage.removeItem('framework-engine:has_skipped_onboarding');
       router.push('/');
@@ -66,6 +71,9 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
+    if (systemProfile.trim()) {
+      localStorage.setItem('framework-engine:system-profile', systemProfile.trim());
+    }
     localStorage.setItem('framework-engine:has_skipped_onboarding', 'true');
     router.push('/');
   };
@@ -131,7 +139,7 @@ export default function OnboardingPage() {
                   setSelectedProvider(p.id as any);
                   setValidationError(null);
                 }}
-                className={`btn-hallmark text-xs justify-center transition-colors ${
+                className={`btn-hallmark text-xs justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
                   selectedProvider === p.id
                     ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold'
                     : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
@@ -157,7 +165,7 @@ export default function OnboardingPage() {
                   }
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[var(--color-accent)] hover:underline"
+                  className="inline-flex items-center gap-1 text-[var(--color-accent)] hover:underline focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
                 >
                   Get API Key <ExternalLink className="w-3 h-3" />
                 </a>
@@ -168,12 +176,12 @@ export default function OnboardingPage() {
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder={`sk-...`}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-focus)] font-mono text-[var(--color-ink)]"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] font-mono text-[var(--color-ink)]"
                 />
                 <button
                   type="button"
                   onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-2.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none"
+                  className="absolute right-3 top-2.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
                   aria-label={showKey ? 'Hide key' : 'Show key'}
                 >
                   {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -187,13 +195,27 @@ export default function OnboardingPage() {
                 type="text"
                 value={ollamaUrl}
                 onChange={(e) => setOllamaUrl(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] font-mono text-[var(--color-ink)]"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] font-mono text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
               <p className="text-xs text-[var(--color-ink-faint)]">
-                Make sure your local Ollama instance allows CORS: <code className="bg-[var(--color-paper-3)] px-1">OLLAMA_ORIGINS="{typeof window !== 'undefined' ? window.location.origin : '*'}" ollama serve</code>
+                Make sure your local Ollama instance allows CORS: <code className="bg-[var(--color-paper-3)] px-1 font-mono">OLLAMA_ORIGINS="{typeof window !== 'undefined' ? window.location.origin : '*'}" ollama serve</code>
               </p>
             </div>
           )}
+
+          {/* Optional Personal System Profile Textarea */}
+          <div className="space-y-2 pt-2 border-t border-[var(--color-border-hairline)]">
+            <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-ink-muted)]">
+              <User className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Personal System Profile (Optional)
+            </div>
+            <textarea
+              rows={3}
+              value={systemProfile}
+              onChange={(e) => setSystemProfile(e.target.value)}
+              placeholder="e.g. I am a founder building open source products. Include my background context when personas respond..."
+              className="w-full p-2.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
+            />
+          </div>
 
           {validationError && (
             <div className="p-3 text-xs bg-[var(--color-error)]/10 text-[var(--color-error)] border border-[var(--color-error)]/20 rounded-[var(--radius-sm)]">
@@ -206,7 +228,7 @@ export default function OnboardingPage() {
             <button
               type="button"
               onClick={handleSkip}
-              className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] underline"
+              className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] underline focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
             >
               Skip for Now (Read-Only Mode)
             </button>
@@ -215,7 +237,7 @@ export default function OnboardingPage() {
               type="button"
               onClick={handleValidateAndSave}
               disabled={isValidating}
-              className="btn-hallmark btn-hallmark-primary text-xs gap-2"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-2 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
             >
               {isValidating ? 'Validating Key...' : 'Validate & Save'}
               <ArrowRight className="w-4 h-4" />

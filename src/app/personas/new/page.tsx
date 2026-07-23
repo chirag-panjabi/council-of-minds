@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
-import { ArrowLeft, Save, Sparkles } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, Wand2 } from 'lucide-react';
 import Link from 'next/link';
 
 /* Hallmark · genre: editorial · macrostructure: form-surface · theme: atelier · nav: N1b · footer: Ft4 */
@@ -18,6 +18,56 @@ export default function NewPersonaPage() {
   const [defaultModel, setDefaultModel] = useState('gpt-4o');
   const [tagsInput, setTagsInput] = useState('Philosophy, Strategy');
   const [isSaving, setIsSaving] = useState(false);
+
+  // AI Quick-Generate State
+  const [quickPrompt, setQuickPrompt] = useState('');
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleQuickGenerate = async () => {
+    if (!quickPrompt.trim() || isGenerating) return;
+    setIsGenerating(true);
+
+    try {
+      const provider = 'openai';
+      const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-provider': provider,
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemPrompt: 'You are a Persona Directive Generator. Given a character name or prompt, output a JSON object with keys: name, role, description, systemPrompt, defaultModel, tags (array of strings). Do NOT wrap in markdown code blocks.',
+          messages: [{ role: 'user', content: `Generate persona directives for: "${quickPrompt}"` }],
+        }),
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
+      const text = await res.text();
+      const cleanJsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJsonStr);
+
+      if (parsed.name) setName(parsed.name);
+      if (parsed.role) setRole(parsed.role);
+      if (parsed.description) setDescription(parsed.description);
+      if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
+      if (parsed.defaultModel) setDefaultModel(parsed.defaultModel);
+      if (parsed.tags && Array.isArray(parsed.tags)) setTagsInput(parsed.tags.join(', '));
+    } catch (err: any) {
+      // Fallback local heuristic generator if offline or error
+      setName(quickPrompt.trim());
+      setRole('Advisor & Specialist');
+      setDescription(`Analytical reflection persona modeled after ${quickPrompt.trim()}.`);
+      setSystemPrompt(`You are ${quickPrompt.trim()}. Analyze all user dilemmas through your unique philosophical stance and core principles. Be direct, structured, and insightful.`);
+      setTagsInput('Analysis, Custom');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,13 +99,47 @@ export default function NewPersonaPage() {
       <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-8">
         {/* N1b Navigation Header */}
         <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
-          <Link href="/personas" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-mono">
+          <Link
+            href="/personas"
+            aria-label="Back to Persona Library"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-mono focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" /> Back to Library
           </Link>
           <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
             Persona Creator Surface
           </div>
         </header>
+
+        {/* AI Quick-Generate Assistant Bar */}
+        <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-accent)]/30 rounded-[var(--radius-lg)] space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-xs font-mono font-semibold text-[var(--color-accent)] uppercase tracking-wider">
+              <Sparkles className="w-4 h-4" /> AI Auto-Draft Assistant
+            </div>
+            <span className="text-[10px] font-mono text-[var(--color-ink-muted)]">1-Click Directive Generator</span>
+          </div>
+
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={quickPrompt}
+              onChange={(e) => setQuickPrompt(e.target.value)}
+              placeholder="e.g. Marcus Aurelius, Skeptical VC, or Friedrich Nietzsche..."
+              className="flex-1 px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
+            />
+            <button
+              type="button"
+              onClick={handleQuickGenerate}
+              disabled={isGenerating || !quickPrompt.trim()}
+              aria-label="Auto-Draft Directives"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+            >
+              <Wand2 className="w-3.5 h-3.5" />
+              {isGenerating ? 'Drafting...' : 'Auto-Draft'}
+            </button>
+          </div>
+        </div>
 
         {/* Form Surface */}
         <form onSubmit={handleSubmit} className="space-y-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 md:p-8">
@@ -145,13 +229,13 @@ export default function NewPersonaPage() {
           </div>
 
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--color-border-hairline)]">
-            <Link href="/personas" className="btn-hallmark text-xs">
+            <Link href="/personas" className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]">
               Cancel
             </Link>
             <button
               type="submit"
               disabled={isSaving}
-              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
             >
               <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Persona'}
             </button>
