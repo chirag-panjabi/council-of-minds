@@ -6,8 +6,9 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { ChatMessage, Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
+import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -24,13 +25,22 @@ export default function CouncilChatPage() {
   );
   
   const allPersonas = useLiveQuery(() => db.personas.toArray()) || [];
-  const activeDebaterIds = chatSession?.personaIds || personaGroup?.personaIds || [];
+  const [activeDebaterIds, setActiveDebaterIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    const ids = chatSession?.personaIds || personaGroup?.personaIds || [];
+    if (ids.length > 0 && activeDebaterIds.length === 0) {
+      setActiveDebaterIds(ids);
+    }
+  }, [chatSession, personaGroup]);
+
   const councilPersonas = allPersonas.filter((p) => activeDebaterIds.includes(p.id));
   const activeSynthId = chatSession?.synthesizerId || personaGroup?.synthesizerPersonaId;
   const synthesizerPersona = allPersonas.find((p) => p.id === activeSynthId);
 
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
+  const [autoPilotCap, setAutoPilotCap] = useState<number>(6);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeSpeakerIndex, setActiveSpeakerIndex] = useState<number | null>(null);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
@@ -38,6 +48,9 @@ export default function CouncilChatPage() {
   // Incognito Mode Memory State
   const [isIncognito, setIsIncognito] = useState(false);
   const [incognitoMessages, setIncognitoMessages] = useState<ChatMessage[]>([]);
+
+  // Persona Selector Modal for Dynamic Debater Addition
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
   // Multimodal File Attachments Staging
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
@@ -57,6 +70,15 @@ export default function CouncilChatPage() {
 
   const toggleReasoning = (msgId: string) => {
     setExpandedReasoningIds((prev) => ({ ...prev, [msgId]: !prev[msgId] }));
+  };
+
+  const handleAddDebaters = (newPersonas: Persona[]) => {
+    const newIds = newPersonas.map((p) => p.id);
+    const combinedIds = Array.from(new Set([...activeDebaterIds, ...newIds]));
+    setActiveDebaterIds(combinedIds);
+    if (!isIncognito) {
+      db.chats.update(chatId, { personaIds: combinedIds, updatedAt: Date.now() });
+    }
   };
 
   // Staging File Handlers
@@ -125,6 +147,7 @@ export default function CouncilChatPage() {
     let mdContent = `# ${chatSession?.title || 'Council Debate Transcript'}${isIncognito ? ' (Incognito Session)' : ''}\n\n`;
     mdContent += `**Council Debaters:** ${councilPersonas.map((p) => p.name).join(', ')}\n`;
     mdContent += `**Synthesizer:** ${synthesizerPersona?.name || 'Standard Synthesizer'}\n`;
+    mdContent += `**Auto-Pilot Turn Cap:** ${autoPilotCap} turns\n`;
     mdContent += `**Date:** ${new Date().toLocaleDateString()}\n\n---\n\n`;
 
     activeMessages.forEach((msg) => {
@@ -270,8 +293,9 @@ export default function CouncilChatPage() {
     setIsStreaming(true);
 
     let currentHistory = [...activeMessages, userMessageObj];
+    const turnsToExecute = Math.min(councilPersonas.length, autoPilotCap);
 
-    for (let i = 0; i < councilPersonas.length; i++) {
+    for (let i = 0; i < turnsToExecute; i++) {
       setActiveSpeakerIndex(i);
       const speaker = councilPersonas[i];
       const turnMsg = await executePersonaTurn(speaker, currentHistory);
@@ -322,6 +346,16 @@ export default function CouncilChatPage() {
         onDrop={handleDrop}
         className="flex flex-col h-screen bg-[var(--color-paper)] relative"
       >
+        {/* Persona Selector Modal for Adding Debaters */}
+        <PersonaSelectorModal
+          isOpen={isSelectorOpen}
+          onClose={() => setIsSelectorOpen(false)}
+          mode="multi"
+          title="Add Debaters to Council"
+          selectedPersonaIds={activeDebaterIds}
+          onSelectMultiplePersonas={handleAddDebaters}
+        />
+
         {/* Drag and Drop Overlay */}
         {isDragging && (
           <div className="absolute inset-0 z-50 bg-black/60 backdrop-blur-xs flex flex-col items-center justify-center text-white space-y-3 pointer-events-none">
@@ -342,7 +376,7 @@ export default function CouncilChatPage() {
                 {chatSession?.title || 'Council Debate Session'}
                 {isIncognito && (
                   <span className="px-2 py-0.5 bg-[var(--color-warning)]/15 text-[var(--color-warning)] border border-[var(--color-warning)]/30 rounded text-[10px] font-mono font-semibold flex items-center gap-1">
-                    <EyeOff className="w-3 h-3" /> Incognito (Memory Only)
+                    <EyeOff className="w-3 h-3" /> Incognito
                   </span>
                 )}
               </div>
@@ -353,23 +387,25 @@ export default function CouncilChatPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Incognito Toggle */}
-            <button
-              onClick={() => {
-                setIsIncognito(!isIncognito);
-                if (!isIncognito && incognitoMessages.length === 0) {
-                  setIncognitoMessages([...dbMessages]);
-                }
-              }}
-              aria-label="Toggle Incognito Conversation Mode"
-              className={`btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                isIncognito ? 'bg-[var(--color-warning)]/20 text-[var(--color-warning)] border-[var(--color-warning)]/40 font-semibold' : ''
-              }`}
-              title="Toggle Memory-Only Incognito Mode"
+            {/* Auto-Pilot Turn Cap Selector (1 to 12 turns) */}
+            <div
+              className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]"
+              title="Auto-Pilot Turn Limit Cap"
             >
-              <EyeOff className="w-3.5 h-3.5" />
-              {isIncognito ? 'Incognito On' : 'Incognito'}
-            </button>
+              <Sliders className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+              <select
+                value={autoPilotCap}
+                onChange={(e) => setAutoPilotCap(Number(e.target.value))}
+                aria-label="Select Auto-Pilot Turn Cap Limit"
+                className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map((num) => (
+                  <option key={num} value={num}>
+                    Cap: {num} turn{num === 1 ? '' : 's'}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Model Selector */}
             <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]">
@@ -388,6 +424,24 @@ export default function CouncilChatPage() {
               </select>
             </div>
 
+            {/* Incognito Toggle */}
+            <button
+              onClick={() => {
+                setIsIncognito(!isIncognito);
+                if (!isIncognito && incognitoMessages.length === 0) {
+                  setIncognitoMessages([...dbMessages]);
+                }
+              }}
+              aria-label="Toggle Incognito Conversation Mode"
+              className={`btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isIncognito ? 'bg-[var(--color-warning)]/20 text-[var(--color-warning)] border-[var(--color-warning)]/40 font-semibold' : ''
+              }`}
+              title="Toggle Memory-Only Incognito Mode"
+            >
+              <EyeOff className="w-3.5 h-3.5" />
+              {isIncognito ? 'Incognito On' : 'Incognito'}
+            </button>
+
             {/* Export Session Transcript Button */}
             <button
               onClick={handleExportTranscript}
@@ -401,7 +455,7 @@ export default function CouncilChatPage() {
           </div>
         </header>
 
-        {/* Debater Roster Strip */}
+        {/* Debater Roster Strip with + Add Agent Button */}
         <div className="px-6 py-2 bg-[var(--color-paper)] border-b border-[var(--color-border-hairline)] flex items-center justify-between overflow-x-auto gap-4">
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-ink-muted)] shrink-0">Debaters:</span>
@@ -421,6 +475,15 @@ export default function CouncilChatPage() {
                 <span>@{p.name}</span>
               </button>
             ))}
+
+            <button
+              onClick={() => setIsSelectorOpen(true)}
+              aria-label="Add debater persona to Council"
+              className="px-2.5 py-1 rounded-full text-xs font-mono border border-dashed border-[var(--color-border)] text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] hover:border-[var(--color-accent)] flex items-center gap-1 transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+              title="Add persona to active council"
+            >
+              <Plus className="w-3 h-3" /> Add Agent
+            </button>
           </div>
 
           <button
@@ -510,7 +573,7 @@ export default function CouncilChatPage() {
         {/* Multimodal Attachment Staging Bar */}
         <AttachmentStaging stagedFiles={stagedFiles} onRemoveFile={handleRemoveStagedFile} />
 
-        {/* Input Bar with Paperclip & Morphing Round-Robin Trigger Button */}
+        {/* Input Bar */}
         <form onSubmit={handleSend} className="p-4 border-t border-[var(--color-border-hairline)] bg-[var(--color-paper-2)]">
           <div className="max-w-3xl mx-auto relative flex items-center gap-2">
             <button
