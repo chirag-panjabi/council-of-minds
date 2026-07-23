@@ -12,7 +12,11 @@ export default function PrivacyPage() {
       <div className="p-6 md:p-12 max-w-3xl mx-auto space-y-10">
         {/* N1a Broad-sheet Navigation Header */}
         <header className="border-b border-[var(--color-border-hairline)] pb-4 flex items-center justify-between">
-          <Link href="/" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
+          <Link
+            href="/"
+            aria-label="Return to Dashboard"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" /> Return to Dashboard
           </Link>
           <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
@@ -41,10 +45,10 @@ export default function PrivacyPage() {
             </div>
             <h2 className="font-display text-2xl text-[var(--color-ink)]">Your Data Belongs Exclusively to Your Browser</h2>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
-              Council of Minds operates on a <strong>100% Client-Side Storage</strong> architecture. All your conversation histories, custom personas, persona groups, attachments, and settings are stored locally inside your browser’s IndexedDB database (<code className="bg-[var(--color-paper-2)] px-1">CouncilOfMindsDB</code>) and localStorage.
+              Council of Minds operates on a <strong>100% Client-Side Storage</strong> architecture. All your conversation histories, custom personas, persona groups, attachments, and settings are stored locally inside your browser’s IndexedDB database (<code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">CouncilOfMindsDB</code>) and localStorage.
             </p>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
-              There is zero server-side database (no PostgreSQL, MongoDB, or cloud backup buckets). If you clear your browser cache or reset site data, your local information is purged unless you export a <code className="bg-[var(--color-paper-2)] px-1">.zip</code> backup from Settings.
+              There is zero server-side database (no PostgreSQL, MongoDB, or cloud backup buckets). If you clear your browser cache or reset site data, your local information is purged unless you export a <code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">.json</code> database backup from Settings.
             </p>
           </section>
 
@@ -57,10 +61,10 @@ export default function PrivacyPage() {
             </div>
             <h2 className="font-display text-2xl text-[var(--color-ink)]">How Cloud API Keys & Streaming Transit</h2>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
-              When you interact with cloud LLM providers (OpenAI, Anthropic, Google Gemini), requests pass through a same-origin stateless proxy route (<code className="bg-[var(--color-paper-2)] px-1">/api/chat</code>) executing on the Edge Runtime.
+              When you interact with cloud LLM providers (OpenAI, Anthropic, Google Gemini), requests pass through a same-origin stateless proxy route (<code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">/api/chat</code>) executing on the Edge Runtime.
             </p>
             <ul className="text-sm text-[var(--color-ink-muted)] space-y-1.5 list-disc pl-5">
-              <li>Your API key is sent via HTTPS request headers (<code className="bg-[var(--color-paper-2)] px-1">x-api-key</code>) directly from your browser.</li>
+              <li>Your API key is sent via HTTPS request headers (<code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">x-api-key</code>) directly from your browser.</li>
               <li>The proxy exists purely to bypass browser CORS restrictions and stream Server-Sent Events (SSE) back to your screen.</li>
               <li><strong>The proxy server never logs, prints, or persists your API key or prompt content.</strong> Once the stream finishes, request memory is immediately garbage collected.</li>
             </ul>
@@ -75,10 +79,10 @@ export default function PrivacyPage() {
             </div>
             <h2 className="font-display text-2xl text-[var(--color-ink)]">Direct Browser-to-Loopback Connectivity</h2>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
-              If you configure a local LLM daemon (Ollama on <code className="bg-[var(--color-paper-2)] px-1">http://localhost:11434</code> or LM Studio on <code className="bg-[var(--color-paper-2)] px-1">http://localhost:1234</code>), requests travel <strong>browser → localhost loopback directly</strong>.
+              If you configure a local LLM daemon (Ollama on <code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">http://localhost:11434</code> or LM Studio on <code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">http://localhost:1234</code>), requests travel <strong>browser → localhost loopback directly</strong>.
             </p>
             <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed">
-              Cloud proxies are completely bypassed for local requests. No data or prompts leave your machine. You must ensure your local daemon allows CORS requests from your application domain (e.g., <code className="bg-[var(--color-paper-2)] px-1">OLLAMA_ORIGINS</code>).
+              Cloud proxies are completely bypassed for local requests. No data or prompts leave your machine. You must ensure your local daemon allows CORS requests from your application domain (e.g., <code className="bg-[var(--color-paper-2)] px-1 font-mono text-xs">OLLAMA_ORIGINS</code>).
             </p>
           </section>
 
@@ -107,7 +111,11 @@ export default function PrivacyPage() {
         {/* Ft1 Mast-headed Footer */}
         <footer className="border-t border-[var(--color-border-hairline)] pt-6 flex items-center justify-between text-xs font-mono text-[var(--color-ink-faint)]">
           <div>Council of Minds Memo Ref: PRIVACY-SAFETY-V1.0</div>
-          <Link href="/onboarding" className="text-[var(--color-accent)] hover:underline">
+          <Link
+            href="/onboarding"
+            aria-label="Back to Onboarding"
+            className="text-[var(--color-accent)] hover:underline focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
+          >
             Back to Onboarding
           </Link>
         </footer>
