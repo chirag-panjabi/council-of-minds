@@ -1,287 +1,239 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { Sparkles, MessageSquare, Users, AlertCircle, ArrowRight, Plus, Search, Trash2 } from 'lucide-react';
+import type { Persona } from '@/types';
+import Link from 'next/link';
+import { Users, MessageSquare, ArrowRight, Zap, Shield, Search, Plus, Trash2 } from 'lucide-react';
+import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { useRouter } from 'next/navigation';
 
-/* Hallmark · genre: editorial · macrostructure: 01-bento-grid · theme: specimen · nav: N6 · footer: Ft1 */
+/* Hallmark · genre: editorial · macrostructure: 01-bento · theme: studio · nav: N1 · footer: Ft1 */
 
 export default function DashboardPage() {
   const router = useRouter();
-  const [hasProviderKey, setHasProviderKey] = useState(true);
-  const [quickPersonaSearch, setQuickPersonaSearch] = useState('');
-
+  const personas = useLiveQuery(() => db.personas.filter((p) => !p.isArchived).toArray()) || [];
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
-  const personas = useLiveQuery(() => db.personas.where('isArchived').equals(0).toArray()) || [];
   const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(5).toArray()) || [];
   const usageRecords = useLiveQuery(() => db.usage.toArray()) || [];
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const hasOpenAI = Boolean(localStorage.getItem('framework-engine:api-key:openai'));
-    const hasAnthropic = Boolean(localStorage.getItem('framework-engine:api-key:anthropic'));
-    const hasGemini = Boolean(localStorage.getItem('framework-engine:api-key:gemini'));
-    const hasOllama = Boolean(localStorage.getItem('framework-engine:ollama-enabled') === 'true');
-    setHasProviderKey(hasOpenAI || hasAnthropic || hasGemini || hasOllama);
-  }, []);
+  const [personaSearch, setPersonaSearch] = useState('');
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
 
-  const totalTokens = usageRecords.reduce((acc, u) => acc + u.promptTokens + u.completionTokens, 0);
-
-  const filteredQuickPersonas = personas.filter(
-    (p) =>
-      p.name.toLowerCase().includes(quickPersonaSearch.toLowerCase()) ||
-      p.role.toLowerCase().includes(quickPersonaSearch.toLowerCase())
+  const totalTokens = usageRecords.reduce(
+    (acc, rec) => acc + (rec.promptTokens || 0) + (rec.completionTokens || 0),
+    0
   );
 
-  const handleStart1On1 = async (personaId: string) => {
-    const persona = personas.find((p) => p.id === personaId);
-    if (!persona) return;
+  const filteredPersonas = personas.filter(
+    (p) =>
+      p.name.toLowerCase().includes(personaSearch.toLowerCase()) ||
+      p.role.toLowerCase().includes(personaSearch.toLowerCase())
+  );
 
-    const newChatId = 'chat-' + Date.now();
-    await db.chats.add({
-      id: newChatId,
-      title: `1-on-1 with ${persona.name}`,
-      type: '1-on-1',
-      personaId: persona.id,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    });
-
-    router.push(`/chat/1-on-1/${newChatId}`);
+  const handleSelectPersonaForChat = (persona: Persona) => {
+    router.push(`/chat/1-on-1/new?persona=${persona.id}`);
   };
 
-  const handleDeleteChat = async (e: React.MouseEvent, chatId: string, chatTitle: string) => {
-    e.preventDefault();
+  const handleDeleteSession = async (e: React.MouseEvent, sessionId: string) => {
     e.stopPropagation();
-
-    if (confirm(`Are you sure you want to delete session "${chatTitle}"?`)) {
-      await db.chats.delete(chatId);
-      await db.messages.where('chatId').equals(chatId).delete();
+    e.preventDefault();
+    if (confirm('Delete this chat session permanently?')) {
+      await db.messages.where('chatId').equals(sessionId).delete();
+      await db.chats.delete(sessionId);
     }
   };
 
   return (
     <Shell>
-      <div className="p-6 md:p-10 space-y-8 max-w-6xl mx-auto">
-        {/* N6 Newspaper Masthead Header */}
-        <header className="border-b-2 border-[var(--color-ink)] pb-4 space-y-2">
-          <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
-            <span>Vol. I — Executive Studio</span>
-            <span>{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+      <div className="p-6 md:p-12 max-w-7xl mx-auto space-y-10">
+        {/* Persona Selector Modal triggered by + New Chat */}
+        <PersonaSelectorModal
+          isOpen={isSelectorOpen}
+          onClose={() => setIsSelectorOpen(false)}
+          mode="single"
+          title="Select Persona to Start 1-on-1 Chat"
+          onSelectPersona={handleSelectPersonaForChat}
+        />
+
+        {/* Masthead Header (N1) */}
+        <header className="border-b border-[var(--color-border-hairline)] pb-6 space-y-2">
+          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
+            <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] inline-block" />
+            Workspace Orientation • Sovereign Local Engine
           </div>
-          <h1 className="font-display text-4xl md:text-6xl text-[var(--color-ink)] leading-none tracking-tight">
-            Cognitive Studio & Dilemma Debater
+          <h1 className="font-display text-4xl md:text-5xl font-normal text-[var(--color-ink)] tracking-tight">
+            Council of Minds
           </h1>
-          <p className="text-sm text-[var(--color-ink-muted)] font-body max-w-2xl leading-relaxed">
-            Synthesize competing perspectives, challenge mental models, and resolve complex personal and strategic decisions.
+          <p className="text-sm leading-relaxed text-[var(--color-ink-muted)] max-w-2xl font-body">
+            Multi-persona cognitive framework for structured decision synthesis, dialectic debate, and analytical 1-on-1 dialogue.
           </p>
         </header>
 
-        {/* Generation Gate Banner if no key configured */}
-        {!hasProviderKey && (
-          <div className="p-4 bg-[var(--color-warning)]/10 border border-[var(--color-warning)] rounded-[var(--radius-md)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-[var(--color-warning)] shrink-0 mt-0.5" />
-              <div>
-                <div className="text-sm font-semibold text-[var(--color-ink)]">
-                  Read-Only Mode — No API Provider Configured
+        {/* Bento Grid Layout (Macrostructure 01) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Bento Tile 1: Saved Persona Groups (Rosters) */}
+          <div className="lg:col-span-2 p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-6 flex flex-col justify-between group hover:border-[var(--color-border)] transition-all">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-[var(--color-ink-muted)]">
+                  <Users className="w-4 h-4 text-[var(--color-accent)]" /> Saved Roster Panels
                 </div>
-                <div className="text-xs text-[var(--color-ink-muted)]">
-                  Generation is currently disabled. Configure an API key or local Ollama connection to start persona debates.
-                </div>
-              </div>
-            </div>
-            <Link href="/onboarding" className="btn-hallmark btn-hallmark-primary text-xs shrink-0">
-              Configure Keys
-            </Link>
-          </div>
-        )}
-
-        {/* 01 · Bento Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Tile 1: Persona Groups Grid (Spans 2 cols) */}
-          <div className="md:col-span-2 p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
-            <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-3">
-              <div>
-                <span className="font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
-                  01 // Saved Rosters
-                </span>
-                <h2 className="font-display text-2xl text-[var(--color-ink)]">Persona Groups Overview</h2>
-              </div>
-              <Link href="/personas/groups" className="btn-hallmark text-xs gap-1">
-                <Plus className="w-3.5 h-3.5" /> Group Editor
-              </Link>
-            </div>
-
-            {groups.length === 0 ? (
-              <div className="p-8 text-center border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)] space-y-3">
-                <Users className="w-8 h-8 text-[var(--color-ink-faint)] mx-auto" />
-                <div className="text-sm text-[var(--color-ink-muted)] font-medium">No custom persona groups created yet.</div>
-                <p className="text-xs text-[var(--color-ink-faint)] max-w-sm mx-auto">
-                  Combine Stoic, VC, Socratic, and CTO personas into custom Councils to deconstruct dilemmas.
-                </p>
-                <Link href="/personas/groups" className="btn-hallmark text-xs inline-flex">
-                  Create First Group
+                <Link
+                  href="/personas/groups"
+                  className="text-xs font-mono text-[var(--color-accent)] hover:underline flex items-center gap-1"
+                >
+                  Manage Groups <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {groups.map((group) => (
-                  <div key={group.id} className="p-4 bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-3 flex flex-col justify-between">
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between">
-                        <h3 className="font-display text-lg text-[var(--color-ink)]">{group.name}</h3>
-                        <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
-                      </div>
-                      <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2 leading-relaxed">{group.description}</p>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2 border-t border-[var(--color-border-hairline)]">
-                      <span className="text-[10px] font-mono text-[var(--color-ink-faint)]">
-                        {group.personaIds.length} Personas
-                      </span>
-                      <Link
-                        href="/personas/groups"
-                        aria-label={`Open roster editor for ${group.name}`}
-                        className="text-xs text-[var(--color-accent)] font-semibold hover:underline inline-flex items-center gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded px-1"
-                      >
-                        Launch Council <ArrowRight className="w-3 h-3" />
-                      </Link>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Tile 2: Usage Analytics Widget */}
-          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] flex flex-col justify-between space-y-4">
-            <div>
-              <span className="font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
-                02 // Local Metrics
-              </span>
-              <h2 className="font-display text-2xl text-[var(--color-ink)]">Token Consumption</h2>
-              <p className="text-xs text-[var(--color-ink-muted)] mt-1 leading-relaxed">
-                Extracted directly from SSE payloads. Zero remote telemetry.
-              </p>
-            </div>
-
-            <div className="space-y-4 my-4">
-              <div className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)]">
-                <div className="text-xs text-[var(--color-ink-muted)] uppercase tracking-wider font-mono">Total Tokens Passed</div>
-                <div className="font-display text-4xl text-[var(--color-ink)] mt-1">{totalTokens.toLocaleString()}</div>
-              </div>
-
-              <div className="flex justify-between text-xs text-[var(--color-ink-muted)] px-1 font-mono">
-                <span>Active Personas: {personas.length}</span>
-                <span>Saved Groups: {groups.length}</span>
-              </div>
-            </div>
-
-            <Link href="/analytics" className="btn-hallmark text-xs w-full justify-center">
-              View Detailed Analytics
-            </Link>
-          </div>
-
-          {/* Tile 3: Quick 1-on-1 Personas Launcher with Search Filter */}
-          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <span className="font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
-                  03 // Quick Start
-                </span>
-                <h2 className="font-display text-2xl text-[var(--color-ink)]">1-on-1 Perspective</h2>
-              </div>
-            </div>
-
-            {/* Quick Filter Search Input */}
-            <div className="relative">
-              <input
-                type="text"
-                value={quickPersonaSearch}
-                onChange={(e) => setQuickPersonaSearch(e.target.value)}
-                placeholder="Filter personas..."
-                className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-              />
-              <Search className="w-3.5 h-3.5 text-[var(--color-ink-muted)] absolute left-2.5 top-2" />
-            </div>
-
-            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-              {filteredQuickPersonas.length === 0 ? (
-                <div className="p-3 text-center text-xs text-[var(--color-ink-muted)] italic font-mono">
-                  No matching persona found.
+              {groups.length === 0 ? (
+                <div className="py-8 text-center space-y-3 border border-dashed border-[var(--color-border)] rounded-[var(--radius-sm)]">
+                  <p className="text-xs text-[var(--color-ink-muted)]">No persona rosters configured yet.</p>
+                  <Link
+                    href="/personas/groups"
+                    className="btn-hallmark text-xs inline-flex items-center gap-1 bg-[var(--color-accent)] text-white"
+                  >
+                    + Create Roster Group
+                  </Link>
                 </div>
               ) : (
-                filteredQuickPersonas.slice(0, 6).map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => handleStart1On1(p.id)}
-                    aria-label={`Start 1-on-1 session with ${p.name}`}
-                    className="w-full p-2.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] text-left hover:border-[var(--color-accent)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] transition-colors flex items-center justify-between group"
-                  >
-                    <div>
-                      <div className="text-xs font-semibold text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors">
-                        {p.name}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {groups.slice(0, 4).map((g) => (
+                    <Link
+                      key={g.id}
+                      href={`/chat/council/new?group=${g.id}`}
+                      className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] hover:border-[var(--color-accent)] rounded-[var(--radius-sm)] transition-all space-y-2 block"
+                    >
+                      <div className="font-display text-base text-[var(--color-ink)] flex items-center justify-between">
+                        <span>{g.name}</span>
+                        <span className="text-[10px] font-mono px-2 py-0.5 bg-[var(--color-paper-2)] rounded text-[var(--color-ink-muted)]">
+                          {g.personaIds?.length || 0} Members
+                        </span>
                       </div>
-                      <div className="text-[10px] text-[var(--color-ink-muted)]">{p.role}</div>
-                    </div>
-                    <ArrowRight className="w-3.5 h-3.5 text-[var(--color-ink-faint)] group-hover:text-[var(--color-accent)] transition-colors shrink-0" />
-                  </button>
-                ))
+                      <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2">{g.description}</p>
+                    </Link>
+                  ))}
+                </div>
               )}
             </div>
           </div>
 
-          {/* Tile 4: Recent History (Spans 2 cols) */}
-          <div className="md:col-span-2 p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
-            <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-3">
-              <div>
-                <span className="font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
-                  04 // History
+          {/* Bento Tile 2: Usage Telemetry Widget */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4 flex flex-col justify-between">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-ink-muted)] flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-[var(--color-accent)]" /> Token Telemetry
                 </span>
-                <h2 className="font-display text-2xl text-[var(--color-ink)]">Recent Sessions</h2>
+                <Link href="/analytics" className="text-xs font-mono text-[var(--color-accent)] hover:underline">
+                  Details
+                </Link>
+              </div>
+
+              <div className="space-y-1">
+                <div className="font-display text-3xl text-[var(--color-ink)]">
+                  {totalTokens.toLocaleString()}
+                </div>
+                <div className="text-xs font-mono text-[var(--color-ink-muted)]">Total Tokens Consumed</div>
               </div>
             </div>
 
+            <div className="pt-4 border-t border-[var(--color-border-hairline)] flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span className="flex items-center gap-1">
+                <Shield className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Local Storage
+              </span>
+              <span>100% BYOK</span>
+            </div>
+          </div>
+
+          {/* Bento Tile 3: 1-on-1 Quick Start */}
+          <div className="lg:col-span-2 p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-ink-muted)] flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-[var(--color-accent)]" /> 1-on-1 Persona Quick-Start
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsSelectorOpen(true)}
+                  className="btn-hallmark text-xs bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] gap-1 py-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                >
+                  <Plus className="w-3.5 h-3.5" /> New 1-on-1 Chat
+                </button>
+                <Link href="/personas" className="text-xs font-mono text-[var(--color-accent)] hover:underline">
+                  All ({personas.length})
+                </Link>
+              </div>
+            </div>
+
+            {/* Quick Filter Bar */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-[var(--color-ink-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                value={personaSearch}
+                onChange={(e) => setPersonaSearch(e.target.value)}
+                placeholder="Filter personas by name or role..."
+                className="w-full pl-8 pr-3 py-1.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-56 overflow-y-auto">
+              {filteredPersonas.slice(0, 6).map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/chat/1-on-1/new?persona=${p.id}`}
+                  className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] hover:border-[var(--color-accent)] rounded-[var(--radius-sm)] transition-all flex items-center justify-between group"
+                >
+                  <div>
+                    <div className="font-display text-sm text-[var(--color-ink)]">{p.name}</div>
+                    <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">{p.role}</div>
+                  </div>
+                  <ArrowRight className="w-3.5 h-3.5 text-[var(--color-ink-muted)] group-hover:text-[var(--color-accent)] group-hover:translate-x-0.5 transition-all" />
+                </Link>
+              ))}
+            </div>
+          </div>
+
+          {/* Bento Tile 4: Recent Sessions List with Delete Shortcut */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-ink-muted)]">
+                Recent Sessions
+              </span>
+              <span className="text-[10px] font-mono text-[var(--color-ink-muted)]">{recentChats.length} Active</span>
+            </div>
+
             {recentChats.length === 0 ? (
-              <div className="p-6 text-center text-xs text-[var(--color-ink-muted)] italic">
-                No recent sessions found. Select a persona above to start your first session.
+              <div className="py-8 text-center text-xs font-mono text-[var(--color-ink-muted)]">
+                No recent chat sessions.
               </div>
             ) : (
               <div className="space-y-2">
-                {recentChats.map((chat) => (
+                {recentChats.map((c) => (
                   <div
-                    key={chat.id}
-                    className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] flex items-center justify-between hover:border-[var(--color-ink-muted)] transition-colors group"
+                    key={c.id}
+                    className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] hover:border-[var(--color-border)] rounded-[var(--radius-sm)] flex items-center justify-between transition-all group"
                   >
                     <Link
-                      href={chat.type === 'council' ? `/chat/council/${chat.id}` : `/chat/1-on-1/${chat.id}`}
-                      aria-label={`Open session ${chat.title}`}
-                      className="flex items-center gap-3 flex-1 min-w-0 pr-3 focus:outline-none"
+                      href={c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`}
+                      className="flex-1 min-w-0 pr-2"
                     >
-                      <MessageSquare className="w-4 h-4 text-[var(--color-accent)] shrink-0" />
-                      <div className="truncate">
-                        <div className="text-sm font-medium text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors truncate">
-                          {chat.title}
-                        </div>
-                        <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
-                          {chat.type.toUpperCase()} • Updated {new Date(chat.updatedAt).toLocaleTimeString()}
-                        </div>
+                      <div className="font-display text-sm text-[var(--color-ink)] truncate">{c.title}</div>
+                      <div className="text-[10px] font-mono text-[var(--color-ink-muted)] flex items-center gap-2">
+                        <span className="uppercase">{c.type}</span> • {new Date(c.updatedAt).toLocaleDateString()}
                       </div>
                     </Link>
 
                     <button
-                      onClick={(e) => handleDeleteChat(e, chat.id, chat.title)}
-                      aria-label={`Delete session ${chat.title}`}
-                      className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-error)] focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] rounded shrink-0 transition-colors"
+                      onClick={(e) => handleDeleteSession(e, c.id)}
+                      aria-label={`Delete chat session ${c.title}`}
+                      className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-error)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Delete Session"
                     >
-                      <Trash2 className="w-4 h-4" />
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 ))}
@@ -290,14 +242,16 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Ft1 Mast-headed Footer */}
-        <footer className="border-t border-[var(--color-border-hairline)] pt-6 flex flex-col md:flex-row items-center justify-between text-xs text-[var(--color-ink-faint)] gap-4 font-mono">
-          <div>Council of Minds © 2026 — Local-First Open Source Architecture</div>
-          <div className="flex items-center gap-4">
-            <Link href="/personas" className="hover:underline">Library</Link>
-            <Link href="/personas/groups" className="hover:underline">Groups</Link>
-            <Link href="/analytics" className="hover:underline">Analytics</Link>
-            <Link href="/settings" className="hover:underline">Settings</Link>
+        {/* Masthead Footer (Ft1) */}
+        <footer className="pt-8 border-t border-[var(--color-border-hairline)] flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-[var(--color-ink-muted)]">
+          <div>Council of Minds • Open Source BYOK Edition</div>
+          <div className="flex items-center gap-6">
+            <Link href="/privacy" className="hover:text-[var(--color-ink)] underline">
+              Privacy Memo
+            </Link>
+            <Link href="/settings" className="hover:text-[var(--color-ink)] underline">
+              Settings & Keys
+            </Link>
           </div>
         </footer>
       </div>
