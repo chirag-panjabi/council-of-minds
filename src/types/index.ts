@@ -29,6 +29,8 @@ export interface ChatSession {
   type: '1-on-1' | 'council';
   groupId?: string;
   personaId?: string;
+  personaIds?: string[];
+  synthesizerId?: string;
   modelOverride?: string;
   contextRetention?: 'stateless' | 'summary' | 'hybrid' | 'infinite';
   createdAt: number;
