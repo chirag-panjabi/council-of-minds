@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import type { ChatMessage, Persona } from '@/types';
+import type { ChatMessage, ChatSession, Persona } from '@/types';
 import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
@@ -14,22 +14,67 @@ import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal
 
 export default function CouncilChatPage() {
   const params = useParams();
-  const chatId = params?.id as string;
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const chatSession = useLiveQuery(() => db.chats.get(chatId), [chatId]);
-  const dbMessages = useLiveQuery(() => db.messages.where('chatId').equals(chatId).sortBy('timestamp'), [chatId]) || [];
-  
+  const chatId = params?.id as string;
+  const groupQueryParam = searchParams.get('group');
+  const topicQueryParam = searchParams.get('topic');
+
+  // Handle 'new' session initialization
+  useEffect(() => {
+    if (chatId === 'new') {
+      const initNewCouncilSession = async () => {
+        let targetGroupId: string | undefined = groupQueryParam || undefined;
+        if (!targetGroupId) {
+          const firstGroup = await db.groups.toCollection().first();
+          targetGroupId = firstGroup?.id;
+        }
+
+        const group = targetGroupId ? await db.groups.get(targetGroupId) : undefined;
+        const newChatId = 'council-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+
+        const newSession: ChatSession = {
+          id: newChatId,
+          title: group ? `Debate: ${group.name}` : 'Council Debate Session',
+          type: 'council',
+          groupId: targetGroupId,
+          personaIds: group?.personaIds || [],
+          synthesizerId: group?.synthesizerPersonaId,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        await db.chats.add(newSession);
+
+        let redirectUrl = `/chat/council/${newChatId}`;
+        if (topicQueryParam) {
+          redirectUrl += `?topic=${encodeURIComponent(topicQueryParam)}`;
+        }
+        router.replace(redirectUrl);
+      };
+
+      initNewCouncilSession();
+    }
+  }, [chatId, groupQueryParam, topicQueryParam, router]);
+
+  const chatSession = useLiveQuery(() => (chatId && chatId !== 'new' ? db.chats.get(chatId) : undefined), [chatId]);
+  const dbMessages = useLiveQuery(
+    () => (chatId && chatId !== 'new' ? db.messages.where('chatId').equals(chatId).sortBy('timestamp') : []),
+    [chatId]
+  ) || [];
+
   const personaGroup = useLiveQuery(
     () => (chatSession?.groupId ? db.groups.get(chatSession.groupId) : undefined),
     [chatSession]
   );
-  
+
   const allPersonas = useLiveQuery(() => db.personas.toArray()) || [];
   const [activeDebaterIds, setActiveDebaterIds] = useState<string[]>([]);
 
   useEffect(() => {
     const ids = chatSession?.personaIds || personaGroup?.personaIds || [];
-    if (ids.length > 0 && activeDebaterIds.length === 0) {
+    if (ids.length > 0) {
       setActiveDebaterIds(ids);
     }
   }, [chatSession, personaGroup]);
@@ -39,6 +84,14 @@ export default function CouncilChatPage() {
   const synthesizerPersona = allPersonas.find((p) => p.id === activeSynthId);
 
   const [input, setInput] = useState('');
+
+  // Pre-populate initial topic query param if present
+  useEffect(() => {
+    if (topicQueryParam && !input) {
+      setInput(topicQueryParam);
+    }
+  }, [topicQueryParam]);
+
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
   const [autoPilotCap, setAutoPilotCap] = useState<number>(6);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -76,7 +129,7 @@ export default function CouncilChatPage() {
     const newIds = newPersonas.map((p) => p.id);
     const combinedIds = Array.from(new Set([...activeDebaterIds, ...newIds]));
     setActiveDebaterIds(combinedIds);
-    if (!isIncognito) {
+    if (!isIncognito && chatId !== 'new') {
       db.chats.update(chatId, { personaIds: combinedIds, updatedAt: Date.now() });
     }
   };
@@ -263,7 +316,7 @@ export default function CouncilChatPage() {
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if ((!input.trim() && stagedFiles.length === 0) || isStreaming || councilPersonas.length === 0) return;
+    if ((!input.trim() && stagedFiles.length === 0) || isStreaming || councilPersonas.length === 0 || chatId === 'new') return;
 
     let userContent = input.trim();
     stagedFiles.forEach((sf) => {
@@ -307,14 +360,14 @@ export default function CouncilChatPage() {
   };
 
   const handleTriggerSinglePersona = async (speaker: Persona) => {
-    if (isStreaming) return;
+    if (isStreaming || chatId === 'new') return;
     setIsStreaming(true);
     await executePersonaTurn(speaker, activeMessages);
     setIsStreaming(false);
   };
 
   const handleSynthesize = async () => {
-    if (isStreaming || activeMessages.length === 0) return;
+    if (isStreaming || activeMessages.length === 0 || chatId === 'new') return;
     const synth = synthesizerPersona || councilPersonas[0];
     if (!synth) return;
 

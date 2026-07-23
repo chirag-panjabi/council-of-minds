@@ -1,11 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams, useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import type { ChatMessage, Persona } from '@/types';
+import type { ChatMessage, ChatSession, Persona } from '@/types';
 import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download, Paperclip, EyeOff, UploadCloud, Layers, UserCheck } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
@@ -14,18 +14,58 @@ import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal
 
 export default function OneOnOneChatPage() {
   const params = useParams();
-  const chatId = params?.id as string;
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
-  const chatSession = useLiveQuery(() => db.chats.get(chatId), [chatId]);
-  const dbMessages = useLiveQuery(() => db.messages.where('chatId').equals(chatId).sortBy('timestamp'), [chatId]) || [];
-  
-  const [activePersonaId, setActivePersonaId] = useState<string | undefined>(chatSession?.personaId);
-  
+  const chatId = params?.id as string;
+  const personaQueryParam = searchParams.get('persona');
+
+  // Handle 'new' session initialization
   useEffect(() => {
-    if (chatSession?.personaId && !activePersonaId) {
-      setActivePersonaId(chatSession.personaId);
+    if (chatId === 'new') {
+      const initNewSession = async () => {
+        let targetPersonaId = personaQueryParam;
+        if (!targetPersonaId) {
+          const firstPersona = await db.personas.toCollection().first();
+          targetPersonaId = firstPersona?.id || 'persona-1';
+        }
+
+        const targetPersona = await db.personas.get(targetPersonaId);
+        const newChatId = 'chat-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5);
+
+        const newSession: ChatSession = {
+          id: newChatId,
+          title: targetPersona ? `Dialogue with ${targetPersona.name}` : '1-on-1 Dialogue Session',
+          type: '1-on-1',
+          personaId: targetPersonaId,
+          contextRetention: 'hybrid',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+
+        await db.chats.add(newSession);
+        router.replace(`/chat/1-on-1/${newChatId}`);
+      };
+
+      initNewSession();
     }
-  }, [chatSession]);
+  }, [chatId, personaQueryParam, router]);
+
+  const chatSession = useLiveQuery(() => (chatId && chatId !== 'new' ? db.chats.get(chatId) : undefined), [chatId]);
+  const dbMessages = useLiveQuery(
+    () => (chatId && chatId !== 'new' ? db.messages.where('chatId').equals(chatId).sortBy('timestamp') : []),
+    [chatId]
+  ) || [];
+
+  const [activePersonaId, setActivePersonaId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (chatSession?.personaId) {
+      setActivePersonaId(chatSession.personaId);
+    } else if (personaQueryParam) {
+      setActivePersonaId(personaQueryParam);
+    }
+  }, [chatSession, personaQueryParam]);
 
   const persona = useLiveQuery(
     () => (activePersonaId ? db.personas.get(activePersonaId) : undefined),
@@ -75,14 +115,14 @@ export default function OneOnOneChatPage() {
 
   const handleSwapPersona = (newPersona: Persona) => {
     setActivePersonaId(newPersona.id);
-    if (!isIncognito) {
+    if (!isIncognito && chatId !== 'new') {
       db.chats.update(chatId, { personaId: newPersona.id, updatedAt: Date.now() });
     }
   };
 
   const handleChangeContextRetention = (retention: 'stateless' | 'summary' | 'hybrid' | 'infinite') => {
     setContextRetention(retention);
-    if (!isIncognito) {
+    if (!isIncognito && chatId !== 'new') {
       db.chats.update(chatId, { contextRetention: retention });
     }
   };
@@ -175,7 +215,7 @@ export default function OneOnOneChatPage() {
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if ((!input.trim() && stagedFiles.length === 0) || isStreaming || !persona) return;
+    if ((!input.trim() && stagedFiles.length === 0) || isStreaming || !persona || chatId === 'new') return;
 
     let userContent = input.trim();
 
@@ -225,7 +265,6 @@ export default function OneOnOneChatPage() {
       const provider = 'openai';
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
-      // Context Retention Pruning
       let sendHistory = [...activeMessages, userMessageObj];
       if (contextRetention === 'stateless') {
         sendHistory = [userMessageObj];
@@ -331,7 +370,6 @@ export default function OneOnOneChatPage() {
 
         {/* Header Bar */}
         <header className="px-6 py-3 border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] flex flex-wrap items-center justify-between gap-4">
-          {/* Persona Avatar Trigger (Click to Swap Persona) */}
           <button
             onClick={() => setIsSelectorOpen(true)}
             aria-label="Click to swap active persona"
@@ -351,7 +389,7 @@ export default function OneOnOneChatPage() {
                   </span>
                 )}
               </div>
-              <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">{persona?.role} (Click to swap)</div>
+              <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">{persona?.role || 'Initializing...'} (Click to swap)</div>
             </div>
           </button>
 
@@ -428,7 +466,7 @@ export default function OneOnOneChatPage() {
           {activeMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
               <Brain className="w-10 h-10 text-[var(--color-accent)] opacity-60" />
-              <h2 className="font-display text-2xl text-[var(--color-ink)]">Begin Dialogue with {persona?.name}</h2>
+              <h2 className="font-display text-2xl text-[var(--color-ink)]">Begin Dialogue with {persona?.name || 'Persona'}</h2>
               <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
                 State your dilemma, question, or scenario below to receive structured analytical reflection.
               </p>
