@@ -5,6 +5,7 @@ import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
+import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N4 */
 
@@ -21,9 +22,10 @@ export default function SettingsPage() {
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({});
 
-  // Restore Preview Modal State
+  // Restore & Guidance Modal States
   const [restoreManifest, setRestoreManifest] = useState<BackupManifest | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
+  const [showGuidanceModal, setShowGuidanceModal] = useState(false);
 
   useEffect(() => {
     setOpenaiKey(localStorage.getItem('framework-engine:api-key:openai') || '');
@@ -168,6 +170,13 @@ export default function SettingsPage() {
   return (
     <Shell>
       <div className="p-6 md:p-12 max-w-4xl mx-auto space-y-10">
+        {/* Local Model Guidance Modal */}
+        <LocalModelGuidance
+          isOpen={showGuidanceModal}
+          onClose={() => setShowGuidanceModal(false)}
+          ollamaUrl={ollamaUrl}
+        />
+
         {/* Restore Preview Modal */}
         {restoreManifest && (
           <RestorePreviewModal
@@ -294,13 +303,22 @@ export default function SettingsPage() {
 
           {/* Section 2: Local Model Settings */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
-            <div className="space-y-1 border-b border-[var(--color-border-hairline)] pb-4">
-              <h2 className="font-display text-xl text-[var(--color-ink)] flex items-center gap-2">
-                <Server className="w-5 h-5 text-[var(--color-accent)]" /> Local LLM Engine (Ollama / LM Studio)
-              </h2>
-              <p className="text-xs text-[var(--color-ink-muted)]">
-                Direct browser-to-loopback connection. Zero cloud proxy transit.
-              </p>
+            <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
+              <div className="space-y-1">
+                <h2 className="font-display text-xl text-[var(--color-ink)] flex items-center gap-2">
+                  <Server className="w-5 h-5 text-[var(--color-accent)]" /> Local LLM Engine (Ollama / LM Studio)
+                </h2>
+                <p className="text-xs text-[var(--color-ink-muted)]">
+                  Direct browser-to-loopback connection. Zero cloud proxy transit.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowGuidanceModal(true)}
+                className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+              >
+                CORS & Setup Guide
+              </button>
             </div>
 
             <div className="space-y-4">
