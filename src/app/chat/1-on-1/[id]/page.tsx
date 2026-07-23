@@ -161,7 +161,7 @@ export default function OneOnOneChatPage() {
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
               <Brain className="w-10 h-10 text-[var(--color-accent)] opacity-60" />
               <h2 className="font-display text-2xl text-[var(--color-ink)]">Begin Dialogue with {persona?.name}</h2>
-              <p className="text-xs text-[var(--color-ink-muted)]">
+              <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
                 State your dilemma, question, or scenario below to receive structured analytical reflection.
               </p>
             </div>
@@ -191,8 +191,11 @@ export default function OneOnOneChatPage() {
                   {msg.reasoning && (
                     <div className="think-accordion my-2 text-left">
                       <button
+                        type="button"
                         onClick={() => toggleReasoning(msg.id)}
-                        className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-mono text-[var(--color-think-ink)] hover:bg-black/5"
+                        aria-expanded={Boolean(expandedReasoningIds[msg.id])}
+                        aria-label="Toggle persona reasoning process"
+                        className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-mono text-[var(--color-think-ink)] hover:bg-black/5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
                       >
                         <span className="flex items-center gap-1.5 font-semibold">
                           <Brain className="w-3.5 h-3.5 text-[var(--color-accent)]" />
@@ -201,7 +204,7 @@ export default function OneOnOneChatPage() {
                         {expandedReasoningIds[msg.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                       </button>
                       {expandedReasoningIds[msg.id] && (
-                        <div className="p-3 text-xs leading-relaxed border-t border-[var(--color-think-border)] whitespace-pre-wrap">
+                        <div className="p-3 text-xs leading-relaxed border-t border-[var(--color-think-border)] whitespace-pre-wrap font-mono">
                           {msg.reasoning}
                         </div>
                       )}
@@ -239,12 +242,13 @@ export default function OneOnOneChatPage() {
               }}
               placeholder={`Ask ${persona?.name || 'persona'} to analyze your dilemma... (Shift+Enter for new line)`}
               rows={2}
-              className="w-full pr-12 pl-4 py-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] resize-none"
+              className="w-full pr-12 pl-4 py-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] resize-none"
             />
             <button
               type="submit"
               disabled={!input.trim() && !isStreaming}
-              className="absolute right-3 p-2 bg-[var(--color-accent)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-hover)] transition-colors disabled:opacity-40"
+              aria-label={isStreaming ? 'Stop generation' : 'Send message'}
+              className="absolute right-3 p-2 bg-[var(--color-accent)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
             >
               {isStreaming ? <Square className="w-4 h-4" /> : <Send className="w-4 h-4" />}
             </button>
