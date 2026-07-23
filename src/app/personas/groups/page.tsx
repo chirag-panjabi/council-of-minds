@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import type { Persona, PersonaGroup } from '@/types';
-import { ArrowLeft, Sparkles, Plus, Check, Trash2, ArrowRight, ShieldCheck, Play } from 'lucide-react';
+import type { PersonaGroup } from '@/types';
+import { ArrowLeft, Sparkles, Plus, Check, Trash2, Play, Copy } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 14-narrative-workflow · theme: riso · nav: N1b · footer: Ft4 */
 
@@ -38,6 +38,19 @@ export default function PersonaGroupsPage() {
     setDescription(group.description);
     setSelectedPersonaIds(group.personaIds);
     setSynthesizerPersonaId(group.synthesizerPersonaId || group.personaIds[0] || '');
+  };
+
+  const handleDuplicateGroup = async (group: PersonaGroup) => {
+    const newGroupId = 'group-' + Date.now();
+    const duplicatedGroup: PersonaGroup = {
+      ...group,
+      id: newGroupId,
+      name: `${group.name} (Copy)`,
+      createdAt: Date.now(),
+    };
+
+    await db.groups.add(duplicatedGroup);
+    handleStartEdit(duplicatedGroup);
   };
 
   const handleTogglePersonaSelect = (personaId: string) => {
@@ -115,7 +128,11 @@ export default function PersonaGroupsPage() {
             </p>
           </div>
 
-          <Link href="/personas" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
+          <Link
+            href="/personas"
+            aria-label="Back to Persona Library"
+            className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
+          >
             <ArrowLeft className="w-4 h-4" /> Back to Library
           </Link>
         </header>
@@ -124,7 +141,11 @@ export default function PersonaGroupsPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-display text-2xl text-[var(--color-ink)]">Saved Roster Panels ({groups.length})</h2>
-            <button onClick={handleStartCreate} className="btn-hallmark text-xs gap-1">
+            <button
+              onClick={handleStartCreate}
+              aria-label="Create New Persona Group"
+              className="btn-hallmark text-xs gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
               <Plus className="w-3.5 h-3.5" /> New Group
             </button>
           </div>
@@ -147,13 +168,24 @@ export default function PersonaGroupsPage() {
                           <h3 className="font-display text-xl text-[var(--color-ink)]">{group.name}</h3>
                           <p className="text-xs text-[var(--color-ink-muted)] line-clamp-2">{group.description}</p>
                         </div>
-                        <button
-                          onClick={() => handleDeleteGroup(group.id, group.name)}
-                          className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-error)]"
-                          title="Delete Group"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleDuplicateGroup(group)}
+                            aria-label={`Duplicate group ${group.name}`}
+                            className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
+                            title="Duplicate Group"
+                          >
+                            <Copy className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteGroup(group.id, group.name)}
+                            aria-label={`Delete group ${group.name}`}
+                            className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-error)] focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] rounded"
+                            title="Delete Group"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="space-y-1.5 pt-2 border-t border-[var(--color-border-hairline)]">
@@ -179,13 +211,15 @@ export default function PersonaGroupsPage() {
                     <div className="flex items-center gap-2 pt-2">
                       <button
                         onClick={() => handleStartEdit(group)}
-                        className="btn-hallmark text-xs flex-1"
+                        aria-label={`Edit roster for ${group.name}`}
+                        className="btn-hallmark text-xs flex-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                       >
                         Edit Roster
                       </button>
                       <button
                         onClick={() => handleLaunchCouncilDebate(group)}
-                        className="btn-hallmark btn-hallmark-primary text-xs flex-1 gap-1"
+                        aria-label={`Launch Council debate for ${group.name}`}
+                        className="btn-hallmark btn-hallmark-primary text-xs flex-1 gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
                       >
                         <Play className="w-3.5 h-3.5 fill-current" /> Launch Debate
                       </button>
@@ -227,7 +261,7 @@ export default function PersonaGroupsPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="e.g. Strategic Product Panel"
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-medium"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-medium focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
 
@@ -238,7 +272,7 @@ export default function PersonaGroupsPage() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="e.g. Evaluates market risk, technical debt, and philosophical alignment..."
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)]"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
             </div>
@@ -260,8 +294,17 @@ export default function PersonaGroupsPage() {
                 return (
                   <div
                     key={p.id}
+                    role="checkbox"
+                    aria-checked={isSelected}
+                    tabIndex={0}
                     onClick={() => handleTogglePersonaSelect(p.id)}
-                    className={`p-3 border rounded-[var(--radius-md)] cursor-pointer transition-all ${
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleTogglePersonaSelect(p.id);
+                      }
+                    }}
+                    className={`p-3 border rounded-[var(--radius-md)] cursor-pointer transition-all focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] ${
                       isSelected
                         ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-medium'
                         : 'border-[var(--color-border)] bg-[var(--color-paper)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
@@ -290,7 +333,7 @@ export default function PersonaGroupsPage() {
               <select
                 value={synthesizerPersonaId}
                 onChange={(e) => setSynthesizerPersonaId(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-medium"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-medium focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               >
                 {personas
                   .filter((p) => selectedPersonaIds.includes(p.id))
@@ -308,14 +351,14 @@ export default function PersonaGroupsPage() {
             <button
               type="button"
               onClick={handleStartCreate}
-              className="btn-hallmark text-xs"
+              className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
               Reset Form
             </button>
             <button
               type="submit"
               disabled={isSaving || selectedPersonaIds.length === 0}
-              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <Sparkles className="w-4 h-4" /> {editingGroupId ? 'Update Roster' : 'Save New Roster'}
             </button>
