@@ -7,6 +7,8 @@ import { db } from '@/lib/db';
 import { ArrowLeft, Save, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
+/* Hallmark · genre: editorial · macrostructure: form-surface · theme: atelier · nav: N1b · footer: Ft4 */
+
 export default function NewPersonaPage() {
   const router = useRouter();
   const [name, setName] = useState('');
@@ -45,19 +47,21 @@ export default function NewPersonaPage() {
   return (
     <Shell>
       <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-8">
+        {/* N1b Navigation Header */}
         <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
-          <Link href="/personas" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
+          <Link href="/personas" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] font-mono">
             <ArrowLeft className="w-4 h-4" /> Back to Library
           </Link>
-          <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
+          <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
             Persona Creator Surface
           </div>
         </header>
 
+        {/* Form Surface */}
         <form onSubmit={handleSubmit} className="space-y-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 md:p-8">
           <div>
             <h1 className="font-display text-3xl text-[var(--color-ink)]">Draft New Persona</h1>
-            <p className="text-xs text-[var(--color-ink-muted)] mt-1">
+            <p className="text-xs text-[var(--color-ink-muted)] mt-1 leading-relaxed">
               Define the identity, behavioral directives, and default model for a new thinking agent.
             </p>
           </div>
@@ -71,7 +75,7 @@ export default function NewPersonaPage() {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="e.g. Socrates"
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] font-medium"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] font-medium"
               />
             </div>
 
@@ -82,7 +86,7 @@ export default function NewPersonaPage() {
                 value={role}
                 onChange={(e) => setRole(e.target.value)}
                 placeholder="e.g. Classical Philosopher"
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
             </div>
           </div>
@@ -94,7 +98,7 @@ export default function NewPersonaPage() {
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Short summary of persona's analytical perspective..."
-              className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)]"
+              className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
             />
           </div>
 
@@ -104,7 +108,7 @@ export default function NewPersonaPage() {
               <select
                 value={defaultModel}
                 onChange={(e) => setDefaultModel(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)]"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] font-mono"
               >
                 <option value="gpt-4o">OpenAI GPT-4o</option>
                 <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
@@ -120,20 +124,23 @@ export default function NewPersonaPage() {
                 type="text"
                 value={tagsInput}
                 onChange={(e) => setTagsInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-mono text-[var(--color-ink-muted)]">System Prompt Instructions *</label>
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span>System Prompt Directives *</span>
+              <span>{systemPrompt.length} chars</span>
+            </div>
             <textarea
               required
               rows={6}
               value={systemPrompt}
               onChange={(e) => setSystemPrompt(e.target.value)}
               placeholder="You are [Name]. Analyze the user's dilemma by..."
-              className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
+              className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
             />
           </div>
 
@@ -150,6 +157,12 @@ export default function NewPersonaPage() {
             </button>
           </div>
         </form>
+
+        {/* Ft4 Dense Colophon Footer */}
+        <footer className="border-t border-[var(--color-border-hairline)] pt-6 text-xs font-mono text-[var(--color-ink-faint)] flex justify-between">
+          <div>Persona Creator Schema v1.0 • Hallmark Atelier Theme</div>
+          <div>Council of Minds</div>
+        </footer>
       </div>
     </Shell>
   );
