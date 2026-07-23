@@ -46,11 +46,16 @@ export default function ErrorBoundary({
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
             <button
               onClick={() => reset()}
-              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5"
+              aria-label="Try Execution Again"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
               <RotateCcw className="w-4 h-4" /> Try Execution Again
             </button>
-            <Link href="/" className="btn-hallmark text-xs gap-1.5">
+            <Link
+              href="/"
+              aria-label="Return to Dashboard"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
               <Home className="w-4 h-4" /> Return to Dashboard
             </Link>
           </div>

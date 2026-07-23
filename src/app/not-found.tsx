@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { useUIStore } from '@/lib/stores/useUIStore';
-import { Home, Users, Search, ArrowLeft } from 'lucide-react';
+import { Home, Users, Search } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 09-specimen-error · theme: monochroma · nav: N1a · footer: Ft6 */
 
@@ -34,15 +34,24 @@ export default function NotFound() {
 
           {/* Recovery Actions */}
           <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-            <Link href="/" className="btn-hallmark btn-hallmark-primary text-xs gap-1.5">
+            <Link
+              href="/"
+              aria-label="Return to Dashboard"
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
               <Home className="w-4 h-4" /> Return to Dashboard
             </Link>
-            <Link href="/personas" className="btn-hallmark text-xs gap-1.5">
+            <Link
+              href="/personas"
+              aria-label="View Persona Library"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
               <Users className="w-4 h-4" /> Persona Library
             </Link>
             <button
               onClick={() => setSearchPaletteOpen(true)}
-              className="btn-hallmark text-xs gap-1.5"
+              aria-label="Open Command Search Palette"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
               <Search className="w-4 h-4" /> Search (⌘K)
             </button>
