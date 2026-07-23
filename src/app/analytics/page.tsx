@@ -4,223 +4,279 @@ import { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { ShieldCheck, Cpu, Zap, Activity, Filter, Trash2, Search } from 'lucide-react';
+import { BarChart2, Cpu, HardDrive, Trash2, Search, Download, DollarSign, Zap } from 'lucide-react';
 
-/* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: almanac · nav: N1a · footer: Ft7 */
+/* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N3 */
+
+// Estimated BYOK Pricing per 1k tokens (input/output)
+const MODEL_PRICING: Record<string, { input: number; output: number }> = {
+  'gpt-4o': { input: 0.005, output: 0.015 },
+  'gpt-4o-mini': { input: 0.00015, output: 0.0006 },
+  'claude-3-5-sonnet': { input: 0.003, output: 0.015 },
+  'gemini-1.5-pro': { input: 0.00125, output: 0.005 },
+  'ollama-local': { input: 0, output: 0 },
+};
 
 export default function AnalyticsPage() {
-  const usageRecords = useLiveQuery(() => db.usage.toArray()) || [];
+  const usageRecords = useLiveQuery(() => db.usage.orderBy('timestamp').reverse().toArray()) || [];
   const chats = useLiveQuery(() => db.chats.toArray()) || [];
+  const messages = useLiveQuery(() => db.messages.toArray()) || [];
+  const personas = useLiveQuery(() => db.personas.toArray()) || [];
 
-  const [selectedModelFilter, setSelectedModelFilter] = useState<string>('all');
-  const [logSearchQuery, setLogSearchQuery] = useState('');
-  const [clearStatus, setClearStatus] = useState<string | null>(null);
+  const [selectedModelFilter, setSelectedModelFilter] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
-  const totalPromptTokens = usageRecords.reduce((acc, u) => acc + u.promptTokens, 0);
-  const totalCompletionTokens = usageRecords.reduce((acc, u) => acc + u.completionTokens, 0);
-  const totalTokens = totalPromptTokens + totalCompletionTokens;
+  const totalTokens = usageRecords.reduce(
+    (acc, r) => acc + (r.promptTokens || 0) + (r.completionTokens || 0),
+    0
+  );
 
-  // Average tokens per request calculation
-  const avgTokensPerReq = usageRecords.length > 0 ? Math.round(totalTokens / usageRecords.length) : 0;
+  const avgTokensPerRequest = usageRecords.length > 0 ? Math.round(totalTokens / usageRecords.length) : 0;
 
-  // Find most active model
-  const modelCounts: Record<string, number> = {};
-  usageRecords.forEach((u) => {
-    modelCounts[u.model] = (modelCounts[u.model] || 0) + 1;
+  // Calculate estimated BYOK spend
+  const estimatedSpend = usageRecords.reduce((acc, r) => {
+    const pricing = MODEL_PRICING[r.model] || { input: 0.002, output: 0.006 };
+    const promptCost = ((r.promptTokens || 0) / 1000) * pricing.input;
+    const completionCost = ((r.completionTokens || 0) / 1000) * pricing.output;
+    return acc + promptCost + completionCost;
+  }, 0);
+
+  // Model breakdown
+  const modelBreakdown: Record<string, number> = {};
+  usageRecords.forEach((r) => {
+    modelBreakdown[r.model] = (modelBreakdown[r.model] || 0) + (r.promptTokens || 0) + (r.completionTokens || 0);
   });
-  let mostActiveModel = 'None';
-  let maxCount = 0;
-  Object.entries(modelCounts).forEach(([m, count]) => {
-    if (count > maxCount) {
-      maxCount = count;
-      mostActiveModel = m;
+
+  const topModel = Object.entries(modelBreakdown).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
+
+  const filteredRecords = usageRecords.filter((r) => {
+    if (selectedModelFilter && r.model !== selectedModelFilter) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return r.model.toLowerCase().includes(q) || r.id.toLowerCase().includes(q);
     }
+    return true;
   });
 
-  // Extract unique models for filter pills
-  const availableModels = Array.from(new Set(usageRecords.map((u) => u.model)));
-
-  // Filtered records
-  const filteredRecords = usageRecords.filter((u) => {
-    const matchesModel = selectedModelFilter === 'all' || u.model.toLowerCase().includes(selectedModelFilter.toLowerCase());
-    const matchesQuery = logSearchQuery.trim() === '' || u.model.toLowerCase().includes(logSearchQuery.toLowerCase()) || String(u.promptTokens + u.completionTokens).includes(logSearchQuery);
-    return matchesModel && matchesQuery;
-  });
-
-  const handleClearTelemetry = async () => {
-    if (confirm('Are you sure you want to clear token usage telemetry logs? (Saved chats and personas will be preserved).')) {
+  const handleClearLogs = async () => {
+    if (confirm('Are you sure you want to clear all telemetry usage logs? This action cannot be undone.')) {
       await db.usage.clear();
-      setClearStatus('Telemetry logs cleared successfully!');
-      setTimeout(() => setClearStatus(null), 3000);
     }
+  };
+
+  const handleExportCSV = () => {
+    if (usageRecords.length === 0) return;
+    let csv = 'ID,Model,PromptTokens,CompletionTokens,TotalTokens,Timestamp\n';
+    usageRecords.forEach((r) => {
+      csv += `"${r.id}","${r.model}",${r.promptTokens},${r.completionTokens},${r.promptTokens + r.completionTokens},"${new Date(r.timestamp).toISOString()}"\n`;
+    });
+
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `telemetry-usage-${Date.now()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportJSON = () => {
+    if (usageRecords.length === 0) return;
+    const blob = new Blob([JSON.stringify(usageRecords, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `telemetry-usage-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
     <Shell>
-      <div className="p-6 md:p-10 space-y-8 max-w-5xl mx-auto">
-        {/* N1a Broad-sheet Header */}
-        <header className="border-b border-[var(--color-border-hairline)] pb-4 space-y-1">
-          <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
-            Token-First Local Analytics
+      <div className="p-6 md:p-12 max-w-7xl mx-auto space-y-10">
+        {/* Header Bar (N3) */}
+        <header className="flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-[var(--color-border-hairline)] pb-6">
+          <div className="space-y-1">
+            <h1 className="font-display text-4xl font-normal text-[var(--color-ink)]">
+              Token Telemetry & Analytics
+            </h1>
+            <p className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
+              Local Usage Audit • {usageRecords.length} Execution Records
+            </p>
           </div>
-          <h1 className="font-display text-4xl text-[var(--color-ink)]">Analytics & Usage Telemetry</h1>
-          <p className="text-xs text-[var(--color-ink-muted)]">
-            Extracted directly from SSE streaming headers. 100% stored in local IndexedDB.
-          </p>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              disabled={usageRecords.length === 0}
+              aria-label="Export Telemetry Data as CSV"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+              title="Export CSV"
+            >
+              <Download className="w-3.5 h-3.5" /> Export CSV
+            </button>
+
+            <button
+              onClick={handleExportJSON}
+              disabled={usageRecords.length === 0}
+              aria-label="Export Telemetry Data as JSON"
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+              title="Export JSON"
+            >
+              <Download className="w-3.5 h-3.5" /> Export JSON
+            </button>
+
+            <button
+              onClick={handleClearLogs}
+              disabled={usageRecords.length === 0}
+              aria-label="Clear Telemetry Logs"
+              className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/30 hover:bg-[var(--color-error)]/10 gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] disabled:opacity-40"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Clear Logs
+            </button>
+          </div>
         </header>
 
-        {clearStatus && (
-          <div className="p-3 bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 rounded text-xs font-mono">
-            {clearStatus}
-          </div>
-        )}
-
-        {/* 04 · Stat-Led Hero Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-2">
+        {/* Hero Stat Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Card 1: Total Tokens */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
               <span>Total Tokens</span>
-              <Zap className="w-4 h-4 text-[var(--color-accent)]" />
-            </div>
-            <div className="font-display text-3xl text-[var(--color-ink)]">{totalTokens.toLocaleString()}</div>
-            <div className="text-[10px] text-[var(--color-ink-faint)]">Prompt + Completion Tokens</div>
-          </div>
-
-          <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
-              <span>Avg per Request</span>
-              <Activity className="w-4 h-4 text-[var(--color-accent)]" />
-            </div>
-            <div className="font-display text-3xl text-[var(--color-ink)]">{avgTokensPerReq.toLocaleString()}</div>
-            <div className="text-[10px] text-[var(--color-ink-faint)]">Context Bloat Indicator</div>
-          </div>
-
-          <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
-              <span>Most Active Model</span>
-              <Cpu className="w-4 h-4 text-[var(--color-accent)]" />
-            </div>
-            <div className="font-display text-xl text-[var(--color-ink)] truncate">{mostActiveModel}</div>
-            <div className="text-[10px] text-[var(--color-ink-faint)]">Top Execution Engine</div>
-          </div>
-
-          <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
-              <span>Storage Usage</span>
-              <ShieldCheck className="w-4 h-4 text-[var(--color-accent)]" />
+              <BarChart2 className="w-4 h-4 text-[var(--color-accent)]" />
             </div>
             <div className="font-display text-3xl text-[var(--color-ink)]">
-              {Math.round((chats.length * 150 + usageRecords.length * 80) / 1024)} KB
+              {totalTokens.toLocaleString()}
             </div>
-            <div className="text-[10px] text-[var(--color-ink-faint)]">Quantitative IndexedDB Analysis</div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Across all sessions</div>
+          </div>
+
+          {/* Card 2: Avg Per Request */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span>Avg Per Request</span>
+              <Zap className="w-4 h-4 text-[var(--color-accent)]" />
+            </div>
+            <div className="font-display text-3xl text-[var(--color-ink)]">
+              {avgTokensPerRequest.toLocaleString()}
+            </div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Tokens per completion</div>
+          </div>
+
+          {/* Card 3: Estimated BYOK Spend */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span>Estimated BYOK Spend</span>
+              <DollarSign className="w-4 h-4 text-emerald-600" />
+            </div>
+            <div className="font-display text-3xl text-[var(--color-ink)]">
+              ${estimatedSpend.toFixed(3)}
+            </div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Local Ollama is $0.00 / Free</div>
+          </div>
+
+          {/* Card 4: Database Footprint */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span>IndexedDB Storage</span>
+              <HardDrive className="w-4 h-4 text-[var(--color-accent)]" />
+            </div>
+            <div className="font-display text-3xl text-[var(--color-ink)]">
+              {chats.length + messages.length + personas.length}
+            </div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
+              {chats.length} Chats • {messages.length} Msgs
+            </div>
           </div>
         </div>
 
-        {/* Tabular Usage Breakdown & Filter Control */}
-        <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[var(--color-border-hairline)] pb-4">
-            <div>
-              <h2 className="font-display text-2xl text-[var(--color-ink)]">Execution Log & Token Breakdown</h2>
-              <p className="text-xs text-[var(--color-ink-muted)]">Real-time SSE token telemetry per request.</p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-3">
-              {/* Search Log Input */}
+        {/* Model Breakdown & Filter Pills */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-display text-xl text-[var(--color-ink)]">Execution Logs by Model</h2>
+            <div className="flex items-center gap-2">
               <div className="relative">
+                <Search className="w-3.5 h-3.5 text-[var(--color-ink-muted)] absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  value={logSearchQuery}
-                  onChange={(e) => setLogSearchQuery(e.target.value)}
-                  placeholder="Filter logs..."
-                  className="pl-7 pr-3 py-1 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded font-mono text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Filter logs by model name..."
+                  className="pl-8 pr-3 py-1.5 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
                 />
-                <Search className="w-3 h-3 text-[var(--color-ink-muted)] absolute left-2 top-2" />
               </div>
 
-              {/* Clear Telemetry Button */}
-              <button
-                onClick={handleClearTelemetry}
-                aria-label="Clear Telemetry Logs"
-                className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/30 hover:bg-[var(--color-error)]/10 gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] shrink-0"
-              >
-                <Trash2 className="w-3.5 h-3.5" /> Clear Logs
-              </button>
+              <div className="flex items-center gap-1.5 overflow-x-auto">
+                <button
+                  onClick={() => setSelectedModelFilter(null)}
+                  className={`px-3 py-1 rounded-full text-xs font-mono transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                    selectedModelFilter === null
+                      ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold'
+                      : 'bg-[var(--color-paper-2)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'
+                  }`}
+                >
+                  All Models
+                </button>
+                {Object.keys(modelBreakdown).map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setSelectedModelFilter(m === selectedModelFilter ? null : m)}
+                    className={`px-3 py-1 rounded-full text-xs font-mono transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                      selectedModelFilter === m
+                        ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold border border-[var(--color-accent)]'
+                        : 'bg-[var(--color-paper-2)] text-[var(--color-ink-muted)] border border-[var(--color-border)]'
+                    }`}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Model Filter Pills */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
-            <span className="text-[10px] font-mono uppercase text-[var(--color-ink-muted)] shrink-0 flex items-center gap-1">
-              <Filter className="w-3 h-3 text-[var(--color-accent)]" /> Filter:
-            </span>
-            <button
-              onClick={() => setSelectedModelFilter('all')}
-              aria-label="Filter all models"
-              className={`px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] border transition-all focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                selectedModelFilter === 'all'
-                  ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-semibold'
-                  : 'bg-[var(--color-paper)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)]'
-              }`}
-            >
-              All
-            </button>
-            {availableModels.map((m) => (
-              <button
-                key={m}
-                onClick={() => setSelectedModelFilter(m)}
-                aria-label={`Filter by ${m}`}
-                className={`px-2.5 py-1 text-xs font-mono rounded-[var(--radius-sm)] border transition-all focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] shrink-0 ${
-                  selectedModelFilter === m
-                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] border-[var(--color-ink)] font-semibold'
-                    : 'bg-[var(--color-paper)] border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-accent)]'
-                }`}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-
-          {filteredRecords.length === 0 ? (
-            <div className="p-8 text-center text-xs text-[var(--color-ink-muted)] italic">
-              No usage records match the selected model filter or query.
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-[var(--color-border-hairline)] text-xs font-mono uppercase tracking-wider text-[var(--color-ink-muted)]">
-                    <th className="py-2 px-3">Timestamp</th>
-                    <th className="py-2 px-3">Model Engine</th>
-                    <th className="py-2 px-3">Prompt Tokens</th>
-                    <th className="py-2 px-3">Completion Tokens</th>
-                    <th className="py-2 px-3">Total Tokens</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[var(--color-border-hairline)] text-xs">
-                  {filteredRecords.slice(0, 25).map((u) => (
-                    <tr key={u.id} className="hover:bg-[var(--color-paper)] transition-colors">
-                      <td className="py-2.5 px-3 font-mono text-[var(--color-ink-faint)]">
-                        {new Date(u.timestamp).toLocaleTimeString()}
-                      </td>
-                      <td className="py-2.5 px-3 font-mono font-medium text-[var(--color-ink)]">{u.model}</td>
-                      <td className="py-2.5 px-3 font-mono text-[var(--color-ink-muted)]">{u.promptTokens}</td>
-                      <td className="py-2.5 px-3 font-mono text-[var(--color-ink-muted)]">{u.completionTokens}</td>
-                      <td className="py-2.5 px-3 font-mono font-semibold text-[var(--color-accent)]">
-                        {u.promptTokens + u.completionTokens}
-                      </td>
+          {/* Telemetry Log Table */}
+          <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] overflow-hidden bg-[var(--color-paper)]">
+            {filteredRecords.length === 0 ? (
+              <div className="p-8 text-center text-xs font-mono text-[var(--color-ink-muted)]">
+                No usage logs match your filter criteria.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider">
+                      <th className="p-3">Model Target</th>
+                      <th className="p-3">Prompt Tokens</th>
+                      <th className="p-3">Completion Tokens</th>
+                      <th className="p-3">Total Tokens</th>
+                      <th className="p-3">Est. Spend</th>
+                      <th className="p-3">Timestamp</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border-hairline)] text-xs font-mono text-[var(--color-ink)]">
+                    {filteredRecords.map((r) => {
+                      const total = (r.promptTokens || 0) + (r.completionTokens || 0);
+                      const pricing = MODEL_PRICING[r.model] || { input: 0.002, output: 0.006 };
+                      const cost = ((r.promptTokens || 0) / 1000) * pricing.input + ((r.completionTokens || 0) / 1000) * pricing.output;
+                      return (
+                        <tr key={r.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
+                          <td className="p-3 font-semibold text-[var(--color-accent)]">{r.model}</td>
+                          <td className="p-3">{(r.promptTokens || 0).toLocaleString()}</td>
+                          <td className="p-3">{(r.completionTokens || 0).toLocaleString()}</td>
+                          <td className="p-3 font-semibold">{total.toLocaleString()}</td>
+                          <td className="p-3 text-emerald-600">${cost.toFixed(4)}</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">
+                            {new Date(r.timestamp).toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* Ft7 Almanac Colophon Footer */}
-        <footer className="border-t border-[var(--color-border-hairline)] pt-6 text-xs font-mono text-[var(--color-ink-faint)] flex justify-between">
-          <div>Telemetry Schema v1.0 • Almanac Theme</div>
-          <div>Council of Minds</div>
-        </footer>
       </div>
     </Shell>
   );
