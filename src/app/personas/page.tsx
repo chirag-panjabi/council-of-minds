@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Plus, Grid, List, Download, Upload, Trash2, ArrowRight, Sparkles } from 'lucide-react';
+import { Plus, Grid, List, Download, Upload, Edit3, ArrowRight, Sparkles } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 11-catalogue · theme: atelier · nav: N1b · footer: Ft4 */
@@ -147,7 +147,7 @@ export default function PersonaLibraryPage() {
           <div className="flex flex-wrap items-center gap-1.5">
             <button
               onClick={() => setSelectedTag(null)}
-              className={`px-2.5 py-1 text-xs rounded-[var(--radius-sm)] font-mono transition-colors ${
+              className={`px-2.5 py-1 text-xs rounded-[var(--radius-sm)] font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
                 selectedTag === null
                   ? 'bg-[var(--color-accent)] text-white font-semibold'
                   : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -159,7 +159,7 @@ export default function PersonaLibraryPage() {
               <button
                 key={tag}
                 onClick={() => setSelectedTag(tag)}
-                className={`px-2.5 py-1 text-xs rounded-[var(--radius-sm)] font-mono transition-colors ${
+                className={`px-2.5 py-1 text-xs rounded-[var(--radius-sm)] font-mono transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
                   selectedTag === tag
                     ? 'bg-[var(--color-accent)] text-white font-semibold'
                     : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
@@ -173,7 +173,8 @@ export default function PersonaLibraryPage() {
           <div className="flex items-center border border-[var(--color-border)] rounded-[var(--radius-sm)] p-0.5 bg-[var(--color-paper)]">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-[2px] transition-colors ${
+              aria-label="Switch to grid view"
+              className={`p-1.5 rounded-[2px] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
                 viewMode === 'grid' ? 'bg-[var(--color-paper-3)] text-[var(--color-ink)]' : 'text-[var(--color-ink-muted)]'
               }`}
             >
@@ -181,7 +182,8 @@ export default function PersonaLibraryPage() {
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-[2px] transition-colors ${
+              aria-label="Switch to list view"
+              className={`p-1.5 rounded-[2px] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
                 viewMode === 'list' ? 'bg-[var(--color-paper-3)] text-[var(--color-ink)]' : 'text-[var(--color-ink-muted)]'
               }`}
             >
@@ -210,13 +212,24 @@ export default function PersonaLibraryPage() {
                       </h3>
                       <div className="text-xs font-mono text-[var(--color-ink-muted)]">{persona.role}</div>
                     </div>
-                    <button
-                      onClick={() => handleExport(persona)}
-                      className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                      title="Export Share Code"
-                    >
-                      <Download className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <Link
+                        href={`/personas/${persona.id}/edit`}
+                        aria-label={`Edit ${persona.name}`}
+                        className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
+                        title="Edit Persona Directives"
+                      >
+                        <Edit3 className="w-4 h-4" />
+                      </Link>
+                      <button
+                        onClick={() => handleExport(persona)}
+                        aria-label={`Export share code for ${persona.name}`}
+                        className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
+                        title="Export Share Code"
+                      >
+                        <Download className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                   <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed line-clamp-3">
                     {persona.description}
@@ -255,9 +268,19 @@ export default function PersonaLibraryPage() {
                   <div className="text-xs font-mono text-[var(--color-ink-muted)]">{persona.role} — {persona.description}</div>
                 </div>
                 <div className="flex items-center gap-2">
+                  <Link
+                    href={`/personas/${persona.id}/edit`}
+                    className="btn-hallmark text-xs p-2"
+                    aria-label={`Edit ${persona.name}`}
+                    title="Edit Persona"
+                  >
+                    <Edit3 className="w-3.5 h-3.5" />
+                  </Link>
                   <button
                     onClick={() => handleExport(persona)}
                     className="btn-hallmark text-xs p-2"
+                    aria-label={`Export ${persona.name}`}
+                    title="Export Share Code"
                   >
                     <Download className="w-3.5 h-3.5" />
                   </button>
@@ -286,7 +309,7 @@ export default function PersonaLibraryPage() {
               <textarea
                 readOnly
                 value={exportCode}
-                className="w-full h-32 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)] select-all"
+                className="w-full h-32 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)] select-all focus:outline-none"
               />
               <div className="flex justify-end">
                 <button
@@ -312,7 +335,7 @@ export default function PersonaLibraryPage() {
                 value={importCode}
                 onChange={(e) => setImportCode(e.target.value)}
                 placeholder="Paste Base64 code here..."
-                className="w-full h-24 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)]"
+                className="w-full h-24 p-3 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded font-mono text-xs text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
               />
 
               {importStatus && (
