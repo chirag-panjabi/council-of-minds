@@ -16,3 +16,8 @@ When writing code for this project, you must adhere to the following constraints
 - **No Authentication:** Do not implement NextAuth, Clerk, Supabase Auth, or any login screens.
 - **No Billing Logic:** Do not add Stripe, payment gateways, or backend credit-deduction logic.
 - **Secure Key Handling:** The backend must never log, print, or persist the user's API key. It must only exist in memory during the request proxy.
+
+# Hallmark Skill Enforced for All UI Decisions
+- Everything related to UI design, aesthetics, component structure, typography, microinteractions, and visual layouts MUST be governed by the `hallmark` skill (`/Users/chirag/.gemini/config/skills/hallmark/SKILL.md`).
+- Any legacy UI design or styling references in existing `docs/` specifications are overridden by the `hallmark` skill guidelines.
+- Every page and component design must follow Hallmark anti-AI-slop principles (pre-flight scan, genre detection, macrostructure pick, 2+1 font discipline, locked tokens, 8-state component discipline, mobile responsiveness, and slop-test gates).

@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 
+ * Hallmark Design System Tokens — Genre: Editorial
+ * Locked OKLCH Palette & Typography Variables
+ */
+
+:root {
+  /* Paper (Background) Bands */
+  --color-paper: oklch(98% 0.008 75);
+  --color-paper-2: oklch(95% 0.012 75);
+  --color-paper-3: oklch(91% 0.016 75);
+
+  /* Ink (Text & Foreground) Bands */
+  --color-ink: oklch(18% 0.015 60);
+  --color-ink-muted: oklch(45% 0.015 60);
+  --color-ink-faint: oklch(68% 0.01 60);
+
+  /* Accent & Highlight Tokens */
+  --color-accent: oklch(42% 0.14 38); /* Warm Terracotta Oxblood */
+  --color-accent-hover: oklch(36% 0.15 38);
+  --color-accent-subtle: oklch(94% 0.03 38);
+
+  /* Functional & Status Tokens */
+  --color-border: oklch(88% 0.012 75);
+  --color-border-hairline: oklch(92% 0.008 75);
+  --color-focus: oklch(45% 0.18 250);
+  --color-error: oklch(50% 0.18 25);
+  --color-success: oklch(50% 0.15 145);
+  --color-warning: oklch(58% 0.16 85);
+
+  /* Reasoning Accordion Special Tokens */
+  --color-think-bg: oklch(96% 0.01 80);
+  --color-think-border: oklch(89% 0.02 80);
+  --color-think-ink: oklch(35% 0.02 80);
+
+  /* Font Family Discipline (2+1 Rule) */
+  --font-display: 'Instrument Serif', 'Newsreader', 'Georgia', serif;
+  --font-body: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
+
+  /* Touch & Interaction Bounds */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 8px;
+}
+
+.dark {
+  /* Dark Slate Studio Theme */
+  --color-paper: oklch(14% 0.015 250);
+  --color-paper-2: oklch(18% 0.018 250);
+  --color-paper-3: oklch(24% 0.02 250);
+
+  --color-ink: oklch(92% 0.008 250);
+  --color-ink-muted: oklch(70% 0.012 250);
+  --color-ink-faint: oklch(48% 0.01 250);
+
+  --color-accent: oklch(62% 0.16 145); /* Leaf Green */
+  --color-accent-hover: oklch(70% 0.18 145);
+  --color-accent-subtle: oklch(22% 0.04 145);
+
+  --color-border: oklch(26% 0.02 250);
+  --color-border-hairline: oklch(20% 0.015 250);
+  --color-focus: oklch(65% 0.2 250);
+
+  --color-think-bg: oklch(17% 0.02 250);
+  --color-think-border: oklch(28% 0.025 250);
+  --color-think-ink: oklch(78% 0.012 250);
+}
+
+/* Mobile Safety Floor & Root Bounds */
+html, body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  overflow-x: clip;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Typography Purity Rule — Headlines strictly Roman */
+h1, h2, h3, h4, h5, h6, .font-display {
+  font-family: var(--font-display);
+  font-style: normal !important;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/* Hallmark 8-State Component Disciplines */
+.btn-hallmark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-paper-2);
+  color: var(--color-ink);
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+  cursor: pointer;
+  user-select: none;
+  min-height: 44px; /* WCAG 2.2 Touch target floor */
+  white-space: nowrap;
+}
+
+.btn-hallmark:hover, .btn-hallmark.is-hover {
+  background-color: var(--color-paper-3);
+  border-color: var(--color-ink-muted);
+}
+
+.btn-hallmark:focus-visible, .btn-hallmark.is-focus {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.btn-hallmark:active, .btn-hallmark.is-active {
+  transform: translateY(1px);
+}
+
+.btn-hallmark:disabled, .btn-hallmark[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-hallmark-primary {
+  background-color: var(--color-accent);
+  color: oklch(98% 0 0);
+  border-color: var(--color-accent);
+}
+
+.btn-hallmark-primary:hover, .btn-hallmark-primary.is-hover {
+  background-color: var(--color-accent-hover);
+  border-color: var(--color-accent-hover);
+}
+
+/* Broad-sheet Hairline Divider */
+.hairline-divider {
+  border-top: 1px solid var(--color-border-hairline);
+  margin: 1.5rem 0;
+}
+
+/* Reasoning Thought Process Accordion Styling */
+.think-accordion {
+  background-color: var(--color-think-bg);
+  border-left: 2px solid var(--color-accent);
+  border-top: 1px solid var(--color-think-border);
+  border-right: 1px solid var(--color-think-border);
+  border-bottom: 1px solid var(--color-think-border);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--color-think-ink);
+}

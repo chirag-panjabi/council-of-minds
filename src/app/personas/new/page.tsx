@@ -1,0 +1,156 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Shell } from '@/components/layout/Shell';
+import { db } from '@/lib/db';
+import { ArrowLeft, Save, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+
+export default function NewPersonaPage() {
+  const router = useRouter();
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('');
+  const [description, setDescription] = useState('');
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [defaultModel, setDefaultModel] = useState('gpt-4o');
+  const [tagsInput, setTagsInput] = useState('Philosophy, Strategy');
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !systemPrompt.trim()) return;
+
+    setIsSaving(true);
+    const tags = tagsInput
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+
+    await db.personas.add({
+      id: 'persona-' + Date.now(),
+      name: name.trim(),
+      role: role.trim() || 'Advisor',
+      description: description.trim(),
+      systemPrompt: systemPrompt.trim(),
+      defaultModel,
+      tags,
+      isArchived: false,
+      createdAt: Date.now(),
+    });
+
+    router.push('/personas');
+  };
+
+  return (
+    <Shell>
+      <div className="p-6 md:p-10 max-w-3xl mx-auto space-y-8">
+        <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
+          <Link href="/personas" className="inline-flex items-center gap-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]">
+            <ArrowLeft className="w-4 h-4" /> Back to Library
+          </Link>
+          <div className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
+            Persona Creator Surface
+          </div>
+        </header>
+
+        <form onSubmit={handleSubmit} className="space-y-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] p-6 md:p-8">
+          <div>
+            <h1 className="font-display text-3xl text-[var(--color-ink)]">Draft New Persona</h1>
+            <p className="text-xs text-[var(--color-ink-muted)] mt-1">
+              Define the identity, behavioral directives, and default model for a new thinking agent.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Name *</label>
+              <input
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Socrates"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] font-medium"
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Role / Title</label>
+              <input
+                type="text"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                placeholder="e.g. Classical Philosopher"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Brief Description</label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Short summary of persona's analytical perspective..."
+              className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)]"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Default Model Target</label>
+              <select
+                value={defaultModel}
+                onChange={(e) => setDefaultModel(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)]"
+              >
+                <option value="gpt-4o">OpenAI GPT-4o</option>
+                <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
+                <option value="claude-3-5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                <option value="gemini-1.5-pro">Google Gemini 1.5 Pro</option>
+                <option value="ollama-local">Ollama Local Model</option>
+              </select>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Tags (Comma Separated)</label>
+              <input
+                type="text"
+                value={tagsInput}
+                onChange={(e) => setTagsInput(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="block text-xs font-mono text-[var(--color-ink-muted)]">System Prompt Instructions *</label>
+            <textarea
+              required
+              rows={6}
+              value={systemPrompt}
+              onChange={(e) => setSystemPrompt(e.target.value)}
+              placeholder="You are [Name]. Analyze the user's dilemma by..."
+              className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--color-border-hairline)]">
+            <Link href="/personas" className="btn-hallmark text-xs">
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              disabled={isSaving}
+              className="btn-hallmark btn-hallmark-primary text-xs gap-1.5"
+            >
+              <Save className="w-4 h-4" /> {isSaving ? 'Saving...' : 'Save Persona'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Shell>
+  );
+}
