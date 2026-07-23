@@ -35,9 +35,13 @@ export function PersonaSelectorModal({
   const [markedIds, setMarkedIds] = useState<string[]>(selectedPersonaIds);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
+  const selectedIdsKey = selectedPersonaIds ? selectedPersonaIds.join(',') : '';
+
   useEffect(() => {
-    setMarkedIds(selectedPersonaIds);
-  }, [selectedPersonaIds, isOpen]);
+    if (isOpen) {
+      setMarkedIds(selectedPersonaIds);
+    }
+  }, [selectedIdsKey, isOpen]);
 
   // Load favorites from local storage key
   useEffect(() => {
