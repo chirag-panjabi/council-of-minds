@@ -1,195 +1,218 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { useUIStore } from '@/lib/stores/useUIStore';
 import {
   LayoutDashboard,
   Users,
   MessageSquare,
-  Plus,
-  Settings,
   BarChart2,
-  ChevronLeft,
+  Settings,
+  Plus,
   Search,
-  Sparkles,
-  ShieldCheck,
+  ChevronRight,
+  ShieldAlert,
+  HelpCircle,
+  Keyboard,
 } from 'lucide-react';
+import { SearchPalette } from '@/components/search/SearchPalette';
+import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
+
+/* Hallmark · genre: editorial · theme: studio · nav: N1b */
 
 export function Sidebar() {
   const pathname = usePathname();
-  const { isSidebarOpen, setSidebarOpen, setSearchPaletteOpen } = useUIStore();
+  const router = useRouter();
+
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
-  const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(10).toArray()) || [];
+  const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(5).toArray()) || [];
 
-  if (!isSidebarOpen) return null;
+  // Global keydown listeners for Cmd/Ctrl+K and Cmd/Ctrl+/
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === '/') {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const isActive = (path: string) => pathname === path;
 
   return (
-    <aside className="w-64 h-screen sticky top-0 flex flex-col bg-[var(--color-paper-2)] border-r border-[var(--color-border-hairline)] select-none z-30 transition-all duration-200">
-      {/* Broad-sheet Masthead Header */}
-      <div className="p-4 border-b border-[var(--color-border-hairline)] flex items-center justify-between">
-        <Link href="/" className="group flex flex-col">
-          <span className="font-display text-lg tracking-tight text-[var(--color-ink)] group-hover:text-[var(--color-accent)] transition-colors">
-            Council of Minds
-          </span>
-          <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
-            Editorial Studio v1.0
-          </span>
-        </Link>
-        <button
-          onClick={() => setSidebarOpen(false)}
-          className="p-1 rounded-[var(--radius-sm)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] transition-colors"
-          title="Collapse Sidebar"
-        >
-          <ChevronLeft className="w-4 h-4" />
-        </button>
-      </div>
+    <>
+      <SearchPalette />
+      <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
 
-      {/* ⌘K Search Quick Trigger */}
-      <div className="px-3 py-2">
-        <button
-          onClick={() => setSearchPaletteOpen(true)}
-          className="w-full flex items-center justify-between px-3 py-1.5 text-xs text-[var(--color-ink-muted)] bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] hover:border-[var(--color-ink-muted)] transition-colors"
-        >
-          <span className="flex items-center gap-2">
-            <Search className="w-3.5 h-3.5" />
-            Search...
-          </span>
-          <kbd className="font-mono text-[10px] bg-[var(--color-paper-3)] px-1.5 py-0.5 rounded border border-[var(--color-border)]">
-            ⌘K
-          </kbd>
-        </button>
-      </div>
+      <aside className="w-64 bg-[var(--color-paper-2)] border-r border-[var(--color-border-hairline)] flex flex-col justify-between h-screen sticky top-0 shrink-0 font-body text-sm">
+        <div className="p-4 space-y-6 overflow-y-auto">
+          {/* Workspace Masthead */}
+          <div className="space-y-1">
+            <div className="font-display text-xl font-medium tracking-tight text-[var(--color-ink)]">
+              Council of Minds
+            </div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider">
+              BYOK Dialectic Workspace
+            </div>
+          </div>
 
-      {/* Main Navigation Links */}
-      <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-4">
-        {/* Core Pages */}
-        <div className="space-y-1">
-          <Link
-            href="/"
-            className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
-              pathname === '/'
-                ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold'
-                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
-            }`}
+          {/* Quick Search Palette Trigger (Cmd+K) */}
+          <button
+            onClick={() => setIsSearchOpen(true)}
+            aria-label="Open global search command palette (Command + K)"
+            className="w-full flex items-center justify-between px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:border-[var(--color-accent)] transition-all group focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
           >
-            <LayoutDashboard className="w-4 h-4" />
-            Orientation Dashboard
-          </Link>
-          <Link
-            href="/personas"
-            className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
-              pathname?.startsWith('/personas')
-                ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold'
-                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
-            }`}
-          >
-            <Users className="w-4 h-4" />
-            Persona Library & Groups
-          </Link>
-        </div>
-
-        {/* Persona Groups Section */}
-        <div>
-          <div className="flex items-center justify-between px-3 mb-1">
-            <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-ink-faint)]">
-              Persona Groups
+            <span className="flex items-center gap-2">
+              <Search className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Search...
             </span>
+            <kbd className="font-mono text-[10px] bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] px-1.5 py-0.5 rounded text-[var(--color-ink-muted)]">
+              ⌘K
+            </kbd>
+          </button>
+
+          {/* Main Navigation Links */}
+          <nav className="space-y-1">
+            <Link
+              href="/"
+              className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isActive('/')
+                  ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+              }`}
+            >
+              <LayoutDashboard className="w-4 h-4 text-[var(--color-accent)]" />
+              <span>Dashboard</span>
+            </Link>
+
+            <Link
+              href="/personas"
+              className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isActive('/personas')
+                  ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+              }`}
+            >
+              <Users className="w-4 h-4 text-[var(--color-accent)]" />
+              <span>Persona Library</span>
+            </Link>
+
             <Link
               href="/personas/groups"
-              className="text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] p-0.5"
-              title="Manage Roster Groups"
+              className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isActive('/personas/groups')
+                  ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+              }`}
             >
-              <Plus className="w-3.5 h-3.5" />
+              <MessageSquare className="w-4 h-4 text-[var(--color-accent)]" />
+              <span>Persona Groups</span>
             </Link>
-          </div>
-          <div className="space-y-1">
-            {groups.length === 0 ? (
-              <div className="px-3 py-2 text-xs italic text-[var(--color-ink-faint)]">
-                No saved rosters yet.
-              </div>
-            ) : (
-              groups.map((group) => (
+          </nav>
+
+          {/* Saved Groups Section */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider px-2">
+              <span>Saved Rosters</span>
+              <Link href="/personas/groups" aria-label="Create new roster group" className="hover:text-[var(--color-accent)]">
+                <Plus className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+            <div className="space-y-0.5">
+              {groups.slice(0, 5).map((g) => (
                 <Link
-                  key={group.id}
+                  key={g.id}
                   href="/personas/groups"
-                  className="flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] rounded-[var(--radius-sm)] transition-colors"
+                  className="flex items-center justify-between px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors"
                 >
-                  <Sparkles className="w-3.5 h-3.5 text-[var(--color-accent)]" />
-                  <span className="truncate">{group.name}</span>
+                  <span className="truncate">{g.name}</span>
+                  <ChevronRight className="w-3 h-3 opacity-50" />
                 </Link>
-              ))
-            )}
+              ))}
+            </div>
           </div>
-        </div>
 
-        {/* Recent Conversations */}
-        <div>
-          <div className="px-3 mb-1 text-[10px] font-mono uppercase tracking-widest text-[var(--color-ink-faint)]">
-            Recent Conversations
-          </div>
-          <div className="space-y-1">
-            {recentChats.length === 0 ? (
-              <div className="px-3 py-2 text-xs italic text-[var(--color-ink-faint)]">
-                No recent chats.
-              </div>
-            ) : (
-              recentChats.map((chat) => (
+          {/* Recent Sessions */}
+          <div className="space-y-2">
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider px-2">
+              Recent Sessions
+            </div>
+            <div className="space-y-0.5">
+              {recentChats.map((c) => (
                 <Link
-                  key={chat.id}
-                  href={chat.type === 'council' ? `/chat/council/${chat.id}` : `/chat/1-on-1/${chat.id}`}
-                  className={`flex items-center gap-2 px-3 py-1.5 text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)] rounded-[var(--radius-sm)] transition-colors ${
-                    pathname?.includes(chat.id) ? 'bg-[var(--color-paper-3)] text-[var(--color-ink)] font-medium' : ''
-                  }`}
+                  key={c.id}
+                  href={c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`}
+                  className="block px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors truncate"
                 >
-                  <MessageSquare className="w-3.5 h-3.5 text-[var(--color-ink-muted)]" />
-                  <span className="truncate">{chat.title}</span>
+                  {c.title}
                 </Link>
-              ))
-            )}
+              ))}
+            </div>
           </div>
         </div>
-      </nav>
 
-      {/* Footer Navigation (Analytics, Privacy, Settings) */}
-      <div className="p-3 border-t border-[var(--color-border-hairline)] space-y-1">
-        <Link
-          href="/analytics"
-          className={`flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
-            pathname === '/analytics'
-              ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
-          }`}
-        >
-          <BarChart2 className="w-4 h-4" />
-          Analytics
-        </Link>
-        <Link
-          href="/privacy"
-          className={`flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
-            pathname === '/privacy'
-              ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
-          }`}
-        >
-          <ShieldCheck className="w-4 h-4" />
-          Privacy Memo
-        </Link>
-        <Link
-          href="/settings"
-          className={`flex items-center gap-2.5 px-3 py-1.5 text-xs font-medium rounded-[var(--radius-sm)] transition-colors ${
-            pathname === '/settings'
-              ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)]'
-              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-3)]'
-          }`}
-        >
-          <Settings className="w-4 h-4" />
-          Settings
-        </Link>
-      </div>
-    </aside>
+        {/* Footer Navigation Bar */}
+        <div className="p-4 border-t border-[var(--color-border-hairline)] space-y-1">
+          <button
+            onClick={() => setIsShortcutsOpen(true)}
+            className="w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+          >
+            <span className="flex items-center gap-3">
+              <Keyboard className="w-4 h-4 text-[var(--color-accent)]" /> Shortcuts
+            </span>
+            <kbd className="font-mono text-[10px] bg-[var(--color-paper)] border border-[var(--color-border-hairline)] px-1.5 py-0.5 rounded">
+              ⌘/
+            </kbd>
+          </button>
+
+          <Link
+            href="/analytics"
+            className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-xs transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+              isActive('/analytics')
+                ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+            }`}
+          >
+            <BarChart2 className="w-4 h-4 text-[var(--color-accent)]" />
+            <span>Analytics</span>
+          </Link>
+
+          <Link
+            href="/privacy"
+            className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-xs transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+              isActive('/privacy')
+                ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+            }`}
+          >
+            <ShieldAlert className="w-4 h-4 text-[var(--color-accent)]" />
+            <span>Privacy Memo</span>
+          </Link>
+
+          <Link
+            href="/settings"
+            className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-xs transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+              isActive('/settings')
+                ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+            }`}
+          >
+            <Settings className="w-4 h-4 text-[var(--color-accent)]" />
+            <span>Settings</span>
+          </Link>
+        </div>
+      </aside>
+    </>
   );
 }
