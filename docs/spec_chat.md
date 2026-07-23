@@ -1,41 +1,46 @@
-# Unified Chat Interface Specification
+# Frontend Functional Specification: Unified Chat Interface
 
-## Purpose
+## 1. Overview & UI Scaling Paradigm
 
-The shared chat interface supplies message history, a header, an input area, streaming states, attachment staging, and safe error handling for both 1-on-1 and Council sessions. Mode-specific behavior is added without duplicating the core interaction model.
+- **Primary Goal:** Provide a single, reusable chat interface (Header, Message History, Input Area) that scales seamlessly from single-persona 1-on-1 conversations to multi-persona Council debates.
+- **Council Mode Scaling:** When more than one AI persona is active, the shared layout conditionally renders the **Persistent Right-Hand Panel** (`spec_council.md`) and the **Moderator Strip** (`spec_council.md`), maintaining a single unified codebase for all chat experiences.
 
-## Shared Header
+## 2. Shared Header Bar
 
-- Editable session title for saved sessions.
-- Active participant indicators and session-only model overrides.
-- Export and delete actions for non-Incognito sessions.
-- A visible normal or Incognito state. Incognito is selected before the first message and cannot silently reclassify existing history.
+- **Editable Title:** Inline editable title for saved non-Incognito sessions.
+- **Participant Indicators & Model Overrides:** Displays single persona avatar (1-on-1) or stacked-avatar cluster (Council). Clicking an avatar opens a menu to swap personas or configure **Provider & Model Overrides**. Prompts user to select *"Remember for this persona forever"* or *"Just this chat"*.
+- **Incognito Toggle & Watermark:** Incognito toggle in header. When active, a persistent ghost watermark/tinted border renders in the Chat Input area. Incognito can only be toggled before sending the first message.
+- **Export & Copy Actions:** Export transcript to Markdown/JSON (with a toggle to include/exclude system events) or copy raw text to clipboard.
 
-## Message Model
+## 3. Message History & Bubble Styling
 
-Each message records a stable identifier, role, creation time, lifecycle state, parent relationship where applicable, displayed persona snapshot, and optional attachment references. A streamed assistant message has pending, complete, failed, or cancelled state.
+- **Layout Differentiation:** User messages are right-aligned; AI messages are left-aligned.
+- **Visual Persona Identification:** WhatsApp/Telegram-style message header featuring Persona Avatar, Name, and subtle accent-color left border/tint on chat bubbles.
+- **Reasoning Models (`<think>` Token Filtering):** For reasoning models (e.g. DeepSeek-R1), raw internal `<think>...</think>` tokens are stripped from user-facing text and rendered inside an expandable **"Thought Process"** UI accordion with a pulsing brain icon.
+- **System & Moderation Events:** Distinct italicized blockquote presentation (e.g., *"Agent added to Council"*, *"Model override applied"*).
 
-The interface must distinguish user, assistant, system, and moderation events in both visual presentation and accessible labels. A persona name and avatar identify assistant content in all modes.
+## 4. Input Area & Staging Behavior
 
-## Streaming Behavior
+- **Auto-Expanding Textarea:** Textarea expands dynamically on input up to a max-height limit.
+- **Keyboard Shortcuts:** Pressing `Enter` (without modifier keys) submits the prompt. Pressing `Shift+Enter` inserts a newline.
+- **Attachment Staging:** Supports uploading files/images into a removable staging bar. Performs provider capability pre-flight checks before submission (e.g., verifies vision model support for images).
+- **Send / Stop Morphing Button:** Submit button morphs into a square **Stop** button while generation is active. Clicking Stop aborts the active stream immediately.
 
-- Only one response stream is active per session.
-- A pending bubble appears before time to first token.
-- Stop cancels the request and leaves a clear cancelled state.
-- Network, provider, validation, and rate-limit errors use actionable inline messages with a retry path only when retrying is safe.
-- Live regions announce final response completion, not every token.
+## 5. Council Additions & Moderator Strip
 
-## Input Behavior
+When Council Mode is active:
+- **Persistent Right Panel:** Hosts Roster display, reorderable Speaking Queue, Auto-Pilot with mandatory Round Limits, Response Length control, and Synthesizer live status (`spec_council.md` §3).
+- **Moderator Strip (Input Area):**
+  - *`@` Mentioning:* Typing `@` in the textarea anchors a popup menu to tag specific Council members.
+  - *Request Persona Reply Button:* Forces a selected persona to respond next without typing a new prompt.
+  - *Stepping Controls:* Quick-action "Continue" and "Synthesize" buttons.
 
-- The input is an auto-expanding textarea with explicit Send and Stop controls.
-- Enter sends only when the focus is in the chat textarea and no modifier key requests a newline.
-- Attachments remain in a removable staging area until send.
-- A provider capability check occurs before content is submitted.
+## 6. Message Lifecycle Data Model & Transactional Safety
 
-## Council Additions
+- **Message Lifecycle States:** Every message records `id`, `role` (`user` | `assistant` | `system`), `timestamp`, `state` (`pending` | `streaming` | `complete` | `failed` | `cancelled`), `personaSnapshot`, and optional `attachmentReferences`.
+- **Transactional Branch Editing:** Editing a user message or regenerating an AI message truncates history from that point. Original history remains intact until the new replacement branch commits successfully. Summaries, token counts, and attachments are reconciled in `IndexedDB`.
 
-Council mode adds a participant roster, sequential turn queue, manual Continue action, per-persona request action, finite Auto-Pilot, synthesis, and direct mentions. These controls follow [Council Specification](./spec_council.md).
+## 7. Accessibility & Screen Reader Guidelines
 
-## Accessibility
-
-All controls have names, visible focus, keyboard operation, and appropriate disabled-state explanations. Modals trap focus and return it to their trigger. Motion respects reduced-motion preferences.
+- **Screen Reader Quiet Streaming Rule:** Screen readers announce final response completion once upon stream finish, avoiding repetitive announcements per SSE chunk.
+- **WCAG Compliance:** All actions feature programmatic names, visible focus indicators, and strict keyboard operation. Modals trap focus and respect `prefers-reduced-motion`.

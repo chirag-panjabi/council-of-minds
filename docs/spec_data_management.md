@@ -2,60 +2,55 @@
 
 ## Overview
 
-`IndexedDB` is the durable local database for chats, messages, personas, attachment blobs, profile data, and analytics. Import, export, restore, and wipe must be explicit, previewable, and local browser operations. API keys are deliberately excluded from all exports and restores.
+`IndexedDB` acts as the sole local database for chats, messages, personas, attachment Blobs, user profile data, and token usage analytics. Import, export, restore, and wipe must be explicit, previewable, zero-egress browser operations. API keys are strictly excluded from all data exports.
 
 ## 1. Export Workflows
 
-### 1.1 Full Backup
+### 1.1 Full Backup & Chat History Archive (`.zip`)
+- **Trigger:** The user clicks `Export Full Backup` or `Export Chat History` in Settings → Data & Privacy.
+- **Format:** Generates a client-side `.zip` archive via `JSZip` containing:
+  - Versioned `manifest.json` (format, `schemaVersion`, `createdAt`, app version, included data categories).
+  - Structured JSON chat session and message files.
+  - Optional **Readable Markdown Transcripts (`.md`)** for each conversation.
+  - Attachment binary Blobs preserved as raw binary entries (not converted to Base64 text).
+- **Exclusions:** Excludes API keys, local drafts, onboarding state, transient UI state, and all Incognito content (messages, attachments, titles, analytics, search entries).
+- **UI Progress:** Shows a loading spinner and accessible progress bar (e.g., *"Zipping 45 chats..."*) processed inside a Web Worker so the main UI thread stays responsive.
 
-- **Trigger:** The user selects `Export Full Backup` in Settings → Data & Privacy.
-- **Format:** Create a client-side ZIP archive with a versioned `manifest.json`, structured persona/session/message files, and attachment binary files. Attachments remain Blob/binary entries; do not turn them into persisted Base64 strings merely for backup.
-- **Manifest:** At minimum identify `format`, `schemaVersion`, `createdAt`, app version, included data categories, and the archive paths needed to restore them. It must allow a future version to identify whether a safe migration is available.
-- **Contents:** Include selected durable chats, messages, personas, and their attachment blobs. Exclude API keys, local drafts, onboarding state, transient UI state, and every Incognito message, attachment, title, analytics record, search entry, and history record.
-- **Feedback:** Show progress such as “Preparing 45 chats…” with an accessible busy state. Create the archive in a worker where practical so the main UI stays responsive, then hand it to the browser download flow.
-
-### 1.2 Portable Persona Export
-
-- **Trigger:** The user selects `Export Custom Personas`.
-- **Format:** Export the canonical, versioned persona schema as JSON. It includes only persona data necessary for a recipient to use it; it does not include chats, user profile data, API keys, analytics, or provider credentials.
-- **Feedback:** Clearly identify the generated file as sensitive prompt content the user is choosing to share.
+### 1.2 Portable Persona Export (`.json`)
+- **Trigger:** The user clicks `Export Custom Personas`.
+- **Format:** Serializes user-created personas into a portable JSON array (`personas_backup_YYYY-MM-DD.json`). Excludes API keys, model overrides, device paths, and local settings.
+- **UI Feedback:** Displays a notice reminding the user that exported persona prompts are saved locally for sharing.
 
 ## 2. Import and Restore Workflows
 
-### 2.1 Entry Points and File Validation
+### 2.1 Entry Points & Drag-and-Drop Dropzone
+- **Entry Points:** File picker button or an interactive **Drag-and-Drop Dropzone** supporting `.json` files up to **5 MiB** (for personas) and `.zip` archives (for full backups).
+- **Pre-Flight Validation:** Validates MIME type, byte size, archive manifest, and schema using Zod before parsing into `IndexedDB`. Never executes imported content as code. Checks browser storage quota before restore.
 
-- `Import Personas` accepts JSON files up to **5 MiB**. `Restore Full Backup` accepts the versioned archive format. A file picker is always available; drag-and-drop is an optional equivalent, not the only interaction.
-- Validate file type, byte size, archive paths, manifest version, and schema before reading data into `IndexedDB`. Never execute imported content or treat a filename, prompt, or archive path as HTML.
-- A full-backup restore checks available storage and reports a clear failure before writes if the browser cannot safely complete it. Do not invent a universal storage-size promise because browser quotas vary.
+### 2.2 Preview Before Commit
+- Parses backup archive into temporary worker state and displays an interactive preview: creation date, schema version, counts of chats/personas/messages/attachments, estimated storage required, and conflicts.
+- User can choose to restore **Personas**, **Chats**, or **Both**. No durable database changes occur until preview is confirmed.
 
-### 2.2 Preview Before Any Write
+### 2.3 Collision Detection & Resolution UI
+- Identity collision key is a matching `id`. A matching name triggers a warning prompt only.
+- For each identity conflict, the UI presents a modal with 3 explicit resolution buttons:
+  1. **Replace Existing:** Overwrites local persona/session with imported version.
+  2. **Keep Both (Duplicate):** Assigns a new UUID and appends `"(Copy)"` or `"(Imported)"` label to the record name.
+  3. **Skip:** Preserves local record and ignores imported item.
+- **Bulk Action:** Includes an accessible **"Apply to all conflicts"** checkbox for bulk processing.
 
-- Parse and validate into memory/temporary worker state, then show a preview: backup creation date, schema version, counts of chats/personas/messages/attachments, estimated local storage required, unsupported items, and conflicts.
-- Let the user choose to restore **personas**, **chats**, or **both**. No durable record changes until they confirm the preview.
-- Supported older schema versions are migrated before the preview; unsupported or future versions stop with a clear, non-destructive error.
+### 2.4 Completion & Transactional Recovery
+- Writes restore batches in transactions that preserve error state. Reports exact restored counts and links to the Persona Library or restored session URL upon completion.
 
-### 2.3 Collision Detection and Resolution
+## 3. Data Wiping: Danger Zone (`/settings`)
 
-- A canonical `id` is the identity collision key. A matching normalized name is a warning only, because different personas may intentionally share a name.
-- For each identity collision, offer `Replace existing`, `Keep both` (assign a new UUID and append an imported label), or `Skip`. Allow an accessible “Apply to all remaining identity conflicts” option.
-- When restoring chats, preserve their IDs only when no collision exists; otherwise create a new session ID and update its message/attachment references atomically.
+- **Trigger:** The user clicks `Wipe All Local Data`.
+- **Confirmation Modal:** Displays a severe red-themed confirmation modal requiring the user to manually type `"DELETE"`. Explains that all chats, personas, attachments, API keys, and settings will be permanently erased.
+- **Execution & Storage Cleanup:** Deletes the `IndexedDB` database and clears only `framework-engine:` namespaced `localStorage` keys. Blanket `localStorage.clear()` is strictly forbidden.
+- **Multi-Tab Blocked Deletion:** If another tab has the database open, halts wipe, warns the user to close competing tabs, and presents *Retry* / *Cancel*. App keys remain intact until DB deletion succeeds.
+- **Post-Wipe Hard Refresh:** Upon successful wipe, executes `window.location.reload()`, forcing the client route guard to redirect the user to `/onboarding` since API keys and profile settings no longer exist.
 
-### 2.4 Completion and Recovery
+## 4. Security, Privacy & Accessibility
 
-- Write the selected restore set in transactions/batches that leave a recoverable error state. If a batch fails, report what completed and offer retry rather than claiming an all-or-nothing restore that did not occur.
-- On completion, announce the restored counts and link to the Persona Library or the relevant canonical session URL. Incognito content cannot be restored because it was never persisted or exported.
-
-## 3. Data Wiping: Danger Zone
-
-- **Trigger:** The user selects `Wipe All Local Data`.
-- **Confirmation:** Use a clearly labelled destructive dialog and require the exact text `DELETE`. Explain that chats, messages, personas, attachment blobs, analytics, profile data, provider keys, preferences, drafts, and onboarding state will be removed from this browser.
-- **Deletion:** Delete the application `IndexedDB` database/stores and only browser keys beginning with `framework-engine:`. Never call blanket `localStorage.clear()`.
-- **Blocked deletion:** If another tab/window has the database open, report that deletion is blocked, ask the user to close the other tab, and provide Retry and Cancel. Keep app keys until database deletion completes; do not display success or reload as if the wipe completed.
-- **Completion:** Once both local stores are removed, reload and route to `/onboarding` because provider configuration no longer exists.
-
-## 4. Security, Privacy, and Accessibility
-
-- Import/export/restore/wipe processing runs in the browser and sends no archive bytes, filenames, or import metadata to the application backend. This local-operation guarantee does not change the separately disclosed cloud-provider request path for chat content.
-- Durable app data remains on the current browser until the user deletes an item or completes a wipe; the app has no hidden remote backup or automatic remote retention. Downloaded backup files are outside the app's control and remain the user's responsibility to retain or delete.
-- Backups may contain sensitive prompts and attachments. The UI warns users before export and does not imply that downloaded files are encrypted.
-- All progress, validation, conflict, and failure states meet WCAG 2.2 AA: keyboard-operable file selection and dialogs, visible focus, text alternatives to color, programmatically associated errors, and reduced-motion-safe feedback.
+- **Zero-Egress Guarantee:** File API processing, Blob creation, and compression run 100% locally within the browser sandbox. No file chunks, transcripts, or telemetry leave the client.
+- **WCAG 2.2 AA Compliance:** Full keyboard operation for dropzones and dialogs, visible focus rings, text alternatives to color, programmatically associated errors, and reduced-motion feedback.

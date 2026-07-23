@@ -1,76 +1,51 @@
-# Dashboard / Home Specification
+# Frontend Functional Specification: Dashboard / Home (`/`)
 
-## Target Page: Dashboard (`/`)
+## 1. Functional Purpose & Page Role
 
-### 1. Functional Purpose
+- **Primary Goal:** Serve as an **orientation surface**—where the user lands to understand their setup state, review token usage, and browse saved **Persona Groups** (`spec_persona_groups.md`).
+- **Relationship to Navigation:** Primary chat launching and session history navigation live in the persistent Sidebar (`spec_sidebar.md`). The Dashboard focuses on state, analytics, and browsing views rather than duplicating Sidebar navigation.
+- **Prerequisites:** Accessible without prior setup or API keys. Users can review stored personas, saved Groups, and analytics without configuring a key.
 
-- **Primary goal:** Provide the central route to new Council and 1-on-1 sessions, the local Persona Library, Settings, and durable chat history.
-- **Prerequisites:** The dashboard is always available. A configured provider is required only to send a new model request; users can still review locally stored sessions and personas without one.
+## 2. Interactive Elements Inventory
 
-### 2. Interactive Elements Inventory
+1. **Setup Required Banner** (Conditional alert)
+2. **Usage-at-a-Glance Widget** (Token usage summary card)
+3. **Groups Overview Grid** (Browsing cards for saved Persona Groups)
+4. **Zero Groups Empty State** (Guidance card + Group Creator button)
+5. **Primary Launch Entry Points** (Start Council, Start 1-on-1, Persona Library shortcuts)
 
-1. Sidebar toggle
-2. Browser-style back and forward controls
-3. Settings link
-4. Setup-required banner (conditional)
-5. Start Council flow
-6. Start 1-on-1 flow
-7. Persona Library link
-8. Recent sessions list
+## 3. Component Specifications & Interaction Flows
 
-### 3. Detailed Component and Interaction Flows
+### 3.1. Setup Required Banner (Conditional)
+- **Trigger:** Displays if `hasSkippedOnboarding` is true or no valid provider API keys exist in `localStorage`.
+- **Content & Action:** Reminds the user that the application is in a read-only state. Contains a direct action link to `/settings` or `/onboarding`.
+- **Accessibility:** Uses a non-disruptive ARIA status/alert pattern; keyboard reachable.
 
-#### 3.1 Sidebar Toggle
+### 3.2. Usage-at-a-Glance Widget
+- **Content:** Displays total tokens consumed, most active Persona or Group, and a summary metric card.
+- **Action:** Clicking "View Details" routes directly to `/analytics` (`spec_analytics.md`).
 
-- **Type:** Button with an accessible name that reflects its current action (for example, `Open navigation`).
-- **Behavior:** Opens or closes the global sidebar. The sidebar is the primary history navigation and displays durable `IndexedDB` sessions grouped by date.
-- **Persistence:** Only the expanded/collapsed preference is stored in the namespaced key `framework-engine:ui:sidebar`; session data is never stored in `localStorage`.
+### 3.3. Groups Overview Grid
+- **Functionality:** Browsing view for all saved Groups, complementary to the Sidebar's quick-scanning list.
+- **Card Display:** Shows stacked-avatar cluster (member avatars), Group name, member count, and default Synthesizer badge (if set).
+- **Sorting & Filtering:** Recency sort by default (most recently edited/launched first); includes a search input filtering by Group name.
+- **Card Action:** Clicking a card opens Council Setup (`spec_council.md`) with that Group's roster and speaking order pre-filled.
+- **Card Context Menu:** Launch Council, Edit Group, Duplicate Group, Delete Group (`spec_persona_groups.md` §3.3).
 
-#### 3.2 Back and Forward Controls
+### 3.4. Zero Groups Empty State
+- **Trigger:** Active when zero saved Groups exist in `IndexedDB`.
+- **Content:** Replaces the grid with a centered explanation card explaining Persona Groups (reusable Council rosters) and a prominent "Create your first Group" button routing to the Group Creator (`spec_persona_groups.md` §3.2).
 
-- **Type:** Buttons.
-- **Behavior:** Use the application router's history APIs. Disabled controls must expose their disabled state and must not intercept the browser's native back/forward behavior.
+### 3.5. Primary Launch Shortcuts
+- Provides quick-launch action cards for **Start Council** (`/chat/council`), **Start 1-on-1** (`/chat/1-on-1`), and **Persona Library** (`/personas`).
 
-#### 3.3 Settings Link
+## 4. Background Data & Performance Rules
 
-- **Type:** Link.
-- **Behavior:** Routes to `/settings`, where users manage providers, preferences, and local-data actions.
+- **Data Fetching:** Fetches saved Groups from `IndexedDB` `groups` store and recent token usage from `IndexedDB` `tokenUsage` store.
+- **Single Source of History:** Recent Conversations are owned exclusively by the Sidebar (`spec_sidebar.md`) to avoid duplicate `IndexedDB` queries and redundant UI elements.
+- **Storage Rules:** `localStorage` is restricted to API keys, light preferences, and drafts. Durable data stays in `IndexedDB`.
 
-#### 3.4 Setup-Required Banner
+## 5. Accessibility & Focus Management
 
-- **Trigger:** The user has not configured an enabled provider, or the last validation failed.
-- **Content:** Explain that a provider is required to send model requests, not that the entire application is read-only. Provide a single clear action to `/settings` (or `/onboarding` before onboarding is complete).
-- **Accessibility:** Use a non-disruptive status/alert pattern, do not rely on color alone, and keep the action keyboard reachable.
-
-#### 3.5 Start Council
-
-- **Behavior:** Opens the Council setup flow. After the user selects the required personas and creates a session, route to `/chat/council/[sessionId]`.
-- **Provider state:** Do not block setup because a key is missing. Disable the send action in the chat with an explanation and a Settings link instead.
-
-#### 3.6 Start 1-on-1
-
-- **Behavior:** Opens the persona/model setup flow. After a session is created, route to `/chat/1-on-1/[sessionId]`.
-
-#### 3.7 Persona Library Link
-
-- **Behavior:** Routes to `/personas` for local persona creation, import, export, and management.
-
-#### 3.8 Recent Sessions
-
-- **Scope:** Show the most recent durable sessions (for example, the latest four) from `IndexedDB`; the sidebar contains the complete durable history.
-- **Per item:** Display a generated/default title and a text mode label in addition to any icon.
-- **Routing:** A 1-on-1 item routes to `/chat/1-on-1/[sessionId]`; a Council item routes to `/chat/council/[sessionId]`.
-- **Incognito:** Incognito sessions never create durable session metadata, so they cannot appear here, in the sidebar, search, analytics, or exports.
-
-### 4. Accessibility and Motion
-
-- Meet WCAG 2.2 AA for contrast, target size, visible focus, and focus-not-obscured behavior.
-- Use semantic navigation landmarks and descriptive link/button names. On route changes, move focus to the destination page heading without unexpectedly stealing focus during an in-page update.
-- The mobile sidebar is a modal drawer: trap focus while open, close with `Escape`, restore focus to the toggle on close, and make the background inert.
-- Respect `prefers-reduced-motion`; opening, closing, and loading states must remain understandable with motion removed.
-
-### 5. Background Data Rules
-
-- Fetch durable session records and persona records from `IndexedDB` only. Built-in personas may be loaded from versioned static application data.
-- `localStorage` is reserved for namespaced API keys, lightweight preferences, onboarding state, and unsent drafts. It must not be used as a fallback chat store.
-- The dashboard performs no model streaming and sends no dashboard data to a server.
+- Meets **WCAG 2.2 AA** guidelines for color contrast, target size (24x24px minimum), and visible focus indicators.
+- Semantic navigation landmarks and descriptive button labels. Route transitions move focus to the page heading without interrupting in-page state updates.

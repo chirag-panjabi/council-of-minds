@@ -1,40 +1,38 @@
 # Target Technology Decisions
 
-## Status
+## 1. Core Architecture Pattern
 
-These are target implementation decisions for the next build. They are not a claim about the legacy codebase.
+- **Pattern:** Stateless Proxy + Local-First Data (BYOK - Bring Your Own Key).
+- **Rationale:** Absolute privacy and zero server database overhead. The backend exists solely as a same-origin stateless proxy to relay LLM requests and bypass browser CORS restrictions. No user data, API keys, or chats are stored on a remote server.
 
-## Core Application
+## 2. Core Framework & UI Stack
 
-| Need | Decision | Rationale |
+| Category | Decision | Architectural Rationale |
 |---|---|---|
-| Application framework | Next.js App Router, React, TypeScript | One browser application and same-origin stateless cloud proxy |
-| UI | Tailwind CSS and accessible component primitives | Fast, consistent UI construction without sacrificing keyboard behavior |
-| Client state | React Context for low-frequency settings; Zustand for active conversation state | Avoid broad re-renders while streaming |
-| Local database | Dexie over IndexedDB | Versioned schema, transactional writes, and testable queries |
-| Validation | Zod | Validate imports, backups, route inputs, and provider configuration before persistence |
-| Streaming | Vercel AI SDK provider adapters where compatible | Keep streaming semantics consistent while preserving explicit capability checks |
+| Framework | Next.js 14 (App Router), React, TypeScript | Single unified codebase for frontend UI and stateless Route Handlers (`app/api/...`). Strict typing for multi-agent payloads. |
+| Styling & Primitives | Tailwind CSS v4 + Radix UI (via shadcn/ui) | Radix UI provides battle-tested focus trapping in modals (Persona Selector) and keyboard navigation in dropdowns. |
+| Micro-Animations | Framer Motion | Smooth UI micro-animations (chat bubble streaming, pulsing thinking indicators) without manual CSS transition headaches. |
+| Icons | Lucide React | Clean, consistent UI icon primitives. |
+| State Management | Zustand + React Context | React Context for low-frequency settings; **Zustand for atomic, high-frequency updates** during multi-agent Council SSE streaming to prevent app-wide re-renders. |
+| Local Database | Dexie.js (IndexedDB wrapper) | Versioned relational local schema (Chats, Messages, Personas, Groups), transactional writes, and Promise-based queries for gigabytes of local storage. |
+| Local Preferences | `localStorage` | Restricted to `framework-engine:` namespaced API keys, preferences, onboarding state, and drafts. |
 
-## Data and Portability
+## 3. Data Validation, Import/Export & Compression
 
-- Use a single versioned IndexedDB schema for personas, sessions, messages, attachments, summaries, token usage, and recent-persona metadata.
-- Store API keys and small UI settings only under namespaced localStorage keys.
-- Export full backups as a versioned archive with a manifest, JSON data, and binary attachments. Use JSON as the canonical portable format; Base64URL is only the transport encoding for a single persona share code.
-- Compression is an optimization that may be introduced in a future format version. It is not part of framework-engine.persona/v1.
+- **Zod:** Strict schema validation for persona imports/exports, backup restoration, and route payloads to prevent corrupt data insertion into `IndexedDB`.
+- **JSZip:** Client-side `.zip` archive generation for full chat history exports (processed entirely in browser with zero server egress).
+- **lz-string:** Compresses persona JSON before Base64URL encoding to shorten share code length for Discord and forum sharing.
 
-## Provider Architecture
+## 4. Specialized Feature Libraries
 
-- OpenAI, Anthropic, and Google Gemini are the initial cloud providers and use the same-origin proxy.
-- Ollama is the initial local provider and uses the browser-to-localhost adapter.
-- Provider adapters expose capabilities such as text streaming, vision input, context limits, and output-token control. The UI must not infer capabilities from a model name alone.
+- **Analytics Visualization:** **Recharts** for rendering browser token usage charts natively in the browser (token counts only; cost estimation excluded).
+- **Audio Integration:** **Native Web Speech API** for dictation (Speech-to-Text) and basic voice generation (Text-to-Speech), keeping the app free and offline, with architectural abstraction for future ElevenLabs/OpenAI TTS.
 
-## Operational Constraints
+## 5. Deployment & Hosting Target
 
-- The proxy has an allowlist of supported providers; it must not proxy arbitrary URLs.
-- All cloud traffic uses HTTPS. Sensitive headers and bodies are redacted before logs, traces, and error reporting.
-- Search runs in a cancellable Web Worker. It uses literal matching and returns a bounded result set.
-- Accessibility is a non-optional requirement: WCAG 2.2 AA, visible focus, keyboard navigation, focus restoration, reduced-motion support, and restrained live announcements.
+- **Deployment Target:** **Vercel** (or standard Serverless Node environment).
+- **Rationale:** Optimized zero-config deployment pipeline for stateless Next.js App Router route handlers.
 
-## Deferred Technology Decisions
+## 6. Deferred Technology Decisions
 
-Dependencies for non-MVP providers, hosted services, web search, code execution, and other future capabilities are intentionally not selected yet. Add an ADR before introducing one.
+- Dependencies for non-MVP providers (Groq, OpenRouter, xAI, LM Studio, vLLM), hosted databases, remote auth, or web search are intentionally deferred. An ADR must be written before introducing any new dependency.

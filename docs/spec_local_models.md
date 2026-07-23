@@ -1,30 +1,47 @@
-# Local LLM Connectivity Specification (Ollama)
+# Local LLM Connectivity Specification (Ollama, LM Studio & Local Models)
 
-## Overview
+## 1. Overview & Security Boundary
 
-The initial local-model integration supports **locally served Ollama only**. It is a direct browser-to-loopback connection, not a proxy request. LM Studio, vLLM/llama.cpp, Groq, OpenRouter, xAI, and generic OpenAI-compatible endpoints are deferred and must not appear as active integrations.
+- **Primary Goal:** Allow power users to connect local LLM engines (Ollama, LM Studio, vLLM/llama.cpp) running on their own hardware for maximum privacy and zero API cost.
+- **Direct Browser Connection:** Requests travel **browser → loopback localhost directly**. They never transit the application's same-origin proxy or any remote cloud server.
+- **Strict Loopback Host Boundary:** Local provider connections are restricted to loopback destinations (`localhost`, `127.0.0.1`, or `[::1]`). LAN, public IP addresses, tunnels, or arbitrary remote URLs are rejected under this local setting.
 
-## 1. Connection Architecture
+## 2. Supported Local Engines & Default Ports
 
-- **Default base URL:** `http://localhost:11434/api`, with chat at `/chat` and model discovery at `/tags`.
-- **Allowed destinations:** Accept only loopback hosts (`localhost`, `127.0.0.1`, or `[::1]`) in the initial build. Do not allow LAN, public, tunnelled, or arbitrary remote URLs through this “local” setting.
-- **Request path:** Browser → local Ollama server. Cloud proxies are not involved, and prompts/attachments for a local Ollama request are not sent to the application's same-origin proxy.
-- **Local-only scope:** This integration is for models served by the local Ollama daemon. Cloud-hosted model services and credentials are not configured through this local path.
+| Engine | Protocol | Default Port | Model Discovery Endpoint | Chat Endpoint |
+| --- | --- | --- | --- | --- |
+| **Ollama (Default)** | Native Ollama API | `http://localhost:11434` | `/api/tags` | `/api/chat` |
+| **LM Studio** | OpenAI-Compatible | `http://localhost:1234` | `/v1/models` | `/v1/chat/completions` |
+| **vLLM / llama.cpp** | OpenAI-Compatible | `http://localhost:8000` | `/v1/models` | `/v1/chat/completions` |
 
-## 2. CORS and Setup
+*Note: Initial build ships with Ollama enabled by default; LM Studio and vLLM ports are pre-configured in Settings for 1-click enablement.*
 
-- The browser still enforces CORS for a page loaded from a different origin. The Settings UI displays the exact current application origin and instructs the user to configure their Ollama allowed origins accordingly (for example, through Ollama's `OLLAMA_ORIGINS` configuration) and restart the local service.
-- Never advise a wildcard CORS setting as the default. The instructions should direct the user to allow only the displayed application origin and link to the [current official Ollama setup guidance](https://docs.ollama.com/faq).
-- The connection test calls the local `/api/tags` endpoint directly. A successful response populates the model selector with installed local models; it does not validate a cloud API key.
+## 3. CORS Configuration & Setup Instructions
 
-## 3. Settings and User Feedback
+Because browser security blocks web pages from making background calls to `localhost`, the Settings UI provides exact, copyable setup instructions:
+- **Ollama CORS Setup:** Displays exact origin command:
+  ```bash
+  OLLAMA_ORIGINS="https://app-domain.com" ollama serve
+  ```
+- **LM Studio CORS Setup:** Directs users to check the *"Enable CORS"* checkbox in LM Studio's Server Control Panel.
+- **Official Documentation Link:** Links directly to [official Ollama setup documentation](https://docs.ollama.com/faq). Wildcard CORS (`*`) is discouraged.
 
-- **Provider control:** A single `Ollama (local)` enablement control, loopback base-URL input, `Test Connection` action, and dynamically populated model selector.
-- **Connection indicator:** While selected, label the provider as `Direct local connection` so the user can distinguish it from a cloud provider routed through the stateless proxy.
-- **Failure states:** Distinguish unavailable server, blocked CORS request, invalid loopback URL, no installed models, and a model that cannot process the selected attachment. Give each a clear retry/configuration action.
-- **Privacy disclosure:** State that local requests stay between the browser and the configured loopback server. The user is responsible for the local server and model configuration; the application must not claim that every Ollama configuration is offline or risk-free.
+## 4. Dynamic Model Auto-Discovery & Connection Testing
 
-## 4. Accessibility and Safety
+- **`Test Connection` Action:** Clicking *Test Connection* in `/settings` pings the local engine's model discovery endpoint (`/api/tags` or `/v1/models`).
+- **Dynamic Dropdown Population:** Upon a successful response, the app parses the JSON payload and dynamically populates persona model selectors with the models currently installed on the user's local machine (e.g. `llama3:8b`, `mistral:7b`).
 
-- Connection test status, model-fetch loading, and errors are conveyed in text and a polite status region, not only with a color/icon.
-- Inputs, test controls, and error recovery meet WCAG 2.2 AA keyboard, label, visible-focus, target-size, and reduced-motion requirements.
+## 5. In-Chat Fallback & Error Handling
+
+If a chat session uses a local persona but the local server is offline or CORS is misconfigured, the chat interface catches the fetch error and displays an actionable inline error message:
+> *"Local provider connection failed. Please ensure your local server (Ollama/LM Studio) is running and CORS is configured correctly for this application origin."*
+
+Distinct failure states are handled for:
+1. *Server Offline:* Local daemon is not running on configured port.
+2. *CORS Blocked:* Browser blocked request due to missing origin header.
+3. *Model Not Found:* Selected local model is not currently pulled/installed.
+
+## 6. Privacy & Accessibility Guidelines
+
+- **Privacy Statement:** Local requests stay entirely on the user's device between browser and local daemon.
+- **WCAG 2.2 AA Compliance:** Connection status indicators, error alerts, and model discovery loading spinners use accessible live regions, non-color visual badges, and keyboard-operable controls.

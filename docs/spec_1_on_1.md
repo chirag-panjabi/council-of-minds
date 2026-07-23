@@ -1,55 +1,60 @@
-# 1-on-1 Chat Specification
+# Frontend Functional Specification: 1-on-1 Chat Mode
 
-## Routes and Purpose
+## 1. Routes & Functional Purpose
 
-The setup route is /chat/1-on-1. A saved session uses /chat/1-on-1/[sessionId]. The mode provides a direct conversation between the user and one local persona.
+- **Routes:** Setup route is `/chat/1-on-1`. Saved session route is `/chat/1-on-1/[sessionId]`.
+- **Primary Goal:** Facilitate a direct, back-and-forth conversation between the user and a single selected AI persona.
+- **Preconditions:** Requires a selected persona and a configured API key for the corresponding provider and model. The UI discloses which provider receives the prompt before the first message.
 
-## Preconditions
+## 2. Header & Global Navigation Controls
 
-- A selected persona is required.
-- The selected provider must be configured and support the requested input capability.
-- The UI must explain which provider receives the request before the first message in a session.
+- **Global Navigation Bar:**
+  - *Sidebar Toggle Button:* Opens or closes the global persistent sidebar.
+  - *Back Button:* Navigates back to the previous view (e.g. Dashboard).
+  - *Settings Button:* Transitions directly to `/settings`.
+- **Active Persona & Model Indicator:** Displays active persona's avatar, name, and current model in the header. Clicking opens a menu to swap personas (via Unified Persona Selector) or configure model overrides.
+- **Model Override Persistence:** Changing a model prompts the user to select:
+  - *"Remember for this persona forever"* (saves model preference to local persona record).
+  - *"Just this chat"* (applies model override to current session only).
+  - Defaults to the Global Model set in Settings.
+- **Header Session Actions:** Rename session, export chat history, and delete session.
+- **Incognito Header Rule:** Incognito can only be toggled before sending the first message. Toggling after a saved conversation has started prompts the user to "Start New Incognito Session" or "Cancel".
 
-## Session Lifecycle
+## 3. Persona Selector Integration Flow
 
-1. The user selects a local persona through the Unified Persona Selector.
-2. The user chooses a session-only provider/model override or uses the saved local preference.
-3. The user chooses normal or Incognito before sending the first message.
-4. The first send creates a session and routes to the mode-qualified session URL unless it is Incognito.
-5. The client appends the user message, creates a pending assistant message, streams the response, and commits durable data only after the state is complete.
+- Clicking the persona indicator opens the **Unified Persona Selector Modal** (`spec_persona_selector.md`).
+- **Search & Filters:** Real-time search by name/description, plus filter toggles ("My Library", "Favorites"). Includes a prominent "Create New Persona" button.
+- **Card Highlight & Action Menu:** Clicking a persona card highlights it in the grid, revealing action buttons (*Detail*, *Edit*, *Export*).
+- **Confirmation:** Clicking "Start Chat" confirms selection, saves the active chat to history, and routes to a fresh session with the chosen persona.
 
-Selecting a different persona starts a new session after confirmation. It must not silently apply a new system prompt to an existing conversation context.
+## 4. Input Area, Attachments & Incognito Watermark
 
-## Header Controls
+- **Incognito Ghost Watermark:** When Incognito is ON, the Chat Input area displays a persistent visual watermark (e.g. ghost icon or tinted border) providing clear confirmation at the point of action.
+- **Attachment Button & Multimodal Validation:** Supports uploading text files (.txt, .md, .pdf) or images. If an image is attached but the chosen model lacks vision capabilities, the UI displays a validation error and blocks sending. Enforces file size limits before upload.
+- **Input Disabled State:** Chat input and send controls are disabled if the required API key for the selected model is missing, displaying an explanatory tooltip.
+- **Send / Stop Button Morphing:**
+  - Submit button remains disabled until valid model and input exist.
+  - While LLM generation is streaming, the Send button transforms into a **Stop** button (square stop icon). Clicking Stop aborts generation immediately and leaves a visible partial response state.
 
-- Show the active persona and model.
-- Support a session-only provider/model override. Saving a preference updates only local persona configuration and never the portable persona profile.
-- Allow rename, export, and delete for saved sessions.
-- Incognito can be selected only before the first message. Turning it on after a saved conversation has started offers Start New Incognito Conversation or Cancel.
+## 5. Message Rendering, Styling & Streaming Logic
 
-## Input and Attachments
+- **Visual Identification:** WhatsApp/Telegram-style message header with Persona Avatar, Name, and subtle accent-color left border/tint on chat bubbles (avoids full bubble saturation for text readability).
+- **Thinking Animation & Token Filtering:** Displays a subtle "Thinking" animation during network latency and generation. Automatically strips raw internal `<think>` reasoning tokens from reasoning models during streaming.
+- **Dual Scroll Strategy:**
+  - *Default:* Auto-scrolls chat log to bottom as SSE chunks stream in.
+  - *User Override:* If user manually scrolls up away from the bottom, scroll position is preserved until user scrolls back down.
 
-- The send action remains disabled until a valid provider and compatible model are selected.
-- Attachments are validated for MIME type, per-file and per-message limits, and provider capability before a request begins.
-- The UI discloses that a supported attachment is sent to the selected provider.
-- Stop cancels the active request and leaves a visible cancelled partial-response state. It never silently retries.
+## 6. Editing, Regeneration & Transactional Branching
 
-## Editing and Regeneration
+- **Edit Message:** Hovering a User Message reveals an Edit icon. Submitting an edit turns the bubble into a text area, truncating history from that point.
+- **Regenerate Message:** Hovering an AI Message reveals a Regenerate icon. Clicking deletes that AI message and requests a fresh response from the same point in history.
+- **Transactional Branching:** Original history remains intact until the new replacement branch commits successfully. Summaries, token usage, and attachments from discarded branches are transactionally reconciled in `IndexedDB`.
 
-- Editing a user message creates an explicit branch decision: replace the later messages or cancel. The original history is retained until the replacement branch commits successfully.
-- Regeneration creates a new assistant attempt for the same parent message rather than overwriting an existing answer without trace.
-- Summaries, token usage, and attachments from discarded branches must be reconciled transactionally.
+## 7. Incognito Data Isolation
 
-## Rendering and Accessibility
+Incognito sessions are strictly memory-only: no messages, summaries, token usage, search index entries, recent-persona records, or export metadata are persisted to `IndexedDB` or `localStorage`.
 
-- User messages and persona messages are visually and programmatically distinguishable.
-- Do not expose hidden provider reasoning or remove literal user content by matching text patterns.
-- Announce a completed response once rather than every streamed chunk.
-- Preserve scroll position when the user has scrolled away from the latest message.
+## 8. Accessibility & Screen Reader Guidelines
 
-## Acceptance Criteria
-
-- Saved sessions use the canonical mode-qualified route.
-- A provider error, abort, timeout, or incompatible attachment produces an actionable inline state.
-- Incognito creates no history, analytics, search, export, or recent-persona data.
-- Keyboard users can operate persona selection, send, stop, edit, regenerate, and all header actions.
+- **Screen Reader Quiet Streaming:** Screen readers announce the completed assistant response once upon finish rather than announcing every streamed SSE chunk.
+- **Keyboard Accessibility:** All header controls, persona selection, attachment upload, send/stop buttons, edit, and regenerate actions are fully operable via keyboard with visible focus rings.

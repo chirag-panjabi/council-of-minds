@@ -1,44 +1,37 @@
-# Open-Source BYOK Implementation Rules
+# Open-Source BYOK Implementation Rules & Agent Instructions
 
-## Status
+## 1. Product Boundary & Strict Stateless Constraints
 
-These are binding rules for the next Framework Engine implementation. They describe the target product rather than the legacy codebase.
+- **Strict Stateless Backend:** The application backend must remain 100% stateless.
+  - **NO Server Databases:** Do not introduce SQLite, PostgreSQL, MongoDB, Prisma, Drizzle, Supabase, or Firebase on the backend.
+  - **NO Authentication:** Do not implement NextAuth, Clerk, or Firebase Auth. There are no remote user accounts.
+  - **NO Billing Gateways:** Do not introduce Stripe or server-side credit deduction logic.
+- **Client-Side Persistence Only:** All user state (chat history, saved personas, API keys, settings) must reside in browser `localStorage` or `IndexedDB`.
+- **Backend Proxy Only:** Next.js Route Handlers (`/api/...`) exist *solely* to securely proxy streaming requests to LLM providers (OpenAI, Anthropic, Gemini, etc.) and bypass browser CORS limits. The proxy must **never log, print, cache, or persist** user API keys or prompt bodies.
 
-## Product Boundary
+## 2. Bring Your Own Key (BYOK) & Pre-Flight Interception
 
-- Do not add user accounts, authentication, billing, remote databases, cloud sync, hosted persona discovery, or product telemetry to the open-source edition.
-- Do not reintroduce a hosted marketplace. Personas are local profiles shared only through explicit user export/import.
-- Treat [Target Scope](./PRODUCT_SCOPE.md), [Privacy, Security, and Safety](./PRIVACY_AND_SAFETY.md), and the ADRs as architectural authority.
+- **Key Storage:** User API keys are entered on `/settings` and saved under `framework-engine:api-key:<provider>` in `localStorage`.
+- **Pre-Flight Key Interception:** If a user attempts to start a chat without a configured API key for the selected model, the UI **must intercept the action before making a network call** and display a helpful modal/tooltip guiding them to `/settings` to enter the missing key.
 
-## Storage Rules
+## 3. Storage & Storage Key Namespacing
 
-- IndexedDB is the durable store for personas, sessions, messages, attachments, summaries, token usage, and recently used personas.
-- Namespaced localStorage keys hold API keys, preferences, onboarding state, and drafts only.
-- Never call localStorage.clear(); remove only documented app-owned keys.
-- Incognito conversations are memory-only and must not create durable records, analytics, search entries, exports, or recent metadata.
+- **IndexedDB:** The durable store for personas, sessions, messages, attachments, summaries, token usage, and recently used personas.
+- **localStorage:** Restricted to `framework-engine:` namespaced API keys, preferences, onboarding state, and drafts. Never invoke `localStorage.clear()`; remove only app-owned keys.
+- **Incognito Privacy Guarantee:** Incognito conversations are strictly memory-only. They must not create durable records, analytics, search entries, exports, or recent metadata.
 
-## Provider Rules
+## 4. Persona Creation & Portable Sharing
 
-- Cloud-provider requests and key validation go through the same-origin stateless proxy.
-- The proxy must not persist or log API keys, prompts, attachments, summaries, or provider responses.
-- The proxy must have a provider allowlist, origin checks, request-size limits, rate limits, timeouts, and safe error handling.
-- Ollama uses a browser-to-localhost path. Do not route a user's local model through a remote deployment.
-- Before adding a provider, document its capability metadata, error modes, privacy disclosure, and fallback behavior.
+- **Local Roster:** Hosted marketplaces are abandoned to maintain a decentralized architecture. Personas are created and edited locally in `IndexedDB`.
+- **Base64URL Share Codes:** Exporting serializes the persona identity and behavior into a Base64URL string (`framework-engine.persona/v1`). API keys, model preferences, and device settings are strictly excluded.
+- **Import Security:** Imported persona strings must be decoded, previewed, schema-validated with Zod, and explicitly confirmed. Imported instructions must never be executed as application code.
 
-## Persona Rules
+## 5. UI/UX Principles, Streaming & Thinking Process
 
-- A portable persona is framework-engine.persona/v1 JSON encoded as Base64URL.
-- Export only persona identity and behavior. Exclude API keys, model/provider preferences, voice selections, device paths, and other local settings.
-- Decode, preview, validate, and explicitly confirm all imports. Never execute an imported persona's instructions as application code.
+- **Aesthetics First:** Built with Tailwind CSS v4, Radix UI (shadcn/ui), and Framer Motion featuring a modern "Structural Glassmorphism" theme.
+- **Smooth Streaming:** All LLM responses stream smoothly via Vercel AI SDK SSE adapters.
+- **Expandable Thinking Process Accordion:** Raw internal reasoning tokens (e.g. `<think>...</think>`) are stripped from the main bubble text and rendered inside an expandable **"Thought Process"** UI accordion (with a pulsing brain icon) so users can inspect the model's reasoning on demand.
 
-## Conversation Rules
+## 6. Core Developer Motto
 
-- Council generations are sequential. Auto-Pilot is off by default and always has a finite turn cap.
-- Background summarization is off by default, discloses its selected provider, and separates generated summary text from trusted system instructions.
-- Cancellation, provider failures, validation failures, and partial streams must retain understandable user-visible state.
-
-## Quality Rules
-
-- Meet the MVP acceptance checklist before declaring a feature complete.
-- Maintain WCAG 2.2 AA behavior in core flows.
-- Do not make claims that a cloud request or browser API is private, offline, or free without documenting its actual data flow and cost model.
+> **"Store it locally, proxy it statelessly, make it beautiful, and respect user privacy."**

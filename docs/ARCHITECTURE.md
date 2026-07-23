@@ -1,58 +1,73 @@
-# Target Architecture: Framework Engine
+# Target Architecture: Council of Minds
 
-## Status
+## Status and Vision
 
-This document describes the target open-source architecture. It intentionally does not describe the legacy implementation.
+This document describes the target open-source architecture for **Council of Minds**. The application is a local-first, multi-agent sandbox and experimentation studio designed around a Bring-Your-Own-Key (BYOK) model.
+
+## Open Core Strategy
+
+This repository represents the "Open Core" of Council of Minds. It is designed to be easily self-hostable by developers. As such, it avoids all server-side dependencies (no databases, no auth, no billing). It relies entirely on client-side state (`localStorage` / `IndexedDB`). A future SaaS version may fork from this core and add hosted features, but this repository remains 100% stateless and local-first.
 
 ## System Boundary
 
-Framework Engine is a browser-owned application with a stateless service boundary for cloud providers.
+Council of Minds is a browser-owned application with a stateless service boundary for cloud providers.
 
-- The browser owns durable IndexedDB data.
-- Namespaced localStorage contains keys, preferences, onboarding state, and drafts.
-- Cloud requests travel from the browser to the same-origin stateless proxy and then to the selected provider.
-- Ollama requests travel directly from the browser to the user-configured localhost endpoint.
+- **Browser Storage:** The browser owns durable `IndexedDB` data and `localStorage` state.
+- **Cloud Requests:** Cloud requests travel from the browser to the same-origin stateless Next.js proxy and then to the selected provider.
+- **Ollama Requests:** Local Ollama requests travel directly from the browser to the user-configured localhost endpoint (`http://localhost:11434`).
 
-The proxy may observe cloud request traffic in transit but must not store or log keys, prompts, attachments, or responses. It is not used to reach a user's local model server.
+The proxy may observe cloud request traffic in transit but must not store, persist, or log keys, prompts, attachments, or responses. It is not used to reach a user's local model server.
 
-## Core Components
+## Core Components & Data Schema
 
-| Component | Responsibility |
+| Component | Responsibility & Storage Details |
 |---|---|
-| Browser client | UI, conversation state, local persistence, provider selection, import/export, search, analytics |
-| IndexedDB | Personas, sessions, messages, attachments, summaries, token usage, recently used persona metadata |
-| Namespaced localStorage | Cloud API keys, UI preferences, onboarding state, and recoverable drafts |
-| Cloud proxy | Origin-checked, size-limited, stateless validation and streaming for supported cloud providers |
-| Local adapter | Direct browser-to-Ollama communication with an explicit CORS and availability check |
+| **Browser Client** | UI, conversation state, local persistence, provider selection, import/export, search, analytics |
+| **IndexedDB (via Dexie.js)** | Object stores: `personas`, `groups` (saved rosters), `chatSessions`, `messages`, `attachments`, `summaries`, `tokenUsage`, and `recentlyUsedPersonas` |
+| **Namespaced localStorage** | Cloud API keys (OpenAI, Anthropic, Gemini, OpenRouter, xAI), UI preferences, onboarding state, and recoverable drafts |
+| **Cloud Proxy (`/api/chat`)** | Origin-checked, size-limited, stateless validation and SSE streaming using the Vercel AI SDK for supported cloud providers |
+| **Local Adapter** | Direct browser-to-Ollama communication with explicit CORS and server availability checks |
 
-## Cloud Request Flow
+## Supported Provider Topology
 
-1. The client verifies that the chosen provider has a configured key.
-2. The client sends the request to the same-origin proxy over HTTPS with the relevant provider key and structured payload.
-3. The proxy validates the allowed provider, redacts diagnostics, forwards the request, and streams the response.
-4. The client persists the completed result only when the session is not Incognito.
+The Vercel AI SDK on the stateless proxy connects to:
+- **OpenAI** (GPT-4o, GPT-4o-mini, etc.)
+- **Anthropic** (Claude 3.5 Sonnet, Claude 3 Opus, etc.)
+- **Google Gemini** (Gemini 1.5 Pro, Gemini 1.5 Flash, etc.)
+- **OpenRouter** (Unified routing to open and proprietary models)
+- **xAI** (Grok series)
+- **Ollama** (Local loopback: Llama 3, Mistral, Qwen, etc. via direct client fetch)
 
-Cloud key validation follows the same proxy path. This avoids contradictory direct-to-provider validation behavior and centralizes request-size, origin, and redaction controls.
+## End-to-End Request Flows
 
-## Local Request Flow
+### Cloud Request Flow
+1. User enters a prompt; client verifies required API keys exist in `localStorage`.
+2. Client sends a POST request over HTTPS to the same-origin proxy (`/api/chat`) with key headers and structured payload.
+3. Proxy validates the provider, initializes the Vercel AI SDK, opens an async stream to the provider API, and streams SSE chunks back to the client.
+4. Client persists the completed result in `IndexedDB` only when the session is not Incognito.
 
-1. The user enables Ollama and supplies a localhost endpoint.
-2. The browser tests the configured endpoint directly and gives an actionable unavailable-server or CORS error.
-3. The browser sends compatible requests directly to that endpoint.
+### Local Request Flow (Ollama)
+1. User enables Ollama and configures a localhost endpoint (`http://localhost:11434`).
+2. Browser tests the configured endpoint directly and gives an actionable unavailable-server or CORS diagnostic error if unreachable.
+3. Browser sends compatible requests directly to that localhost endpoint.
 
-Remote deployments must not assume that their proxy can access a user's localhost service.
+## Conversation & Council Model
 
-## Conversation Model
+- **1-on-1 & Council Routes:** Distinct mode-specific session routes.
+- **Council Generation:** Sequential turn execution (one active persona response at a time).
+- **Moderator Panel:** Roster state, speaking order queue (pre-filled from a Group's default order), and request reply controls live in a persistent right panel.
+- **Auto-Pilot Control:** Opt-in auto-looping. **Strict Rule:** Auto-Pilot cannot be enabled without a mandatory finite round limit; there is no unlimited option.
+- **Two-Axis Memory:** Raw retention window combined with background summarization.
 
-1-on-1 and Council sessions have distinct mode-specific routes. Council generation is sequential: one active response at a time. Auto-Pilot is opt-in and has a finite turn cap. Background summarization is opt-in, provider-disclosed, and isolates generated summaries as untrusted conversation context.
+## Security Controls & Threat Mitigations
 
-## Security Controls
-
-- Restrictive Content Security Policy and no untrusted executable third-party scripts.
-- Redaction of sensitive headers and bodies from logs, errors, traces, and diagnostics.
-- Proxy allowlist, origin checks, request-size limits, rate limits, and timeouts.
-- Blob-first attachment storage with MIME, per-file, per-message, and browser-quota handling.
-- Incognito sessions are memory-only and excluded from all durable indexes and telemetry-like metadata.
+- **XSS Risk & Mitigation:** API keys stored in `localStorage` are vulnerable to XSS. No untrusted third-party scripts are allowed in the frontend codebase.
+- **Unbounded Cost Risk Mitigation:** Council mode debates could consume excessive tokens if left unchecked. Mitigated by mandatory round limits on Auto-Pilot and cost visibility in `/analytics`.
+- **Content Security Policy (CSP):** Restrictive CSP rules and strict origin checks on proxy routes.
+- **Redaction:** Redaction of sensitive headers and request bodies from logs, errors, traces, and diagnostics.
+- **Payload Limits:** Proxy allowlists, request-size limits, rate limits, and timeouts.
+- **Attachment Quotas:** Blob-first attachment storage with MIME validation, per-file, per-message, and quota handling.
+- **Incognito Mode:** Incognito sessions are memory-only and excluded from all durable indexes and telemetry-like metadata.
 
 ## Decision Records
 

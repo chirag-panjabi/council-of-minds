@@ -1,8 +1,8 @@
-# Framework Engine Documentation
+# Council of Minds Documentation Index
 
 ## Authority and Scope
 
-These documents describe the target open-source implementation. The legacy codebase is intentionally out of scope. Start with [Target Scope](./PRODUCT_SCOPE.md); it resolves scope conflicts in older specifications until they are reconciled.
+These documents describe the target open-source, local-first BYOK implementation. The project is strictly a stateless client-side application using `localStorage` or `IndexedDB` for local persistence. Start with [Target Scope](./PRODUCT_SCOPE.md); it resolves scope conflicts in older specifications until they are reconciled.
 
 ## Foundation
 
@@ -24,6 +24,7 @@ These documents describe the target open-source implementation. The legacy codeb
 - [1-on-1 Chat](./spec_1_on_1.md)
 - [Unified Chat](./spec_chat.md)
 - [Council](./spec_council.md)
+- [Persona Groups](./spec_persona_groups.md)
 - [Persona Library](./spec_persona_library.md)
 - [Persona Creator](./spec_persona_creator.md)
 - [Persona Selector](./spec_persona_selector.md)

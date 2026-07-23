@@ -1,53 +1,46 @@
-# File and Attachment Handling Specification
+# File and Attachment Handling (Multimodal) Specification
 
-## Overview
+## 1. Overview & Storage Strategy
 
-Attachments let a user include supported local files with a message. They are stored Blob-first in the browser and, when sent to a cloud model, their bytes or extracted content transit the same-origin stateless proxy and then the selected provider. The proxy does not persist or log them; the provider's own terms and retention controls still apply.
+- **Local-First Blob Storage:** Attachments are stored Blob-first in `IndexedDB` associated with their specific chat message. Base64 encoding occurs strictly at the provider send boundary; Base64 is never stored as canonical local data.
+- **Zero Server Egress:** There is no remote file upload server or S3 bucket. Attachment processing runs 100% locally in the browser.
+- **Proxy Transit Rules:** Cloud model attachments transit browser → same-origin stateless proxy → selected provider. The proxy does not log, cache, or persist attachment content or extracted text. Local Ollama attachments travel browser → loopback `localhost` directly.
 
-## 1. Supported Files and Enforced Limits
+## 2. Supported File Types and Enforced Limits
 
-| Type | Allowed formats | Per-file limit |
+| Type | Allowed Formats | Per-File Limit |
 | --- | --- | --- |
 | Image | PNG, JPEG, WebP | 5 MiB |
-| Plain text | TXT, Markdown, CSV | 1 MiB |
-| Document | PDF | 5 MiB |
+| Plain Text | TXT, Markdown, CSV | 1 MiB |
+| Document | PDF (parsed client-side via `pdf.js`) | 5 MiB |
 
-- A message can stage at most **5 files** and **10 MiB total** (the sum of source file byte sizes). Validate this before a file enters staging.
-- Reject all other file types, including executable formats and Office documents, in the initial build. Validate MIME type and filename extension; never execute or render an attachment as application code.
-- A provider/model may impose a smaller or different capability limit. The effective limit is the stricter of the app limit and the selected model's known capability.
+- **Batch Limits:** A message can stage at most **5 files** and **10 MiB total** (sum of source file byte sizes). Validated before staging.
+- **Excluded Formats:** Executables, ZIP archives (for chat staging), and Office binaries are rejected in MVP.
 
-## 2. Local Storage Lifecycle
+## 3. UI Components & Interaction Flows
 
-- **Staging:** Keep a newly selected file in memory while the user edits the message. Store the sent attachment as a Blob plus safe metadata (name, media type, byte size, message ID) in `IndexedDB`.
-- **No persisted Base64:** Convert bytes to a provider-required representation only at the send boundary. Do not store Base64 as the canonical local form.
-- **Cleanup:** Deleting a message or session removes message-owned attachment blobs. Full backup archives store attachment binaries as separate entries, not Base64 inside message JSON.
-- **Incognito:** Keep staged/sent attachment data in memory only. When the Incognito session ends, cancels, or reloads, discard it; it must not enter durable messages, history, search, analytics, or export.
+- **Paperclip Attachment Button:** Accessible paperclip icon in input bar opening native OS file picker.
+- **Drag & Drop Overlay:** The entire chat window acts as a drop zone. Dragging a file over the chat renders a semi-transparent overlay stating *"Drop files here to attach"*.
+- **Pre-Send Staging Area:** Positioned directly above the chat textarea.
+  - *Images:* Displayed as square thumbnails with alt text and a labelled "X" remove button.
+  - *Documents:* Displayed with file type icon, filename, byte size, and "X" remove button.
+- **In-Chat Display & Lightbox:**
+  - Sent images render inline within the chat bubble and are **clickable to open a full-screen Lightbox view**.
+  - Documents render as accessible labelled document controls with view/extract options.
+- **Model Incompatibility Warnings:** If an image is staged while a text-only model is selected, the UI displays an actionable warning toast: *"The current model does not support image attachments. Please select a vision-capable model."*
 
-## 3. UI and Interaction
+## 4. Multimodal Processing & Model Compatibility
 
-- **Picker:** The paperclip button opens the native file picker and has an accessible name such as `Attach file`.
-- **Drag and drop:** The chat area may support dropping files, but the picker is an equivalent keyboard-accessible path. The drop overlay is supplementary feedback, not the only instruction.
-- **Staging area:** Show each accepted file's thumbnail or file icon, filename, media type, byte size, and a labelled remove button. Images use meaningful alt text based on the filename; decorative previews are hidden from assistive technology.
-- **In-chat display:** Render images inline with an accessible expand action. Documents use labelled controls, not ambiguous pill-shaped links. Do not automatically download a file or open a new window.
-- **Errors:** State the specific reason (unsupported type, per-file limit, total limit, quota failure, unreadable file, or provider incompatibility), preserve other staged files, and return focus to a useful control.
+- **Image Payload Formatting:** Base64 image bytes are formatted into provider-specific vision payload objects (e.g., OpenAI `image_url` format, Anthropic vision content blocks).
+- **Text & Code Extraction:** Extracted text from `.txt`, `.csv`, `.md` files is shown to the user before sending and appended to the prompt as structured text blocks (`[Attached File: filename]\n\n<contents>`).
+- **Client-Side PDF Parsing:** Uses `pdf.js` for client-side text extraction. If parsing fails, the UI explains that the PDF cannot be extracted rather than sending opaque binary bytes.
 
-## 4. Content Processing and Model Compatibility
+## 5. Incognito & Lifecycle Cleanup
 
-- **Images:** Send only to models marked as image-capable by the provider capability data. Reject the send with a model-selection action if image support is absent or unknown.
-- **Text files:** Extract text client-side. Before sending, show the user that extracted content will be included and provide a way to remove the attachment; do not silently append invisible file contents to the prompt.
-- **PDFs:** Extract text client-side only when a supported parser can do so safely. If extraction fails, explain that the PDF cannot be sent with the selected model rather than sending opaque bytes or silently dropping it.
-- **Capability changes:** Recheck every staged attachment if the persona/model/provider changes before send.
+- **Incognito Isolation:** Staged and sent attachments in Incognito sessions reside in memory only. Discarded on session close or page reload; never stored in `IndexedDB`.
+- **Message Cleanup:** Deleting a message or clearing a session removes message-owned attachment Blobs from `IndexedDB`.
+- **Full Backup Bundling:** Full backup `.zip` exports store attachment Blobs as binary files inside the archive (not Base64 inside JSON).
 
-## 5. Transmission and Privacy Disclosure
+## 6. Accessibility Guidelines
 
-- Before the first attachment send for a provider in a session, and whenever the provider changes, show an inline disclosure naming the route:
-  - Cloud model: content, extracted text, and/or image bytes go **browser → same-origin stateless proxy → selected provider**.
-  - Local Ollama: content goes **browser → loopback Ollama server** directly and never through the cloud proxy.
-- The disclosure states that the app proxy does not retain or log attachments, but the selected provider may handle transmitted data under its own policy. The user must be able to cancel or remove attachments before sending.
-- Attachment selection, storage, export, and deletion are local browser operations. They do not upload to a separate app file bucket.
-
-## 6. Accessibility and Safety
-
-- Meet WCAG 2.2 AA for keyboard operation, visible focus, non-color status/error feedback, labelled remove/expand actions, and reduced-motion-safe previews.
-- Announce accepted and rejected files through a concise status region without repeatedly reading the entire staging list.
-- Do not represent the app as malware scanning or encrypting attachments. Users remain responsible for selecting content they are permitted to send.
+- WCAG 2.2 AA compliance for dropzones, keyboard file pickers, aria-describedby errors, and focus management.

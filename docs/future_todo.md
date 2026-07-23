@@ -1,40 +1,48 @@
 # Future To-Do & Ideas Backlog
 
-This file contains work outside the target MVP. The MVP boundary is defined in [Target Scope](./PRODUCT_SCOPE.md).
+This document tracks features, integrations, and architectural enhancements outside the target MVP scope ([Target Scope](./PRODUCT_SCOPE.md)).
 
-## Provider Expansion
+## 1. Provider Expansion
 
-- Groq
-- OpenRouter
-- xAI
-- LM Studio
-- vLLM and llama.cpp compatibility
-- Additional compatible local servers
+- **OpenRouter** (Single key access to hundreds of open/closed models)
+- **Together AI**
+- **Mistral API**
+- **Cohere**
+- **Groq & xAI**
+- **LM Studio** (Dedicated local engine connection manager)
+- **vLLM & llama.cpp** (OpenAI-compatible local server endpoints)
+- **text-generation-webui** (Oobabooga API compatibility)
 
-Each provider needs an adapter, capability metadata, privacy disclosure, connection test, and failure behavior before it can move into the supported-provider list.
+*Requirement:* Each provider requires a dedicated adapter, capability metadata, privacy disclosure, connection test, and error handling before promotion to the supported list.
 
-## Audio
+## 2. Advanced Audio & Podcast Mode
 
-- Speech-to-text with a clear browser/privacy disclosure and an optional local transcription path.
-- Text-to-speech with browser voices, optional BYOK providers, per-persona voice configuration, and explicit cost controls.
-- Council auto-speak and accessible playback controls.
+- **High-Fidelity BYOK TTS (ElevenLabs / OpenAI TTS):** Integration for ultra-realistic persona voices using user-supplied keys.
+- **Persona Voice Selector:** Voice ID dropdown in Persona Creator mapping personas to custom TTS voice IDs.
+- **Council Auto-Speak (Podcast / Audiobook Mode):** Automatic sequential voice playback for Council debates without manual play button clicks.
+- **Whisper API STT Integration:** Optional OpenAI Whisper API integration for high-accuracy Speech-to-Text dictation.
 
-## Advanced Agent Capabilities
+## 3. Advanced Agent Capabilities & Local RAG
 
-- User-approved web search with visible source attribution and egress disclosure.
-- Sandboxed local code execution.
-- Local document retrieval and vector search.
+- **Web Search Integration:** Opt-in web search via Tavily or SerpAPI with visible source attribution and egress disclosures.
+- **Sandboxed Browser Code Execution:** Running generated Python or JavaScript safely in-browser via Pyodide or WebContainers.
+- **Local Vector Database RAG (PGlite + pgvector):** In-browser vector store allowing users to query local PDF libraries without cloud uploads.
 
-## Council Enhancements
+## 4. UI & Council Enhancements
 
-- Drag-and-drop visual turn ordering. The MVP supports an accessible ordered queue with move controls; drag-and-drop is an enhancement, not a prerequisite.
-- Additional moderation policies, reusable debate templates, and richer synthesis formats.
+- **Drag-and-Drop Avatar Queue Strip:** Persistent horizontal avatar strip above chat input allowing users to drag and drop bubbles to dictate Council speaking order.
+- **Additional Moderation Policies:** Reusable debate templates, custom synthesis prompts, and structured debate formats.
 
-## Personalization
+## 5. Personalization & Context Control
 
-- Chat themes and optional wallpapers.
-- Custom raw-message retention beyond MVP presets.
+- **Custom Background Themes & Wallpapers:** Custom chat bubble colors, backgrounds, and theme presets.
+- **Arbitrary Integer Context Retention:** Input field allowing users to specify exact raw message retention numbers (beyond the 0, 4, 10, All presets).
 
-## Revisit Criteria
+## 6. Dollar-Cost Estimation in Analytics
 
-Promote an item only after its privacy impact, cost behavior, accessibility requirements, data retention, and error handling are documented. Add an ADR when it changes the system boundary or durable data model.
+- **Spend Estimation:** Convert tracked token counts (`spec_analytics.md`) into estimated dollar spend using an optional, community-maintained pricing feed.
+- **Local Model Exclusion:** Local models (Ollama, LM Studio) will always display `$0.00` / `N/A` since they incur no API cost.
+
+## 7. Revisit Criteria & Promotion Rules
+
+Promote a backlog item only after its privacy impact, cost behavior, accessibility requirements, data retention, and error handling are fully documented. Add an ADR when a change alters the system boundary or durable data model.

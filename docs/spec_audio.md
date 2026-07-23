@@ -1,34 +1,47 @@
-# Audio Handling: Post-MVP Future Design
+# Audio Handling Specification: Speech-to-Text (STT) & Text-to-Speech (TTS)
 
-## Status
+## 1. Status & Implementation Gate
 
-Audio input and output are **not part of the MVP**. The current build must not present a microphone button, speaker button, Audio Providers settings tab, voice-ID persona field, or auto-play preference as an available feature. This document records constraints for a later, separately scoped implementation.
+- **MVP Scope Status:** Audio features are designated as a **Post-MVP Backlog Capability**. In the initial MVP build, microphone buttons, speaker buttons, voice-ID fields, and audio settings tabs are hidden by default behind a feature flag.
+- **Implementation Gate:** Moving audio into production requires validating browser compatibility, user consent flows, per-character cost handling, and WCAG 2.2 AA accessibility controls.
 
-## 1. Future Speech-to-Text Options
+## 2. Speech-to-Text (STT) Architectural Blueprint
 
-- **Browser speech recognition:** A future opt-in integration may use the browser's Web Speech API where available. It must never be described as universally offline, local, free, or private: browser, OS, language, and vendor behavior vary, and some implementations may transmit audio to a vendor service.
-- **Local speech recognition:** A later local Whisper/Parakeet option may be evaluated for users who accept model-download and device-resource requirements.
-- **Remote speech recognition:** Any future cloud STT provider requires a dedicated BYOK/privacy/cost decision. Its audio and metadata would follow the cloud request boundary: browser → same-origin stateless proxy → selected provider, with no proxy persistence or logging.
+STT enables users to dictate prompts directly into the chat input bar.
 
-## 2. Future Text-to-Speech Options
+- **Option A: Native Web Speech API (Default)**
+  - *Mechanism:* Uses browser `SpeechRecognition` / `webkitSpeechRecognition`.
+  - *Pros:* Zero setup, zero latency, free, native browser integration.
+  - *Cons:* Vendor-dependent (Chrome routes speech audio through Google cloud servers; Safari uses Apple servers; Firefox is experimental).
+- **Option B: Local Whisper / Parakeet (Advanced / Power User)**
+  - *Mechanism:* Local Whisper model running via Transformers.js in-browser or local API endpoint.
+  - *Pros:* 100% private, offline, high accuracy.
+  - *Cons:* Requires downloading ~500MB+ model weights to client storage.
+- **Architecture:** Phase 1 uses Native Web Speech API as the primary STT engine with an abstract interface allowing local Whisper adapters to plug in seamlessly.
 
-- A later implementation may evaluate browser speech synthesis, local synthesis, and separately configured cloud TTS providers.
-- Voice assignment, voice cloning, and provider API keys are out of scope until that implementation defines consent, provider support, content policy, data retention, and cost handling.
-- Auto-play must be off by default. Users retain a visible, keyboard-operable Play/Stop control for any generated audio.
+## 3. Text-to-Speech (TTS) & Persona Voice Binding
 
-## 3. Privacy, Incognito, and Cost Requirements
+TTS allows AI personas to speak responses in distinct voices.
 
-- Before activating browser STT, show a clear disclosure that the browser or OS may process or transmit microphone audio and that handling depends on the user's environment. Request microphone permission only after the user intentionally activates the feature.
-- Before a future cloud STT/TTS request, identify the exact provider and explain that audio, transcript, or generated text may be transmitted to it; the provider's policy applies.
-- In an Incognito session, audio recordings, intermediate transcripts, playback history, audio-provider usage, and generated audio blobs must not be durably stored, searched, analyzed, or exported. A text message deliberately sent by the user still follows the existing Incognito no-persistence rule.
-- Future audio billing must be displayed separately from token estimates when units or pricing differ. Unknown pricing is `N/A`, never assumed to be zero.
+- **Persona Voice ID Binding:** The Persona Creator includes an optional Voice ID dropdown, assigning specific voice IDs to personas.
+- **TTS Provider Strategy:**
+  - *Web Speech Synthesis API (Default Fallback):* Free, built-in browser voices. Requires no API keys.
+  - *OpenAI TTS:* High quality, natural cadence. Requires user OpenAI API key.
+  - *ElevenLabs:* Industry-leading expressive voice synthesis & voice cloning. Requires user ElevenLabs API key.
 
-## 4. Accessibility Requirements for a Future Implementation
+## 4. UI Components & Interaction Specifications
 
-- The text transcript remains the primary equivalent for every STT/TTS interaction; audio is never the only way to receive or provide information.
-- Controls have labels, visible focus, keyboard operation, text status feedback, and reduced-motion-safe listening/playback indicators that meet WCAG 2.2 AA.
-- Do not use pulsing color as the sole “listening” or “playing” signal. Provide a clear Stop control and do not automatically move focus away from the composer.
+- **Chat Input Microphone Button:** A mic icon inside the input bar. Clicking toggles listening mode (renders an accessible pulsing visual indicator). Dictated text streams live into the textarea.
+- **Message Bubble Speaker Button:** A speaker icon beside completed AI chat bubbles. Clicking streams audio playback. Includes Play/Pause/Stop controls.
+- **Settings → Audio Providers Tab:** A dedicated tab under `/settings` to manage ElevenLabs and OpenAI TTS API keys and default voice preferences.
 
-## 5. Implementation Gate
+## 5. Privacy, Incognito & Cost Disclosures
 
-Before audio moves out of the future backlog, create a dedicated implementation spec that fixes supported browsers/providers, consent flow, request topology, retention/deletion behavior, failure states, accessibility testing, and cost disclosure. No Phase-1/MVP commitment is implied by this design note.
+- **Privacy Disclosure:** On first microphone activation, displays an explicit disclosure informing the user that OS/browser vendors (Google/Apple) may process microphone audio.
+- **Cost Disclosures:** Cloud TTS (OpenAI/ElevenLabs) incurs per-character billing billed directly to the user's BYOK key.
+- **Incognito Privacy Guarantee:** In Incognito mode, microphone audio recordings, transcripts, playback history, and audio Blobs are strictly memory-only and never stored in `IndexedDB`.
+
+## 6. Accessibility Requirements
+
+- **Text Primacy:** Text transcripts remain the primary interaction format; audio is strictly supplementary.
+- **WCAG 2.2 AA Compliance:** All controls feature explicit labels, visible focus rings, non-color status signals (text badges alongside color indicators), and `prefers-reduced-motion` compliance.
