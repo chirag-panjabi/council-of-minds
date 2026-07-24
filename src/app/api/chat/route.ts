@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { redactSensitiveData } from '@/lib/utils/redact';
+import { truncateMessagesForModel } from '@/lib/utils/contextTruncation';
 
 export const runtime = 'edge';
 
@@ -42,9 +43,12 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { model: requestedModel = 'default', messages, systemPrompt, temperature = 0.7 } = body;
 
+    // Truncate messages to fit target model context window limit
+    const truncatedMessages = truncateMessagesForModel(messages, requestedModel, systemPrompt);
+
     const fullMessages = systemPrompt
-      ? [{ role: 'system', content: systemPrompt }, ...messages]
-      : messages;
+      ? [{ role: 'system', content: systemPrompt }, ...truncatedMessages]
+      : truncatedMessages;
 
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
