@@ -375,7 +375,7 @@ export default function PersonaGroupsPage() {
                       {/* Designated Default Judge */}
                       <optgroup label="⚖️ Default / Designated Judge">
                         {personas
-                          .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.id.includes('neural-judge'))
+                          .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator'))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
                               ⚖️ {p.name} ({p.role})
@@ -386,7 +386,7 @@ export default function PersonaGroupsPage() {
                       {/* Active Panel Debaters */}
                       <optgroup label="👥 Active Panel Debaters">
                         {personas
-                          .filter((p) => selectedPersonaIds.includes(p.id) && p.id !== DEFAULT_SYNTHESIZER_ID && !p.id.includes('neural-judge'))
+                          .filter((p) => selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
                               👥 {p.name} ({p.role})
@@ -397,7 +397,7 @@ export default function PersonaGroupsPage() {
                       {/* All Other Library Personas */}
                       <optgroup label="📚 Other Library Personas">
                         {personas
-                          .filter((p) => !selectedPersonaIds.includes(p.id) && p.id !== DEFAULT_SYNTHESIZER_ID && !p.id.includes('neural-judge'))
+                          .filter((p) => !selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
                               {p.isSystem ? '⚡' : '🎨'} {p.name} ({p.role})

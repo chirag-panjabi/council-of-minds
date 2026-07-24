@@ -26,8 +26,13 @@ function formatGeneratedPersona(p: any): Persona {
     roleStr = 'Venture Capital';
   }
 
+  const isNeuralJudge = p.agent_id === 'council-neural-judge' || p.name?.includes('Neural Judge');
+  const personaId = isNeuralJudge
+    ? DEFAULT_SYNTHESIZER_ID
+    : (p.id.startsWith('official-') ? p.id : `official-${p.id}`);
+
   return {
-    id: p.id.startsWith('official-') ? p.id : `official-${p.id}`,
+    id: personaId,
     name: p.name,
     role: roleStr,
     description: p.description || 'Analytical thought partner and reasoning framework.',
@@ -101,7 +106,7 @@ db.on('populate', (tx) => {
   tx.table('groups').add(initialGroup);
 });
 
-// Automatic persona deduplication and system flag cleanup on DB ready
+// Automatic persona deduplication, sync, and system flag cleanup on DB ready
 if (typeof window !== 'undefined') {
   db.on('ready', async () => {
     try {
@@ -127,8 +132,20 @@ if (typeof window !== 'undefined') {
         await db.personas.bulkDelete(idsToDelete);
         console.log(`[CouncilDB] Deduplicated ${idsToDelete.length} duplicate persona entries.`);
       }
+
+      // Check if any official personas from fixtures are missing in local IndexedDB
+      const currentPersonas = await db.personas.toArray();
+      const currentNames = new Set(currentPersonas.map((p) => p.name.trim().toLowerCase()));
+      const missingOfficial = (generatedPersonasRaw as any[])
+        .map(formatGeneratedPersona)
+        .filter((p) => !currentNames.has(p.name.trim().toLowerCase()));
+
+      if (missingOfficial.length > 0) {
+        await db.personas.bulkAdd(missingOfficial);
+        console.log(`[CouncilDB] Seeded ${missingOfficial.length} missing official personas into IndexedDB.`);
+      }
     } catch (e) {
-      console.warn('[CouncilDB] Deduplication check skipped:', e);
+      console.warn('[CouncilDB] Synchronization check skipped:', e);
     }
   });
 }
