@@ -8,6 +8,7 @@ import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
+import { generateFullBackupZip } from '@/lib/utils/exportBackup';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N4 */
 
@@ -180,29 +181,23 @@ export default function SettingsPage() {
     }
   };
 
+  const [isExportingZip, setIsExportingZip] = useState(false);
+
   const handleExportBackup = async () => {
-    const personas = await db.personas.toArray();
-    const chats = await db.chats.toArray();
-    const messages = await db.messages.toArray();
-
-    const backup = {
-      version: 'framework-engine.backup/v1',
-      createdAt: Date.now(),
-      counts: {
-        personas: personas.length,
-        chats: chats.length,
-        messages: messages.length,
-      },
-      data: { personas, chats, messages },
-    };
-
-    const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `council-of-minds-backup-${new Date().toISOString().slice(0, 10)}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
+    setIsExportingZip(true);
+    try {
+      const zipBlob = await generateFullBackupZip();
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `council-of-minds-backup-${new Date().toISOString().slice(0, 10)}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      alert('Failed to generate backup ZIP archive: ' + err.message);
+    } finally {
+      setIsExportingZip(false);
+    }
   };
 
   const handleSelectRestoreFile = (file: File) => {
@@ -637,9 +632,11 @@ export default function SettingsPage() {
             <button
               type="button"
               onClick={handleExportBackup}
-              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+              disabled={isExportingZip}
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
             >
-              <Download className="w-3.5 h-3.5" /> Export JSON Backup
+              <Download className="w-3.5 h-3.5" />
+              {isExportingZip ? 'Zipping Full Backup...' : 'Export Full Backup (.zip)'}
             </button>
 
             <label className="btn-hallmark text-xs gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]">
