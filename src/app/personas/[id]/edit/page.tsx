@@ -5,11 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { db, isOfficialPersona } from '@/lib/db';
-import type { Persona } from '@/types';
-import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork } from 'lucide-react';
+import type { Persona, PersonaRevision } from '@/types';
+import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork, History } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
 import { TagInput } from '@/components/personas/TagInput';
 import { AdvancedRulesBuilder, PersonaRule, formatRulesBlock, parseRulesFromPrompt } from '@/components/personas/AdvancedRulesBuilder';
+import { PersonaRevisionHistoryModal } from '@/components/personas/PersonaRevisionHistoryModal';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -32,6 +33,9 @@ export default function EditPersonaPage() {
   // Export Base64 State
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportCode, setExportCode] = useState('');
+
+  // Version History Modal State
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   // Live Test Sandbox State
   const [testPrompt, setTestPrompt] = useState('');
@@ -77,6 +81,8 @@ export default function EditPersonaPage() {
       tags,
       isSystem: false,
       isCustom: true,
+      version: 1,
+      revisionHistory: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -95,6 +101,20 @@ export default function EditPersonaPage() {
     setIsSaving(true);
 
     const finalPrompt = systemPrompt.trim() + formatRulesBlock(advancedRules);
+    const currentVer = persona?.version || 1;
+    const newRevision: PersonaRevision = {
+      id: 'rev-' + Date.now(),
+      version: currentVer,
+      systemPrompt: persona?.systemPrompt || finalPrompt,
+      role: persona?.role || role,
+      description: persona?.description || description,
+      recommendedModel: persona?.recommendedModel,
+      updatedAt: Date.now(),
+    };
+
+    const existingHistory = persona?.revisionHistory || [];
+    const updatedHistory = [...existingHistory, newRevision];
+    const nextVer = currentVer + 1;
 
     await db.personas.update(personaId, {
       name: name.trim(),
@@ -104,11 +124,37 @@ export default function EditPersonaPage() {
       recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived,
+      version: nextVer,
+      revisionHistory: updatedHistory,
+      updatedAt: Date.now(),
     });
+
+    setPersona((prev) =>
+      prev
+        ? {
+            ...prev,
+            name: name.trim(),
+            role: role.trim(),
+            description: description.trim(),
+            systemPrompt: finalPrompt,
+            version: nextVer,
+            revisionHistory: updatedHistory,
+          }
+        : null
+    );
 
     setIsSaving(false);
     setSaveSuccess(true);
     setTimeout(() => setSaveSuccess(false), 2500);
+  };
+
+  const handleRestoreRevision = (rev: PersonaRevision) => {
+    setRole(rev.role || role);
+    setDescription(rev.description || description);
+    setRecommendedModel(rev.recommendedModel || recommendedModel);
+    const { basePrompt, rules } = parseRulesFromPrompt(rev.systemPrompt);
+    setSystemPrompt(basePrompt);
+    setAdvancedRules(rules);
   };
 
   const handleExportShareCode = () => {
@@ -269,6 +315,15 @@ export default function EditPersonaPage() {
               </div>
 
               <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsHistoryModalOpen(true)}
+                  aria-label="View Revision History"
+                  className="btn-hallmark text-xs gap-1 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                  title="View Revision History"
+                >
+                  <History className="w-3.5 h-3.5 text-[var(--color-accent)]" /> v{persona?.version || 1} History
+                </button>
                 <button
                   type="button"
                   onClick={handleExportShareCode}
@@ -499,6 +554,15 @@ export default function EditPersonaPage() {
             </div>
           </div>
         )}
+
+        {/* Persona Revision History Modal */}
+        <PersonaRevisionHistoryModal
+          isOpen={isHistoryModalOpen}
+          onClose={() => setIsHistoryModalOpen(false)}
+          revisions={persona?.revisionHistory || []}
+          currentVersion={persona?.version || 1}
+          onRestore={handleRestoreRevision}
+        />
 
         {/* Ft6 Letter Close Footer */}
         <footer className="border-t border-[var(--color-border-hairline)] pt-4 text-xs font-mono text-[var(--color-ink-faint)] flex justify-between">

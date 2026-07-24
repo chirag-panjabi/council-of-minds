@@ -1,5 +1,16 @@
 export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
 
+export interface PersonaRevision {
+  id: string;
+  version: number;
+  systemPrompt: string;
+  role: string;
+  description: string;
+  recommendedModel?: string;
+  updatedAt: number;
+  changeNote?: string;
+}
+
 export interface Persona {
   id: string;
   name: string;
@@ -16,6 +27,8 @@ export interface Persona {
   welcomeMessage?: string;
   uiColor?: string;
   voiceId?: string;
+  version?: number;
+  revisionHistory?: PersonaRevision[];
   createdAt: number;
   updatedAt?: number;
 }
