@@ -90,6 +90,55 @@ export default function SettingsPage() {
 
   const handleTestConnection = async (provider: string, key: string) => {
     setConnectionInfo((prev) => ({ ...prev, [provider]: { status: 'testing' } }));
+
+    if (provider === 'ollama') {
+      const targetUrl = ollamaUrl.trim() || 'http://localhost:11434';
+      try {
+        const res = await fetch(`${targetUrl}/api/tags`, { method: 'GET', mode: 'cors' });
+        if (res.ok) {
+          const data = await res.json();
+          const modelNames = (data.models || []).map((m: any) => m.name);
+          setConnectionInfo((prev) => ({
+            ...prev,
+            ollama: {
+              status: 'success',
+              modelCount: modelNames.length,
+              modelNames: modelNames.slice(0, 5),
+            },
+          }));
+        } else {
+          setConnectionInfo((prev) => ({
+            ...prev,
+            ollama: {
+              status: 'error',
+              errorMessage: `Local server error (${res.status})`,
+            },
+          }));
+        }
+      } catch (e: any) {
+        // Probe with no-cors mode to distinguish CORS block from offline daemon
+        const probe = await fetch(targetUrl, { mode: 'no-cors' }).catch(() => null);
+        if (probe) {
+          setConnectionInfo((prev) => ({
+            ...prev,
+            ollama: {
+              status: 'error',
+              errorMessage: 'CORS Blocked (Set OLLAMA_ORIGINS)',
+            },
+          }));
+        } else {
+          setConnectionInfo((prev) => ({
+            ...prev,
+            ollama: {
+              status: 'error',
+              errorMessage: `Local server unreachable at ${targetUrl}`,
+            },
+          }));
+        }
+      }
+      return;
+    }
+
     try {
       const res = await fetch('/api/validate-key', {
         method: 'POST',
