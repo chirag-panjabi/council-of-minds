@@ -12,6 +12,7 @@ import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
+import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -122,6 +123,7 @@ export default function CouncilChatPage() {
   // Multimodal File Attachments Staging
   const [stagedFiles, setStagedFiles] = useState<StagedFile[]>([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [isEgressModalOpen, setIsEgressModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -399,6 +401,14 @@ export default function CouncilChatPage() {
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if ((!input.trim() && stagedFiles.length === 0) || isStreaming || councilPersonas.length === 0 || chatId === 'new') return;
+
+    const provider = selectedProvider || (selectedModel.startsWith('gemini') ? 'gemini' : selectedModel.startsWith('claude') ? 'anthropic' : selectedModel.startsWith('ollama') ? 'ollama' : 'openai');
+    const hasAcknowledgedEgress = typeof window !== 'undefined' && localStorage.getItem('framework-engine:has_acknowledged_egress') === 'true';
+
+    if (provider !== 'ollama' && !hasAcknowledgedEgress) {
+      setIsEgressModalOpen(true);
+      return;
+    }
 
     let userContent = input.trim();
     stagedFiles.forEach((sf) => {
@@ -699,6 +709,17 @@ export default function CouncilChatPage() {
           </div>
         </form>
       </div>
+
+      <EgressDisclosureModal
+        isOpen={isEgressModalOpen}
+        providerName={(selectedProvider || selectedModel).toUpperCase()}
+        onConfirm={() => {
+          localStorage.setItem('framework-engine:has_acknowledged_egress', 'true');
+          setIsEgressModalOpen(false);
+          handleSend();
+        }}
+        onCancel={() => setIsEgressModalOpen(false)}
+      />
     </Shell>
   );
 }
