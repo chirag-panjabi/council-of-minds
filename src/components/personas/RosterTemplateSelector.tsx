@@ -14,6 +14,9 @@ interface TemplatePreset {
   description: string;
   personaNames: string[];
   roles: string[];
+  chairmanName?: string;
+  skepticName?: string;
+  synthesizerName?: string;
 }
 
 const TEMPLATE_PRESETS: TemplatePreset[] = [
@@ -23,6 +26,29 @@ const TEMPLATE_PRESETS: TemplatePreset[] = [
     description: 'Balanced C-suite perspective covering Strategy, Finance, Engineering, and Risk.',
     personaNames: ['Strategic Operator', 'Risk & Compliance Auditor', 'Systems Architect', 'Empathetic Facilitator'],
     roles: ['CEO Strategy', 'Risk Management', 'Tech Infrastructure', 'Team Alignment'],
+    chairmanName: 'Strategic Operator',
+    skepticName: 'Risk & Compliance Auditor',
+    synthesizerName: 'Empathetic Facilitator',
+  },
+  {
+    id: 'tmpl-tech-stack',
+    name: 'Tech Stack & Architecture Advisory',
+    description: 'Engineering excellence review balancing architectural modularity, performance, and pragmatic shipping.',
+    personaNames: ['Systems Architect', 'Socratic Skeptic', 'Pragmatic Engineer', 'Neural Judge'],
+    roles: ['Cloud Architecture', 'Code Quality & Security', 'Developer Experience', 'Final Synthesis'],
+    chairmanName: 'Systems Architect',
+    skepticName: 'Socratic Skeptic',
+    synthesizerName: 'Neural Judge',
+  },
+  {
+    id: 'tmpl-philosophy-club',
+    name: 'Philosophy & Dialectic Club',
+    description: 'Deep philosophical inquiry probing first principles, ethical implications, and worldview assumptions.',
+    personaNames: ['Dialectic Philosopher', 'Socratic Skeptic', 'Empathetic Facilitator', 'Neural Judge'],
+    roles: ['Epistemology', 'Socratic Probing', 'Human Values', 'Synthesis'],
+    chairmanName: 'Dialectic Philosopher',
+    skepticName: 'Socratic Skeptic',
+    synthesizerName: 'Neural Judge',
   },
   {
     id: 'tmpl-sci-review',
@@ -30,6 +56,9 @@ const TEMPLATE_PRESETS: TemplatePreset[] = [
     description: 'Rigor-driven academic dialectic reviewing methodological validity and evidence.',
     personaNames: ['Socratic Skeptic', 'Dialectic Philosopher', 'Systems Architect'],
     roles: ['Methodology Audit', 'Epistemology', 'Technical Soundness'],
+    chairmanName: 'Socratic Skeptic',
+    skepticName: 'Dialectic Philosopher',
+    synthesizerName: 'Systems Architect',
   },
   {
     id: 'tmpl-product-council',
@@ -37,6 +66,9 @@ const TEMPLATE_PRESETS: TemplatePreset[] = [
     description: 'User-centric product review balancing UX aesthetics, technical architecture, and market risk.',
     personaNames: ['UX & Design Critic', 'Strategic Operator', 'Systems Architect'],
     roles: ['User Experience', 'Market Strategy', 'Tech Feasibility'],
+    chairmanName: 'UX & Design Critic',
+    skepticName: 'Strategic Operator',
+    synthesizerName: 'Systems Architect',
   },
   {
     id: 'tmpl-ethics-panel',
@@ -44,6 +76,9 @@ const TEMPLATE_PRESETS: TemplatePreset[] = [
     description: 'Proactive evaluation of AI safety, legal compliance, and long-term societal impact.',
     personaNames: ['Risk & Compliance Auditor', 'Dialectic Philosopher', 'Empathetic Facilitator'],
     roles: ['Regulatory Compliance', 'Ethical Standards', 'Stakeholder Care'],
+    chairmanName: 'Risk & Compliance Auditor',
+    skepticName: 'Dialectic Philosopher',
+    synthesizerName: 'Empathetic Facilitator',
   },
 ];
 
@@ -61,12 +96,26 @@ export function RosterTemplateSelector() {
 
     const finalIds = matchedIds.length > 0 ? matchedIds : allPersonas.slice(0, 3).map((p) => p.id);
 
+    const chairmanId = tmpl.chairmanName
+      ? allPersonas.find((p) => p.name.toLowerCase().includes(tmpl.chairmanName!.toLowerCase()))?.id
+      : finalIds[0];
+
+    const skepticId = tmpl.skepticName
+      ? allPersonas.find((p) => p.name.toLowerCase().includes(tmpl.skepticName!.toLowerCase()))?.id
+      : finalIds[1];
+
+    const synthesizerId = tmpl.synthesizerName
+      ? allPersonas.find((p) => p.name.toLowerCase().includes(tmpl.synthesizerName!.toLowerCase()))?.id
+      : finalIds[finalIds.length - 1];
+
     const newGroup: PersonaGroup = {
       id: 'group-' + Date.now(),
       name: tmpl.name,
       description: tmpl.description,
       personaIds: finalIds,
-      synthesizerPersonaId: finalIds[0],
+      chairmanPersonaId: chairmanId,
+      skepticPersonaId: skepticId,
+      synthesizerPersonaId: synthesizerId || finalIds[0],
       createdAt: Date.now(),
     };
 
