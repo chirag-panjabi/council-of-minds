@@ -108,13 +108,23 @@ export default function OneOnOneChatPage() {
   const activeMessages = isIncognito ? incognitoMessages : dbMessages;
 
   useEffect(() => {
-    if (persona?.defaultModel) {
-      setSelectedModel(persona.defaultModel);
-    } else if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined') {
       const savedModel = localStorage.getItem('framework-engine:default-model');
       const savedProvider = localStorage.getItem('framework-engine:default-provider') as ModelProvider;
-      if (savedModel) setSelectedModel(savedModel);
-      if (savedProvider) setSelectedProvider(savedProvider);
+
+      if (savedModel && savedProvider) {
+        setSelectedModel(savedModel);
+        setSelectedProvider(savedProvider);
+        return;
+      }
+    }
+
+    if (persona?.defaultModel) {
+      setSelectedModel(persona.defaultModel);
+      if (persona.defaultModel.startsWith('gemini')) setSelectedProvider('gemini');
+      else if (persona.defaultModel.startsWith('claude')) setSelectedProvider('anthropic');
+      else if (persona.defaultModel.startsWith('ollama') || persona.defaultModel.includes(':')) setSelectedProvider('ollama');
+      else setSelectedProvider('openai');
     }
   }, [persona?.id]);
 
