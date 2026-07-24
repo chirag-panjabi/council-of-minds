@@ -8,6 +8,7 @@ import { db } from '@/lib/db';
 import type { Persona } from '@/types';
 import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
+import { TagInput } from '@/components/personas/TagInput';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -22,7 +23,7 @@ export default function EditPersonaPage() {
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [recommendedModel, setRecommendedModel] = useState('');
-  const [tagsInput, setTagsInput] = useState('');
+  const [tags, setTags] = useState<string[]>([]);
   const [isArchived, setIsArchived] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -48,7 +49,7 @@ export default function EditPersonaPage() {
         setSystemPrompt(p.systemPrompt);
         setRecommendedModel(p.recommendedModel || '');
         setTestModel(p.recommendedModel || 'gpt-4o');
-        setTagsInput(p.tags?.join(', ') || '');
+        setTags(p.tags || []);
         setIsArchived(p.isArchived || false);
       }
     });
@@ -66,7 +67,7 @@ export default function EditPersonaPage() {
       role,
       description,
       recommendedModel: recommendedModel || undefined,
-      tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+      tags,
       isSystem: false,
       isCustom: true,
       createdAt: Date.now(),
@@ -85,10 +86,6 @@ export default function EditPersonaPage() {
     if (!name.trim() || !systemPrompt.trim()) return;
 
     setIsSaving(true);
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
 
     await db.personas.update(personaId, {
       name: name.trim(),
@@ -115,7 +112,7 @@ export default function EditPersonaPage() {
         description,
         systemPrompt,
         recommendedModel,
-        tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+        tags,
       },
     };
     const jsonStr = JSON.stringify(schemaObj);
@@ -349,13 +346,8 @@ export default function EditPersonaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Tags (Comma Separated)</label>
-                <input
-                  type="text"
-                  value={tagsInput}
-                  onChange={(e) => setTagsInput(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-                />
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
+                <TagInput tags={tags} onChange={setTags} />
               </div>
             </div>
 
@@ -414,9 +406,9 @@ export default function EditPersonaPage() {
                       ✨ Best with {recommendedModel}
                     </span>
                   )}
-                  {tagsInput.split(',').map((t) => (
+                  {tags.map((t) => (
                     <span key={t} className="text-[10px] font-mono bg-[var(--color-paper-3)] text-[var(--color-ink-faint)] px-1.5 py-0.5 rounded">
-                      #{t.trim()}
+                      #{t}
                     </span>
                   ))}
                 </div>

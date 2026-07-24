@@ -6,6 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import { ArrowLeft, Save, Sparkles, Wand2 } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
+import { TagInput } from '@/components/personas/TagInput';
 import Link from 'next/link';
 
 /* Hallmark · genre: editorial · macrostructure: form-surface · theme: atelier · nav: N1b · footer: Ft4 */
@@ -17,7 +18,7 @@ export default function NewPersonaPage() {
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
   const [recommendedModel, setRecommendedModel] = useState('');
-  const [tagsInput, setTagsInput] = useState('Philosophy, Strategy');
+  const [tags, setTags] = useState<string[]>(['philosophy', 'strategy']);
   const [isSaving, setIsSaving] = useState(false);
 
   // AI Quick-Generate State
@@ -57,14 +58,14 @@ export default function NewPersonaPage() {
       if (parsed.description) setDescription(parsed.description);
       if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
       if (parsed.recommendedModel || parsed.defaultModel) setRecommendedModel(parsed.recommendedModel || parsed.defaultModel);
-      if (parsed.tags && Array.isArray(parsed.tags)) setTagsInput(parsed.tags.join(', '));
+      if (parsed.tags && Array.isArray(parsed.tags)) setTags(parsed.tags.map((t: string) => t.trim()));
     } catch (err: any) {
       // Fallback local heuristic generator if offline or error
       setName(quickPrompt.trim());
       setRole('Advisor & Specialist');
       setDescription(`Analytical reflection persona modeled after ${quickPrompt.trim()}.`);
       setSystemPrompt(`You are ${quickPrompt.trim()}. Analyze all user dilemmas through your unique philosophical stance and core principles. Be direct, structured, and insightful.`);
-      setTagsInput('Analysis, Custom');
+      setTags(['analysis', 'custom']);
     } finally {
       setIsGenerating(false);
     }
@@ -75,10 +76,6 @@ export default function NewPersonaPage() {
     if (!name.trim() || !systemPrompt.trim()) return;
 
     setIsSaving(true);
-    const tags = tagsInput
-      .split(',')
-      .map((t) => t.trim())
-      .filter(Boolean);
 
     await db.personas.add({
       id: 'persona-' + Date.now(),
@@ -200,13 +197,8 @@ export default function NewPersonaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Tags (Comma Separated)</label>
-              <input
-                type="text"
-                value={tagsInput}
-                onChange={(e) => setTagsInput(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-              />
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
+              <TagInput tags={tags} onChange={setTags} />
             </div>
           </div>
 
