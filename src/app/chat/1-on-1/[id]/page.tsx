@@ -126,6 +126,15 @@ export default function OneOnOneChatPage() {
   const [isEgressModalOpen, setIsEgressModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStopOrPause = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+  };
 
   const activeMessages = isIncognito ? incognitoMessages : dbMessages;
 
@@ -305,6 +314,7 @@ export default function OneOnOneChatPage() {
     setInput('');
     setStagedFiles([]);
     setIsStreaming(true);
+    abortControllerRef.current = new AbortController();
 
     const assistantMsgId = 'msg-' + (Date.now() + 1);
     const assistantMessageObj: ChatMessage = {
@@ -350,6 +360,7 @@ export default function OneOnOneChatPage() {
           systemPrompt: persona.systemPrompt,
           messages: apiMessages,
         }),
+        signal: abortControllerRef.current?.signal,
       });
 
       if (!res.ok) {
@@ -424,6 +435,10 @@ export default function OneOnOneChatPage() {
         }
       }
     } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        return;
+      }
+
       let rawText = err.message || 'Failed to generate response.';
       let userFriendlySummary = 'API Request Failed';
 
@@ -627,7 +642,13 @@ export default function OneOnOneChatPage() {
                 className="w-full pr-12 pl-4 py-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] resize-none"
               />
               <button
-                type="submit"
+                type={isStreaming ? 'button' : 'submit'}
+                onClick={(e) => {
+                  if (isStreaming) {
+                    e.preventDefault();
+                    handleStopOrPause();
+                  }
+                }}
                 disabled={!input.trim() && stagedFiles.length === 0 && !isStreaming}
                 aria-label={isStreaming ? 'Stop generation' : 'Send message'}
                 className="absolute right-3 p-2 bg-[var(--color-accent)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"

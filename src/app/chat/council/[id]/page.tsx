@@ -181,6 +181,16 @@ export default function CouncilChatPage() {
   const [isEgressModalOpen, setIsEgressModalOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  const handleStopOrPause = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setIsStreaming(false);
+    setActiveSpeakerIndex(null);
+  };
 
   const activeMessages = isIncognito ? incognitoMessages : dbMessages;
 
@@ -366,6 +376,7 @@ export default function CouncilChatPage() {
           systemPrompt: enhancedSystemPrompt,
           messages: apiMessages,
         }),
+        signal: abortControllerRef.current?.signal,
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -445,6 +456,18 @@ export default function CouncilChatPage() {
       const finalCleanContent = cleanSpeakerPrefix(fullContent) || '(No response returned from model turn)';
       return { ...assistantMessageObj, content: finalCleanContent };
     } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('aborted')) {
+        const stoppedContent = cleanSpeakerPrefix(assistantMessageObj.content) || '(Turn stopped by user)';
+        if (isIncognito) {
+          setIncognitoMessages((prev) =>
+            prev.map((m) => (m.id === assistantMsgId ? { ...m, content: stoppedContent } : m))
+          );
+        } else {
+          await db.messages.update(assistantMsgId, { content: stoppedContent });
+        }
+        return { ...assistantMessageObj, content: stoppedContent };
+      }
+
       let rawText = err.message || 'Turn execution failed.';
       let userFriendlySummary = 'API Request Failed';
 
@@ -509,6 +532,7 @@ export default function CouncilChatPage() {
     setInput('');
     setStagedFiles([]);
     setIsStreaming(true);
+    abortControllerRef.current = new AbortController();
 
     let currentHistory = [...activeMessages, userMessageObj];
 
@@ -849,7 +873,13 @@ export default function CouncilChatPage() {
                 className="w-full pr-12 pl-4 py-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] resize-none"
               />
               <button
-                type="submit"
+                type={isStreaming ? 'button' : 'submit'}
+                onClick={(e) => {
+                  if (isStreaming) {
+                    e.preventDefault();
+                    handleStopOrPause();
+                  }
+                }}
                 disabled={!input.trim() && stagedFiles.length === 0 && !isStreaming}
                 aria-label={isStreaming ? 'Stop Council debate' : 'Launch Council debate'}
                 className="absolute right-3 p-2 bg-[var(--color-accent)] text-white rounded-[var(--radius-sm)] hover:bg-[var(--color-accent-hover)] focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] active:scale-95 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:active:scale-100"
