@@ -10,6 +10,7 @@ import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, 
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
+import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -589,7 +590,7 @@ export default function CouncilChatPage() {
         </div>
 
         {/* Message Stream */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-6">
+        <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 max-w-4xl mx-auto w-full">
           {activeMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center max-w-md mx-auto space-y-3">
               <Users className="w-10 h-10 text-[var(--color-accent)] opacity-60" />
@@ -602,60 +603,12 @@ export default function CouncilChatPage() {
             activeMessages.map((msg) => {
               const speakerPersona = allPersonas.find((p) => p.id === msg.personaId);
               return (
-                <div
+                <ChatMessageItem
                   key={msg.id}
-                  className={`flex gap-4 max-w-3xl ${msg.role === 'user' ? 'ml-auto flex-row-reverse' : 'mr-auto'}`}
-                >
-                  <div
-                    className={`w-8 h-8 rounded-full shrink-0 flex items-center justify-center text-xs font-semibold ${
-                      msg.role === 'user'
-                        ? 'bg-[var(--color-ink)] text-[var(--color-paper)]'
-                        : 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent)]'
-                    }`}
-                  >
-                    {msg.role === 'user' ? 'M' : speakerPersona?.name.charAt(0) || 'C'}
-                  </div>
-
-                  <div className={`space-y-2 flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                    <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
-                      {msg.role === 'user' ? 'Moderator (You)' : `${speakerPersona?.name} (${speakerPersona?.role})`} •{' '}
-                      {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </div>
-
-                    {msg.reasoning && (
-                      <div className="think-accordion my-2 text-left">
-                        <button
-                          type="button"
-                          onClick={() => toggleReasoning(msg.id)}
-                          aria-expanded={Boolean(expandedReasoningIds[msg.id])}
-                          aria-label="Toggle debater reasoning process"
-                          className="w-full px-3 py-1.5 flex items-center justify-between text-xs font-mono text-[var(--color-think-ink)] hover:bg-black/5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded transition-colors"
-                        >
-                          <span className="flex items-center gap-1.5 font-semibold">
-                            <Brain className="w-3.5 h-3.5 text-[var(--color-accent)]" />
-                            Thought Process & Reasoning
-                          </span>
-                          {expandedReasoningIds[msg.id] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-                        </button>
-                        {expandedReasoningIds[msg.id] && (
-                          <div className="p-3 text-xs leading-relaxed border-t border-[var(--color-think-border)] whitespace-pre-wrap font-mono">
-                            {msg.reasoning}
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    <div
-                      className={`p-4 rounded-[var(--radius-md)] text-sm leading-relaxed whitespace-pre-wrap ${
-                        msg.role === 'user'
-                          ? 'bg-[var(--color-ink)] text-[var(--color-paper)] inline-block text-left'
-                          : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink)]'
-                      }`}
-                    >
-                      {msg.content || (isStreaming && msg.role === 'assistant' ? 'Formulating perspective...' : '')}
-                    </div>
-                  </div>
-                </div>
+                  message={msg}
+                  persona={speakerPersona}
+                  isIncognito={isIncognito}
+                />
               );
             })
           )}
