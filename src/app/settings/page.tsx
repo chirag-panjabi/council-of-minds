@@ -19,8 +19,18 @@ export default function SettingsPage() {
   const [isOllamaEnabled, setIsOllamaEnabled] = useState(false);
 
   const [personalProfile, setPersonalProfile] = useState('');
-  const [defaultProvider, setDefaultProvider] = useState<ModelProvider>('openai');
-  const [defaultModel, setDefaultModel] = useState<string>('gpt-4o');
+  const [defaultProvider, setDefaultProvider] = useState<ModelProvider>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('framework-engine:default-provider') as ModelProvider) || 'openai';
+    }
+    return 'openai';
+  });
+  const [defaultModel, setDefaultModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('framework-engine:default-model') || 'gpt-4o';
+    }
+    return 'gpt-4o';
+  });
   const [showKeys, setShowKeys] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   interface ConnectionDetail {
@@ -44,8 +54,6 @@ export default function SettingsPage() {
     setOllamaUrl(localStorage.getItem('framework-engine:ollama-url') || 'http://localhost:11434');
     setIsOllamaEnabled(localStorage.getItem('framework-engine:ollama-enabled') === 'true');
     setPersonalProfile(localStorage.getItem('framework-engine:personal-profile') || '');
-    setDefaultProvider((localStorage.getItem('framework-engine:default-provider') as ModelProvider) || 'openai');
-    setDefaultModel(localStorage.getItem('framework-engine:default-model') || 'gpt-4o');
   }, []);
 
   const handleSaveKeys = (e: React.FormEvent) => {
@@ -436,6 +444,8 @@ export default function SettingsPage() {
                 onChange={(newModelId, newProvider) => {
                   setDefaultModel(newModelId);
                   setDefaultProvider(newProvider);
+                  localStorage.setItem('framework-engine:default-provider', newProvider);
+                  localStorage.setItem('framework-engine:default-model', newModelId);
                 }}
               />
             </div>

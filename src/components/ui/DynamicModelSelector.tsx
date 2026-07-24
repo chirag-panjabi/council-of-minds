@@ -47,6 +47,13 @@ export function DynamicModelSelector({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (value) {
+      const inferred = inferProvider(value);
+      setProvider(inferred);
+    }
+  }, [value]);
+
   const fetchLiveModels = async (targetProvider: ModelProvider) => {
     setIsLoading(true);
     setError(null);
