@@ -74,8 +74,18 @@ export default function OneOnOneChatPage() {
   );
 
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('framework-engine:default-model') || 'gpt-4o';
+    }
+    return 'gpt-4o';
+  });
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('framework-engine:default-provider') as ModelProvider) || 'openai';
+    }
+    return 'openai';
+  });
   const [contextRetention, setContextRetention] = useState<'stateless' | 'summary' | 'hybrid' | 'infinite'>(
     chatSession?.contextRetention || 'hybrid'
   );
@@ -100,6 +110,11 @@ export default function OneOnOneChatPage() {
   useEffect(() => {
     if (persona?.defaultModel) {
       setSelectedModel(persona.defaultModel);
+    } else if (typeof window !== 'undefined') {
+      const savedModel = localStorage.getItem('framework-engine:default-model');
+      const savedProvider = localStorage.getItem('framework-engine:default-provider') as ModelProvider;
+      if (savedModel) setSelectedModel(savedModel);
+      if (savedProvider) setSelectedProvider(savedProvider);
     }
   }, [persona?.id]);
 

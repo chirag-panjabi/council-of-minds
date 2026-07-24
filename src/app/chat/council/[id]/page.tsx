@@ -93,8 +93,18 @@ export default function CouncilChatPage() {
     }
   }, [topicQueryParam]);
 
-  const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
-  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('openai');
+  const [selectedModel, setSelectedModel] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('framework-engine:default-model') || 'gpt-4o';
+    }
+    return 'gpt-4o';
+  });
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>(() => {
+    if (typeof window !== 'undefined') {
+      return (localStorage.getItem('framework-engine:default-provider') as ModelProvider) || 'openai';
+    }
+    return 'openai';
+  });
   const [autoPilotCap, setAutoPilotCap] = useState<number>(6);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeSpeakerIndex, setActiveSpeakerIndex] = useState<number | null>(null);

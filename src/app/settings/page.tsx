@@ -6,6 +6,7 @@ import { db } from '@/lib/db';
 import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
+import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N4 */
 
@@ -18,6 +19,8 @@ export default function SettingsPage() {
   const [isOllamaEnabled, setIsOllamaEnabled] = useState(false);
 
   const [personalProfile, setPersonalProfile] = useState('');
+  const [defaultProvider, setDefaultProvider] = useState<ModelProvider>('openai');
+  const [defaultModel, setDefaultModel] = useState<string>('gpt-4o');
   const [showKeys, setShowKeys] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
   interface ConnectionDetail {
@@ -41,6 +44,8 @@ export default function SettingsPage() {
     setOllamaUrl(localStorage.getItem('framework-engine:ollama-url') || 'http://localhost:11434');
     setIsOllamaEnabled(localStorage.getItem('framework-engine:ollama-enabled') === 'true');
     setPersonalProfile(localStorage.getItem('framework-engine:personal-profile') || '');
+    setDefaultProvider((localStorage.getItem('framework-engine:default-provider') as ModelProvider) || 'openai');
+    setDefaultModel(localStorage.getItem('framework-engine:default-model') || 'gpt-4o');
   }, []);
 
   const handleSaveKeys = (e: React.FormEvent) => {
@@ -51,6 +56,8 @@ export default function SettingsPage() {
     localStorage.setItem('framework-engine:ollama-url', ollamaUrl.trim());
     localStorage.setItem('framework-engine:ollama-enabled', isOllamaEnabled.toString());
     localStorage.setItem('framework-engine:personal-profile', personalProfile.trim());
+    localStorage.setItem('framework-engine:default-provider', defaultProvider);
+    localStorage.setItem('framework-engine:default-model', defaultModel);
 
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -408,6 +415,29 @@ export default function SettingsPage() {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+
+          {/* Global Default Provider & Model Targets */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
+            <div className="space-y-1 border-b border-[var(--color-border-hairline)] pb-4">
+              <h2 className="font-display text-xl text-[var(--color-ink)] flex items-center gap-2">
+                <Cpu className="w-5 h-5 text-[var(--color-accent)]" /> Global Default Provider & Model Targets
+              </h2>
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                Pre-selects your preferred AI provider and model target across all new 1-on-1 chats and Council debates.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-4">
+              <label className="text-xs font-mono text-[var(--color-ink)]">Default Target:</label>
+              <DynamicModelSelector
+                value={defaultModel}
+                onChange={(newModelId, newProvider) => {
+                  setDefaultModel(newModelId);
+                  setDefaultProvider(newProvider);
+                }}
+              />
             </div>
           </div>
 

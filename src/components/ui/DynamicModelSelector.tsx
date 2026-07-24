@@ -27,11 +27,18 @@ export function DynamicModelSelector({
   size = 'sm',
   className = '',
 }: DynamicModelSelectorProps) {
-  // Infer initial provider from model ID
+  // Infer initial provider from model ID or localStorage default
   const inferProvider = (modelId: string): ModelProvider => {
-    if (modelId.startsWith('gemini')) return 'gemini';
-    if (modelId.startsWith('claude')) return 'anthropic';
-    if (modelId.startsWith('ollama') || modelId.includes(':') || modelId.includes('llama')) return 'ollama';
+    if (modelId) {
+      if (modelId.startsWith('gemini')) return 'gemini';
+      if (modelId.startsWith('claude')) return 'anthropic';
+      if (modelId.startsWith('ollama') || modelId.includes(':') || modelId.includes('llama')) return 'ollama';
+      if (modelId.startsWith('gpt') || modelId.startsWith('o1') || modelId.startsWith('o3')) return 'openai';
+    }
+    if (typeof window !== 'undefined') {
+      const savedProvider = localStorage.getItem('framework-engine:default-provider') as ModelProvider;
+      if (savedProvider) return savedProvider;
+    }
     return 'openai';
   };
 

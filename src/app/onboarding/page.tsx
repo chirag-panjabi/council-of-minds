@@ -51,6 +51,11 @@ export default function OnboardingPage() {
 
         // Store key locally
         localStorage.setItem(`framework-engine:api-key:${selectedProvider}`, apiKey.trim());
+
+        // Save initial global default provider and model target
+        const topDiscoveredModel = data.modelNames?.[0] || (selectedProvider === 'gemini' ? 'gemini-2.5-flash' : selectedProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4o');
+        localStorage.setItem('framework-engine:default-provider', selectedProvider);
+        localStorage.setItem('framework-engine:default-model', topDiscoveredModel);
       }
 
       if (systemProfile.trim()) {

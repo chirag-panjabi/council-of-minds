@@ -16,7 +16,12 @@ export default function NewPersonaPage() {
   const [role, setRole] = useState('');
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [defaultModel, setDefaultModel] = useState('gpt-4o');
+  const [defaultModel, setDefaultModel] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('framework-engine:default-model') || 'gpt-4o';
+    }
+    return 'gpt-4o';
+  });
   const [tagsInput, setTagsInput] = useState('Philosophy, Strategy');
   const [isSaving, setIsSaving] = useState(false);
 
