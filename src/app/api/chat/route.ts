@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redactSensitiveData } from '@/lib/utils/redact';
 
 export const runtime = 'edge';
 
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return new NextResponse(errorText, { status: response.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
       }
 
       let buffer = '';
@@ -116,7 +117,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return new NextResponse(errorText, { status: response.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
       }
 
       let buffer = '';
@@ -181,7 +182,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return new NextResponse(errorText, { status: response.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
       }
 
       let buffer = '';
@@ -246,7 +247,7 @@ export async function POST(req: NextRequest) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        return new NextResponse(errorText, { status: response.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
       }
 
       let buffer = '';
@@ -290,8 +291,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: 'Unsupported provider: ' + provider }, { status: 400 });
+    return NextResponse.json({ error: 'Unsupported provider: ' + redactSensitiveData(provider) }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Internal proxy error' }, { status: 500 });
+    return NextResponse.json({ error: redactSensitiveData(err.message) || 'Internal proxy error' }, { status: 500 });
   }
 }

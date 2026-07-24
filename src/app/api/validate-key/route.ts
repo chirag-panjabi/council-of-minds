@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redactSensitiveData } from '@/lib/utils/redact';
 
 export const runtime = 'edge';
 
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        return new NextResponse(errorText, { status: res.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: res.status });
       }
 
       const data = await res.json();
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        return new NextResponse(errorText, { status: res.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: res.status });
       }
 
       const data = await res.json();
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok && res.status !== 200) {
         const errorText = await res.text();
-        return new NextResponse(errorText, { status: res.status });
+        return new NextResponse(redactSensitiveData(errorText), { status: res.status });
       }
 
       return NextResponse.json({
@@ -111,8 +112,8 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: 'Unsupported provider: ' + provider }, { status: 400 });
+    return NextResponse.json({ error: 'Unsupported provider: ' + redactSensitiveData(provider) }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Validation failed' }, { status: 500 });
+    return NextResponse.json({ error: redactSensitiveData(err.message) || 'Validation failed' }, { status: 500 });
   }
 }
