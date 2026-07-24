@@ -9,6 +9,7 @@ import { RestorePreviewModal, BackupManifest } from '@/components/settings/Resto
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
+import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N4 */
 
@@ -200,50 +201,32 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSelectRestoreFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const parsed = JSON.parse(e.target?.result as string);
-        setRestoreManifest(parsed);
-        setShowRestoreModal(true);
-      } catch (err) {
-        alert('Invalid backup JSON archive file format.');
-      }
-    };
-    reader.readAsText(file);
+  const handleSelectRestoreFile = async (file: File) => {
+    try {
+      const manifest = await parseBackupFile(file);
+      setRestoreManifest(manifest);
+      setShowRestoreModal(true);
+    } catch (err: any) {
+      alert('Failed to parse backup archive file: ' + err.message);
+    }
   };
 
   const handleConfirmRestoreData = async (options: {
     restorePersonas: boolean;
     restoreChats: boolean;
+    restoreGroups: boolean;
     conflictStrategy: 'replace' | 'duplicate' | 'skip';
   }) => {
-    if (!restoreManifest || !restoreManifest.data) return;
+    if (!restoreManifest) return;
 
-    if (options.restorePersonas && restoreManifest.data.personas) {
-      for (const p of restoreManifest.data.personas) {
-        if (options.conflictStrategy === 'duplicate') {
-          p.id = 'custom-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4);
-          p.name = `${p.name} (Imported)`;
-        }
-        await db.personas.put(p);
-      }
+    try {
+      const result = await executeBackupRestore(restoreManifest, options);
+      alert(`Data restoration complete! Restored ${result.personasRestored} personas, ${result.chatsRestored} chats.`);
+    } catch (err: any) {
+      alert('Error during data restore: ' + err.message);
+    } finally {
+      setRestoreManifest(null);
     }
-
-    if (options.restoreChats && restoreManifest.data.chats) {
-      for (const c of restoreManifest.data.chats) {
-        await db.chats.put(c);
-      }
-      if (restoreManifest.data.messages) {
-        for (const m of restoreManifest.data.messages) {
-          await db.messages.put(m);
-        }
-      }
-    }
-
-    alert('Data restoration completed successfully!');
-    setRestoreManifest(null);
   };
 
   const handleWipeData = async () => {
@@ -643,7 +626,7 @@ export default function SettingsPage() {
               <Upload className="w-3.5 h-3.5" /> Restore Backup Archive
               <input
                 type="file"
-                accept=".json"
+                accept=".zip,.json,application/zip,application/x-zip-compressed"
                 onChange={(e) => e.target.files?.[0] && handleSelectRestoreFile(e.target.files[0])}
                 className="hidden"
               />

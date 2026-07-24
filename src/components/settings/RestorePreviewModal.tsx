@@ -12,11 +12,15 @@ export interface BackupManifest {
     personas: number;
     chats: number;
     messages: number;
+    groups?: number;
+    usage?: number;
   };
   data: {
     personas?: any[];
     chats?: any[];
     messages?: any[];
+    groups?: any[];
+    usage?: any[];
   };
 }
 
@@ -27,6 +31,7 @@ interface RestorePreviewModalProps {
   onConfirmRestore: (options: {
     restorePersonas: boolean;
     restoreChats: boolean;
+    restoreGroups: boolean;
     conflictStrategy: 'replace' | 'duplicate' | 'skip';
   }) => void;
 }
@@ -39,6 +44,7 @@ export function RestorePreviewModal({
 }: RestorePreviewModalProps) {
   const [restorePersonas, setRestorePersonas] = useState(true);
   const [restoreChats, setRestoreChats] = useState(true);
+  const [restoreGroups, setRestoreGroups] = useState(true);
   const [conflictStrategy, setConflictStrategy] = useState<'replace' | 'duplicate' | 'skip'>('duplicate');
 
   if (!isOpen || !manifest) return null;
@@ -47,6 +53,7 @@ export function RestorePreviewModal({
     onConfirmRestore({
       restorePersonas,
       restoreChats,
+      restoreGroups,
       conflictStrategy,
     });
     onClose();
