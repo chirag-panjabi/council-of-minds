@@ -14,6 +14,56 @@ export interface ModelOption {
   description?: string;
 }
 
+export const DEFAULT_FALLBACK_MODELS: Record<ModelProvider, ModelOption[]> = {
+  openai: [
+    { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
+    { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
+    { id: 'o3-mini', name: 'o3-mini', provider: 'openai' },
+    { id: 'o1', name: 'o1', provider: 'openai' },
+  ],
+  anthropic: [
+    { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
+    { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'anthropic' },
+    { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
+    { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'anthropic' },
+  ],
+  gemini: [
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash', provider: 'gemini' },
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash', provider: 'gemini' },
+    { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro', provider: 'gemini' },
+  ],
+  ollama: [
+    { id: 'llama3:latest', name: 'Llama 3 (Ollama)', provider: 'ollama' },
+    { id: 'mistral:latest', name: 'Mistral (Ollama)', provider: 'ollama' },
+  ],
+};
+
+export function resolveModelOptions(
+  provider: ModelProvider,
+  fetchedModels: ModelOption[],
+  currentValue?: string
+): ModelOption[] {
+  const defaults = DEFAULT_FALLBACK_MODELS[provider] || [];
+  const map = new Map<string, ModelOption>();
+
+  // Add default fallback models
+  defaults.forEach((m) => map.set(m.id, m));
+
+  // Add fetched live models (overriding defaults if matching ID)
+  fetchedModels.forEach((m) => map.set(m.id, m));
+
+  // Preserve custom current value if set
+  if (currentValue && !map.has(currentValue)) {
+    map.set(currentValue, {
+      id: currentValue,
+      name: `${currentValue} (Custom)`,
+      provider,
+    });
+  }
+
+  return Array.from(map.values());
+}
+
 interface DynamicModelSelectorProps {
   value: string;
   onChange: (modelId: string, provider: ModelProvider) => void;
@@ -43,7 +93,7 @@ export function DynamicModelSelector({
   };
 
   const [provider, setProvider] = useState<ModelProvider>(() => inferProvider(value));
-  const [models, setModels] = useState<ModelOption[]>([]);
+  const [models, setModels] = useState<ModelOption[]>(() => resolveModelOptions(inferProvider(value), [], value));
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -69,22 +119,26 @@ export function DynamicModelSelector({
       });
 
       const res = await fetch(`/api/models?${queryParams.toString()}`);
-      if (!res.ok) throw new Error('Failed to load models');
+      let fetchedModels: ModelOption[] = [];
 
-      const data = await res.json();
-      const fetchedModels: ModelOption[] = data.models || [];
+      if (res.ok) {
+        const data = await res.json();
+        fetchedModels = data.models || [];
+      }
 
-      setModels(fetchedModels);
+      const mergedOptions = resolveModelOptions(targetProvider, fetchedModels, value);
+      setModels(mergedOptions);
 
-      // If current value is not in fetched models, select the first available model
-      if (fetchedModels.length > 0) {
-        const hasCurrentValue = fetchedModels.some((m) => m.id === value);
+      // If current value is not in resolved options, select first model
+      if (mergedOptions.length > 0) {
+        const hasCurrentValue = mergedOptions.some((m) => m.id === value);
         if (!hasCurrentValue) {
-          onChange(fetchedModels[0].id, targetProvider);
+          onChange(mergedOptions[0].id, targetProvider);
         }
       }
     } catch (err: any) {
       setError(err.message || 'Error fetching models');
+      setModels(resolveModelOptions(targetProvider, [], value));
     } finally {
       setIsLoading(false);
     }
