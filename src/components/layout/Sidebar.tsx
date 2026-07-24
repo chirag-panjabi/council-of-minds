@@ -32,7 +32,7 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
-  const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(5).toArray()) || [];
+  const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(30).toArray()) || [];
 
   // Close mobile drawer on route change
   useEffect(() => {
@@ -186,24 +186,48 @@ export function Sidebar() {
 
           {/* Recent Sessions */}
           <div className="space-y-2">
-            <div className="text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider px-2">
-              Recent Sessions
+            <div className="flex items-center justify-between text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider px-2">
+              <span>Recent Sessions ({recentChats.length})</span>
+              <button
+                onClick={() => {
+                  setIsSearchOpen(true);
+                  setIsMobileOpen(false);
+                }}
+                className="hover:text-[var(--color-accent)] font-normal transition-colors"
+                title="Search all historical sessions (⌘K)"
+              >
+                ⌘K
+              </button>
             </div>
-            <div className="space-y-0.5">
+            <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 scrollbar-thin">
               {recentChats.length === 0 ? (
-                <div className="px-3 py-1 text-[11px] font-mono text-[var(--color-ink-muted)] italic">
-                  No recent sessions
+                <div className="px-3 py-2 text-[11px] font-mono text-[var(--color-ink-muted)] italic border border-dashed border-[var(--color-border-hairline)] rounded-[var(--radius-sm)]">
+                  No active sessions yet
                 </div>
               ) : (
-                recentChats.map((c) => (
-                  <Link
-                    key={c.id}
-                    href={c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`}
-                    className="block px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors truncate"
-                  >
-                    {c.title}
-                  </Link>
-                ))
+                recentChats.map((c) => {
+                  const href = c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`;
+                  const isCurrent = pathname === href;
+
+                  return (
+                    <Link
+                      key={c.id}
+                      href={href}
+                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs transition-colors group ${
+                        isCurrent
+                          ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
+                          : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+                      }`}
+                    >
+                      {c.type === 'council' ? (
+                        <Users className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
+                      ) : (
+                        <MessageSquare className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
+                      )}
+                      <span className="truncate flex-1">{c.title}</span>
+                    </Link>
+                  );
+                })
               )}
             </div>
           </div>
