@@ -13,16 +13,26 @@ export function isOfficialPersona(p?: Partial<Persona> | null): boolean {
   return false;
 }
 
+export function formatPersonaOptionLabel(p: Partial<Persona> | null | undefined, prefix = ''): string {
+  if (!p || !p.name) return '';
+  const cleanName = p.name.replace(/\s*\([^)]*\)/g, '').trim();
+  const role = p.role ? ` (${p.role})` : '';
+  return `${prefix}${cleanName}${role}`;
+}
+
 function formatGeneratedPersona(p: any): Persona {
-  const nameStr = p.name || 'AI Persona';
+  const rawName = p.name || 'AI Persona';
+  let cleanName = rawName;
   let roleStr = 'AI Thought Partner';
-  if (nameStr.includes('(')) {
-    roleStr = nameStr.split('(')[1].replace(')', '').trim();
-  } else if (nameStr.includes('Framework')) {
+
+  if (rawName.includes('(')) {
+    cleanName = rawName.split('(')[0].trim();
+    roleStr = rawName.split('(')[1].replace(')', '').trim();
+  } else if (rawName.includes('Framework')) {
     roleStr = 'Philosophical Framework';
-  } else if (nameStr.includes('CTO')) {
+  } else if (rawName.includes('CTO')) {
     roleStr = 'Technology Strategy';
-  } else if (nameStr.includes('VC') || nameStr.includes('Partner')) {
+  } else if (rawName.includes('VC') || rawName.includes('Partner')) {
     roleStr = 'Venture Capital';
   }
 
@@ -33,7 +43,7 @@ function formatGeneratedPersona(p: any): Persona {
 
   return {
     id: personaId,
-    name: p.name,
+    name: cleanName,
     role: roleStr,
     description: p.description || 'Analytical thought partner and reasoning framework.',
     systemPrompt: p.instructions || p.systemPrompt || '',
@@ -114,6 +124,13 @@ export async function ensureOfficialPersonasSynced(): Promise<void> {
     const idsToDelete: string[] = [];
 
     for (const p of allPersonas) {
+      // Strip redundant parenthesized role suffixes stored in legacy p.name
+      if (p.name && p.name.includes('(')) {
+        const cleanName = p.name.split('(')[0].trim();
+        await db.personas.update(p.id, { name: cleanName });
+        p.name = cleanName;
+      }
+
       if (p.isSystem || (!p.isCustom && !p.id.startsWith('custom-'))) {
         const normName = p.name.trim().toLowerCase();
         if (seenOfficialNames.has(normName)) {

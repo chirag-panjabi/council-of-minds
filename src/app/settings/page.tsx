@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
+import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID, formatPersonaOptionLabel } from '@/lib/db';
 import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
@@ -491,12 +491,12 @@ export default function SettingsPage() {
                   <option value="" disabled>-- Select Default Persona --</option>
                   <optgroup label="⚡ Official Built-in Personas">
                     {personas.filter((p) => isOfficialPersona(p)).map((p) => (
-                      <option key={p.id} value={p.id}>⚡ {p.name} ({p.role})</option>
+                      <option key={p.id} value={p.id}>{formatPersonaOptionLabel(p, '⚡ ')}</option>
                     ))}
                   </optgroup>
                   <optgroup label="🎨 Custom User Personas">
                     {personas.filter((p) => !isOfficialPersona(p)).map((p) => (
-                      <option key={p.id} value={p.id}>🎨 {p.name} ({p.role})</option>
+                      <option key={p.id} value={p.id}>{formatPersonaOptionLabel(p, '🎨 ')}</option>
                     ))}
                   </optgroup>
                 </select>
@@ -523,12 +523,12 @@ export default function SettingsPage() {
                   <option value="" disabled>-- Select Default Judge --</option>
                   <optgroup label="⚡ Official Built-in Personas">
                     {personas.filter((p) => isOfficialPersona(p)).map((p) => (
-                      <option key={p.id} value={p.id}>⚡ {p.name} ({p.role})</option>
+                      <option key={p.id} value={p.id}>{formatPersonaOptionLabel(p, '⚡ ')}</option>
                     ))}
                   </optgroup>
                   <optgroup label="🎨 Custom User Personas">
                     {personas.filter((p) => !isOfficialPersona(p)).map((p) => (
-                      <option key={p.id} value={p.id}>🎨 {p.name} ({p.role})</option>
+                      <option key={p.id} value={p.id}>{formatPersonaOptionLabel(p, '🎨 ')}</option>
                     ))}
                   </optgroup>
                 </select>

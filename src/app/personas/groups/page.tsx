@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, DEFAULT_SYNTHESIZER_ID, ensureOfficialPersonasSynced } from '@/lib/db';
+import { db, DEFAULT_SYNTHESIZER_ID, ensureOfficialPersonasSynced, formatPersonaOptionLabel } from '@/lib/db';
 import type { PersonaGroup } from '@/types';
 import { Users, Plus, Play, Edit2, Trash2, Copy, Search, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -393,7 +393,7 @@ export default function PersonaGroupsPage() {
                             .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator'))
                             .map((p) => (
                               <option key={p.id} value={p.id}>
-                                ⚖️ {p.name} ({p.role})
+                                {formatPersonaOptionLabel(p, '⚖️ ')}
                               </option>
                             ))
                         ) : (
@@ -409,7 +409,7 @@ export default function PersonaGroupsPage() {
                           .filter((p) => selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
-                              👥 {p.name} ({p.role})
+                              {formatPersonaOptionLabel(p, '👥 ')}
                             </option>
                           ))}
                       </optgroup>
@@ -420,7 +420,7 @@ export default function PersonaGroupsPage() {
                           .filter((p) => !selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
                           .map((p) => (
                             <option key={p.id} value={p.id}>
-                              {p.isSystem ? '⚡' : '🎨'} {p.name} ({p.role})
+                              {formatPersonaOptionLabel(p, p.isSystem ? '⚡ ' : '🎨 ')}
                             </option>
                           ))}
                       </optgroup>
