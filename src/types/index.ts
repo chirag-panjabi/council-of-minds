@@ -45,6 +45,8 @@ export interface ChatMessage {
   content: string;
   reasoning?: string; // Separated raw reasoning tokens (<think>...</think>)
   timestamp: number;
+  isError?: boolean;
+  errorDetails?: string; // Collapsible raw diagnostic JSON or stack trace
 }
 
 export interface MessageAttachment {

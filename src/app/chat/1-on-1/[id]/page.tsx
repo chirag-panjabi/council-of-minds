@@ -395,13 +395,27 @@ export default function OneOnOneChatPage() {
         }
       }
     } catch (err: any) {
-      const errContent = `Error: ${err.message || 'Failed to generate response.'}`;
+      let rawText = err.message || 'Failed to generate response.';
+      let userFriendlySummary = 'API Request Failed';
+
+      if (rawText.includes('429') || rawText.includes('Quota exceeded') || rawText.includes('RESOURCE_EXHAUSTED')) {
+        userFriendlySummary = 'Provider Quota / Rate Limit Exceeded (HTTP 429). Your API request limit has been reached for this model.';
+      } else if (rawText.includes('401') || rawText.includes('Missing API Key') || rawText.includes('Invalid Key')) {
+        userFriendlySummary = 'Authentication Failed (HTTP 401). Invalid or missing API key for selected provider.';
+      } else {
+        userFriendlySummary = `Upstream API Transport Error: ${rawText.slice(0, 150)}`;
+      }
+
       if (isIncognito) {
         setIncognitoMessages((prev) =>
-          prev.map((m) => (m.id === assistantMsgId ? { ...m, content: errContent } : m))
+          prev.map((m) => (m.id === assistantMsgId ? { ...m, content: userFriendlySummary, isError: true, errorDetails: rawText } : m))
         );
       } else {
-        await db.messages.update(assistantMsgId, { content: errContent });
+        await db.messages.update(assistantMsgId, {
+          content: userFriendlySummary,
+          isError: true,
+          errorDetails: rawText,
+        });
       }
     } finally {
       setIsStreaming(false);

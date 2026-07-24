@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ChatMessage, Persona } from '@/types';
-import { Copy, Check, RotateCcw, Edit2, Brain, ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
+import { Copy, Check, RotateCcw, Edit2, Brain, ChevronDown, ChevronRight, Sparkles, AlertTriangle, Key, Terminal } from 'lucide-react';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -25,6 +25,7 @@ export function ChatMessageItem({
   const [editContent, setEditContent] = useState(message.content);
 
   const isUser = message.role === 'user';
+  const isErrorState = message.isError || message.content.startsWith('Error:');
   const timestampStr = new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   const handleCopy = () => {
@@ -39,6 +40,69 @@ export function ChatMessageItem({
       setIsEditing(false);
     }
   };
+
+  if (isErrorState) {
+    return (
+      <div className="w-full my-4 p-4 bg-[var(--color-paper-2)] border-l-4 border-[var(--color-warning)] border-y border-r border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 shadow-xs">
+        {/* Error Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-[var(--color-warning)] font-mono text-[11px] font-semibold uppercase tracking-wider">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-[var(--color-warning)]" />
+            <span>System Event • Transport / API Failure</span>
+          </div>
+          <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{timestampStr}</span>
+        </div>
+
+        {/* Human Message Explanation */}
+        <div className="text-xs text-[var(--color-ink)] leading-relaxed font-sans font-medium">
+          {message.content.replace(/^Error:\s*/, '')}
+        </div>
+
+        {/* Technical Diagnostics Accordion */}
+        {(message.errorDetails || message.content.includes('{')) && (
+          <div className="border border-[var(--color-border-hairline)] rounded overflow-hidden bg-[var(--color-paper)]">
+            <button
+              type="button"
+              onClick={() => setShowReasoning(!showReasoning)}
+              className="w-full px-3 py-1.5 flex items-center justify-between text-[11px] font-mono text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] transition-colors"
+            >
+              <div className="flex items-center gap-1.5">
+                <Terminal className="w-3 h-3 text-[var(--color-warning)]" />
+                <span>Technical Diagnostics Payload</span>
+              </div>
+              {showReasoning ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+            </button>
+            {showReasoning && (
+              <pre className="p-3 text-[11px] font-mono text-[var(--color-ink-muted)] whitespace-pre-wrap overflow-x-auto border-t border-[var(--color-border-hairline)] bg-black/5 leading-relaxed">
+                {message.errorDetails || message.content}
+              </pre>
+            )}
+          </div>
+        )}
+
+        {/* 1-Click Action Recovery Chips */}
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
+          <a
+            href="/settings"
+            className="flex items-center gap-1 px-2.5 py-1 bg-[var(--color-paper)] border border-[var(--color-border)] hover:border-[var(--color-accent)] rounded text-[10px] font-mono text-[var(--color-ink)] hover:text-[var(--color-accent)] transition-colors"
+          >
+            <Key className="w-3 h-3 text-[var(--color-accent)]" />
+            <span>Manage API Keys</span>
+          </a>
+
+          {onRegenerate && (
+            <button
+              onClick={() => onRegenerate(message.id)}
+              className="flex items-center gap-1 px-2.5 py-1 bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent)]/90 rounded text-[10px] font-mono font-medium transition-colors"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Retry Turn</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   // Helper to render markdown formatting cleanly
   const renderFormattedText = (text: string) => {
