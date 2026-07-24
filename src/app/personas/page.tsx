@@ -8,6 +8,7 @@ import type { Persona } from '@/types';
 import { Search, Plus, Grid, List, Share2, Upload, Trash2, Edit2, Play, Copy, Check, Star, Shield, RotateCcw, GitFork, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { PersonaImportModal } from '@/components/personas/PersonaImportModal';
 
 /* Hallmark · genre: editorial · macrostructure: 11-catalogue · theme: studio · nav: N1b */
 
@@ -535,56 +536,13 @@ export default function PersonaLibraryPage() {
           </div>
         )}
 
-        {/* Import Code Modal */}
-        {showImportModal && (
-          <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-            <div className="bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-md)] max-w-lg w-full p-6 space-y-4 shadow-xl">
-              <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-3">
-                <h3 className="font-display text-xl text-[var(--color-ink)]">Import Persona</h3>
-                <button
-                  onClick={() => setShowImportModal(false)}
-                  className="text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                >
-                  ✕
-                </button>
-              </div>
-
-              <p className="text-xs text-[var(--color-ink-muted)]">
-                Paste a portable Base64 persona share code (`framework-engine.persona/v1`).
-              </p>
-
-              <textarea
-                value={importCode}
-                onChange={(e) => setImportCode(e.target.value)}
-                placeholder="Paste Base64 persona share code here..."
-                rows={4}
-                className="w-full p-3 font-mono text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
-              />
-
-              {importError && (
-                <div className="p-2.5 bg-[var(--color-error)]/10 text-[var(--color-error)] text-xs font-mono rounded border border-[var(--color-error)]/20">
-                  {importError}
-                </div>
-              )}
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  onClick={() => setShowImportModal(false)}
-                  className="btn-hallmark text-xs bg-[var(--color-paper-2)]"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleImport}
-                  disabled={!importCode.trim()}
-                  className="btn-hallmark text-xs bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] disabled:opacity-40"
-                >
-                  Import Persona
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Import Persona Modal Component */}
+        <PersonaImportModal
+          isOpen={showImportModal}
+          onClose={() => setShowImportModal(false)}
+          existingPersonas={personas}
+          onImportSuccess={() => router.refresh()}
+        />
       </div>
     </Shell>
   );
