@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { redactSensitiveData } from '@/lib/utils/redact';
 
 export const runtime = 'edge';
 
@@ -9,10 +10,21 @@ export interface ModelOption {
   description?: string;
 }
 
+const FALLBACK_ANTHROPIC_MODELS: ModelOption[] = [
+  { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
+  { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'anthropic' },
+  { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
+  { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'anthropic' },
+];
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const provider = (searchParams.get('provider') || req.headers.get('x-provider') || 'openai') as 'openai' | 'anthropic' | 'gemini' | 'ollama';
+    const provider = (searchParams.get('provider') || req.headers.get('x-provider') || 'openai') as
+      | 'openai'
+      | 'anthropic'
+      | 'gemini'
+      | 'ollama';
     const apiKey = searchParams.get('key') || req.headers.get('x-api-key') || '';
 
     if (provider === 'gemini') {
@@ -82,14 +94,37 @@ export async function GET(req: NextRequest) {
     }
 
     if (provider === 'anthropic') {
+      if (!apiKey) {
+        return NextResponse.json({
+          provider: 'anthropic',
+          models: FALLBACK_ANTHROPIC_MODELS,
+        });
+      }
+
+      try {
+        const res = await fetch('https://api.anthropic.com/v1/models', {
+          headers: {
+            'x-api-key': apiKey,
+            'anthropic-version': '2023-06-01',
+          },
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          const models: ModelOption[] = (data.data || []).map((m: any) => ({
+            id: m.id,
+            name: m.display_name || m.id,
+            provider: 'anthropic',
+          }));
+          return NextResponse.json({ provider: 'anthropic', models });
+        }
+      } catch {
+        // Fallback on network/CORS error
+      }
+
       return NextResponse.json({
         provider: 'anthropic',
-        models: [
-          { id: 'claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', provider: 'anthropic' },
-          { id: 'claude-3-5-haiku-20241022', name: 'Claude 3.5 Haiku', provider: 'anthropic' },
-          { id: 'claude-3-7-sonnet-20250219', name: 'Claude 3.7 Sonnet', provider: 'anthropic' },
-          { id: 'claude-3-opus-20240229', name: 'Claude 3 Opus', provider: 'anthropic' },
-        ],
+        models: FALLBACK_ANTHROPIC_MODELS,
       });
     }
 
@@ -116,6 +151,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ error: 'Unsupported provider' }, { status: 400 });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Failed to fetch models' }, { status: 500 });
+    const sanitizedError = redactSensitiveData(err.message || 'Failed to fetch models');
+    return NextResponse.json({ error: sanitizedError }, { status: 500 });
   }
 }
