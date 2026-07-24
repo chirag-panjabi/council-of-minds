@@ -56,6 +56,7 @@ export interface ChatSession {
   modelOverride?: string;
   contextRetention?: 'stateless' | 'summary' | 'hybrid' | 'infinite';
   turnExecutionMode?: 'round_robin' | 'dynamic_moderator' | 'free_dialectic';
+  autoPilotCap?: number;
   createdAt: number;
   updatedAt: number;
 }

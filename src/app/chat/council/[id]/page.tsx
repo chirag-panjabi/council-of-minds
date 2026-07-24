@@ -118,12 +118,22 @@ export default function CouncilChatPage() {
     if (chatSession?.turnExecutionMode) {
       setTurnExecutionMode(chatSession.turnExecutionMode);
     }
+    if (chatSession?.autoPilotCap) {
+      setAutoPilotCap(chatSession.autoPilotCap);
+    }
   }, [chatSession]);
 
   const handleModeChange = async (mode: 'round_robin' | 'dynamic_moderator' | 'free_dialectic') => {
     setTurnExecutionMode(mode);
     if (chatId && chatId !== 'new') {
       await db.chats.update(chatId, { turnExecutionMode: mode });
+    }
+  };
+
+  const handleCapChange = async (cap: number) => {
+    setAutoPilotCap(cap);
+    if (chatId && chatId !== 'new') {
+      await db.chats.update(chatId, { autoPilotCap: cap });
     }
   };
 
@@ -652,7 +662,7 @@ export default function CouncilChatPage() {
               <Sliders className="w-3.5 h-3.5 text-[var(--color-accent)]" />
               <select
                 value={autoPilotCap}
-                onChange={(e) => setAutoPilotCap(Number(e.target.value))}
+                onChange={(e) => handleCapChange(Number(e.target.value))}
                 aria-label="Select Auto-Pilot Turn Cap Limit"
                 className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
               >
