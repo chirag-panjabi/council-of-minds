@@ -88,7 +88,10 @@ export async function POST(req: NextRequest) {
     }
 
     if (provider === 'gemini') {
-      const geminiModel = model || 'gemini-1.5-pro';
+      let geminiModel = model || 'gemini-1.5-pro';
+      if (geminiModel === 'gemini-1.5-flash') {
+        geminiModel = 'gemini-1.5-flash-latest';
+      }
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
       const contents = messages.map((m: any) => ({

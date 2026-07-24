@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import {
@@ -15,23 +15,29 @@ import {
   Search,
   ChevronRight,
   ShieldAlert,
-  HelpCircle,
   Keyboard,
+  Menu,
+  X,
 } from 'lucide-react';
 import { SearchPalette } from '@/components/search/SearchPalette';
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
 
-/* Hallmark · genre: editorial · theme: studio · nav: N1b */
+/* Hallmark · genre: editorial · macrostructure: N3 · theme: studio · nav: N3 */
 
 export function Sidebar() {
   const pathname = usePathname();
-  const router = useRouter();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
   const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(5).toArray()) || [];
+
+  // Close mobile drawer on route change
+  useEffect(() => {
+    setIsMobileOpen(false);
+  }, [pathname]);
 
   // Global keydown listeners for Cmd/Ctrl+K and Cmd/Ctrl+/
   useEffect(() => {
@@ -49,17 +55,43 @@ export function Sidebar() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const isActive = (path: string) => pathname === path;
+  const isActive = (path: string) => {
+    if (path === '/') return pathname === '/';
+    return pathname.startsWith(path);
+  };
 
   return (
     <>
       <SearchPalette />
       <KeyboardShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />
 
-      <aside className="w-64 bg-[var(--color-paper-2)] border-r border-[var(--color-border-hairline)] flex flex-col justify-between h-screen sticky top-0 shrink-0 font-body text-sm">
+      {/* Mobile Floating Menu Hamburger Button (< md) */}
+      <button
+        onClick={() => setIsMobileOpen(!isMobileOpen)}
+        aria-label="Toggle Navigation Sidebar"
+        aria-expanded={isMobileOpen}
+        className="md:hidden fixed top-4 left-4 z-40 p-2.5 bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink)] rounded-[var(--radius-sm)] shadow-md focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+      >
+        {isMobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      </button>
+
+      {/* Mobile Backdrop Overlay */}
+      {isMobileOpen && (
+        <div
+          onClick={() => setIsMobileOpen(false)}
+          className="md:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-xs transition-opacity"
+        />
+      )}
+
+      {/* Sidebar Navigation Panel */}
+      <aside
+        className={`w-64 bg-[var(--color-paper-2)] border-r border-[var(--color-border-hairline)] flex flex-col justify-between h-screen fixed md:sticky top-0 z-40 shrink-0 font-body text-sm transition-transform duration-200 ease-in-out ${
+          isMobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
         <div className="p-4 space-y-6 overflow-y-auto">
           {/* Workspace Masthead */}
-          <div className="space-y-1">
+          <div className="space-y-1 pt-2 md:pt-0">
             <div className="font-display text-xl font-medium tracking-tight text-[var(--color-ink)]">
               Council of Minds
             </div>
@@ -70,7 +102,10 @@ export function Sidebar() {
 
           {/* Quick Search Palette Trigger (Cmd+K) */}
           <button
-            onClick={() => setIsSearchOpen(true)}
+            onClick={() => {
+              setIsSearchOpen(true);
+              setIsMobileOpen(false);
+            }}
             aria-label="Open global search command palette (Command + K)"
             className="w-full flex items-center justify-between px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:border-[var(--color-accent)] transition-all group focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
           >
@@ -99,7 +134,7 @@ export function Sidebar() {
             <Link
               href="/personas"
               className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                isActive('/personas')
+                isActive('/personas') && !pathname.startsWith('/personas/groups')
                   ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
                   : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
               }`}
@@ -130,16 +165,22 @@ export function Sidebar() {
               </Link>
             </div>
             <div className="space-y-0.5">
-              {groups.slice(0, 5).map((g) => (
-                <Link
-                  key={g.id}
-                  href="/personas/groups"
-                  className="flex items-center justify-between px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors"
-                >
-                  <span className="truncate">{g.name}</span>
-                  <ChevronRight className="w-3 h-3 opacity-50" />
-                </Link>
-              ))}
+              {groups.length === 0 ? (
+                <div className="px-3 py-1 text-[11px] font-mono text-[var(--color-ink-muted)] italic">
+                  No saved rosters
+                </div>
+              ) : (
+                groups.slice(0, 5).map((g) => (
+                  <Link
+                    key={g.id}
+                    href="/personas/groups"
+                    className="flex items-center justify-between px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors"
+                  >
+                    <span className="truncate">{g.name}</span>
+                    <ChevronRight className="w-3 h-3 opacity-50" />
+                  </Link>
+                ))
+              )}
             </div>
           </div>
 
@@ -149,15 +190,21 @@ export function Sidebar() {
               Recent Sessions
             </div>
             <div className="space-y-0.5">
-              {recentChats.map((c) => (
-                <Link
-                  key={c.id}
-                  href={c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`}
-                  className="block px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors truncate"
-                >
-                  {c.title}
-                </Link>
-              ))}
+              {recentChats.length === 0 ? (
+                <div className="px-3 py-1 text-[11px] font-mono text-[var(--color-ink-muted)] italic">
+                  No recent sessions
+                </div>
+              ) : (
+                recentChats.map((c) => (
+                  <Link
+                    key={c.id}
+                    href={c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`}
+                    className="block px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors truncate"
+                  >
+                    {c.title}
+                  </Link>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -165,7 +212,10 @@ export function Sidebar() {
         {/* Footer Navigation Bar */}
         <div className="p-4 border-t border-[var(--color-border-hairline)] space-y-1">
           <button
-            onClick={() => setIsShortcutsOpen(true)}
+            onClick={() => {
+              setIsShortcutsOpen(true);
+              setIsMobileOpen(false);
+            }}
             className="w-full flex items-center justify-between px-3 py-2 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
           >
             <span className="flex items-center gap-3">

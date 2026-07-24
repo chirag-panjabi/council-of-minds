@@ -42,7 +42,7 @@ export default function OnboardingPage() {
             'x-api-key': apiKey.trim(),
           },
           body: JSON.stringify({
-            model: selectedProvider === 'openai' ? 'gpt-4o-mini' : selectedProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gemini-1.5-flash',
+            model: selectedProvider === 'openai' ? 'gpt-4o-mini' : selectedProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gemini-1.5-flash-latest',
             messages: [{ role: 'user', content: 'Ping' }],
           }),
         });
