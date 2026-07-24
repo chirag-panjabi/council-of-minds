@@ -101,7 +101,7 @@ export default function OneOnOneChatPage() {
     if (persona?.defaultModel) {
       setSelectedModel(persona.defaultModel);
     }
-  }, [persona]);
+  }, [persona?.id]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
