@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Cpu, RefreshCw, Layers } from 'lucide-react';
+import { getModelCapability } from '@/lib/utils/providerCapabilities';
 
 /* Hallmark · component: DynamicModelSelector · genre: editorial · theme: studio */
 
@@ -192,11 +193,16 @@ export function DynamicModelSelector({
           ) : models.length === 0 ? (
             <option value={value}>{value} (Offline)</option>
           ) : (
-            models.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.name}
-              </option>
-            ))
+            models.map((m) => {
+              const cap = getModelCapability(m.id, m.provider);
+              const ctxLabel = cap.maxContextTokens >= 1000000 ? `${(cap.maxContextTokens / 1000000).toFixed(0)}M` : `${Math.round(cap.maxContextTokens / 1000)}k`;
+              const visLabel = cap.supportsVision ? ' 👁' : '';
+              return (
+                <option key={m.id} value={m.id}>
+                  {m.name} [{ctxLabel}{visLabel}]
+                </option>
+              );
+            })
           )}
         </select>
 
