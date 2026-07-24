@@ -80,11 +80,30 @@ export default function PersonaLibraryPage() {
       name: `${persona.name} (Custom)`,
       isSystem: false,
       isCustom: true,
+      version: 1,
+      revisionHistory: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
     await db.personas.add(forkedPersona);
     router.push(`/personas/${forkedPersona.id}/edit`);
+  };
+
+  const handleDuplicatePersona = async (persona: Persona) => {
+    const newPersonaId = 'custom-' + Date.now();
+    const duplicatedPersona: Persona = {
+      ...persona,
+      id: newPersonaId,
+      name: `${persona.name} (Copy)`,
+      isSystem: false,
+      isCustom: true,
+      version: 1,
+      revisionHistory: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await db.personas.add(duplicatedPersona);
+    router.push(`/personas/${newPersonaId}/edit`);
   };
 
   const handleClearFilters = () => {
@@ -376,14 +395,24 @@ export default function PersonaLibraryPage() {
                           <GitFork className="w-3.5 h-3.5" />
                         </button>
                       ) : (
-                        <Link
-                          href={`/personas/${persona.id}/edit`}
-                          aria-label={`Edit ${persona.name}`}
-                          className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
-                          title="Edit Custom Persona"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </Link>
+                        <>
+                          <Link
+                            href={`/personas/${persona.id}/edit`}
+                            aria-label={`Edit ${persona.name}`}
+                            className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                            title="Edit Custom Persona"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </Link>
+                          <button
+                            onClick={() => handleDuplicatePersona(persona)}
+                            aria-label={`Duplicate ${persona.name}`}
+                            className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                            title="Duplicate / Clone Persona"
+                          >
+                            <Copy className="w-3.5 h-3.5" />
+                          </button>
+                        </>
                       )}
                       <button
                         onClick={() => handleExport(persona)}
@@ -471,14 +500,24 @@ export default function PersonaLibraryPage() {
                         <GitFork className="w-4 h-4" />
                       </button>
                     ) : (
-                      <Link
-                        href={`/personas/${persona.id}/edit`}
-                        aria-label={`Edit ${persona.name}`}
-                        className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                        title="Edit Custom Persona"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </Link>
+                      <>
+                        <Link
+                          href={`/personas/${persona.id}/edit`}
+                          aria-label={`Edit ${persona.name}`}
+                          className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                          title="Edit Custom Persona"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Link>
+                        <button
+                          onClick={() => handleDuplicatePersona(persona)}
+                          aria-label={`Duplicate ${persona.name}`}
+                          className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                          title="Duplicate / Clone Persona"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                      </>
                     )}
                     <Link
                       href={`/chat/1-on-1/new?persona=${persona.id}`}

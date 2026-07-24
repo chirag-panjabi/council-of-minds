@@ -178,12 +178,15 @@ export default function EditPersonaPage() {
 
   const handleDuplicate = async () => {
     if (!persona) return;
-    const newPersonaId = 'persona-' + Date.now();
+    const newPersonaId = 'custom-' + Date.now();
     const duplicatedPersona: Persona = {
       ...persona,
       id: newPersonaId,
       name: `${persona.name} (Copy)`,
+      version: 1,
+      revisionHistory: [],
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
 
     await db.personas.add(duplicatedPersona);
