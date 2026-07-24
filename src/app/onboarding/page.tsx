@@ -33,18 +33,14 @@ export default function OnboardingPage() {
         if (!apiKey.trim()) {
           throw new Error('Please enter a valid API key.');
         }
-        // Test key via stateless proxy
-        const res = await fetch('/api/chat', {
+        // Test key via dynamic validation proxy endpoint
+        const res = await fetch('/api/validate-key', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-provider': selectedProvider,
             'x-api-key': apiKey.trim(),
           },
-          body: JSON.stringify({
-            model: selectedProvider === 'openai' ? 'gpt-4o-mini' : selectedProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gemini-1.5-pro',
-            messages: [{ role: 'user', content: 'Ping' }],
-          }),
         });
 
         if (!res.ok) {

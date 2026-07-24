@@ -297,6 +297,8 @@ export default function EditPersonaPage() {
                   <option value="gpt-4o">OpenAI GPT-4o</option>
                   <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
                   <option value="claude-3-5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+                  <option value="gemini-2.5-flash">Google Gemini 2.5 Flash</option>
+                  <option value="gemini-2.0-flash">Google Gemini 2.0 Flash</option>
                   <option value="gemini-1.5-pro">Google Gemini 1.5 Pro</option>
                   <option value="ollama-local">Ollama Local Model</option>
                 </select>

@@ -60,17 +60,13 @@ export default function SettingsPage() {
           setConnectionStatus((prev) => ({ ...prev, [provider]: 'error' }));
         }
       } else {
-        const res = await fetch('/api/chat', {
+        const res = await fetch('/api/validate-key', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'x-provider': provider,
             'x-api-key': key,
           },
-          body: JSON.stringify({
-            model: provider === 'openai' ? 'gpt-4o-mini' : provider === 'anthropic' ? 'claude-3-5-sonnet' : 'gemini-1.5-pro',
-            messages: [{ role: 'user', content: 'ping' }],
-          }),
         });
         if (res.ok) {
           setConnectionStatus((prev) => ({ ...prev, [provider]: 'success' }));
