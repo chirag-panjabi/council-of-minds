@@ -7,6 +7,7 @@ import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
 import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu } from 'lucide-react';
+import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -289,19 +290,10 @@ export default function EditPersonaPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Default Model</label>
-                <select
+                <DynamicModelSelector
                   value={defaultModel}
-                  onChange={(e) => setDefaultModel(e.target.value)}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-                >
-                  <option value="gpt-4o">OpenAI GPT-4o</option>
-                  <option value="gpt-4o-mini">OpenAI GPT-4o Mini</option>
-                  <option value="claude-3-5-sonnet">Anthropic Claude 3.5 Sonnet</option>
-                  <option value="gemini-2.5-flash">Google Gemini 2.5 Flash</option>
-                  <option value="gemini-2.0-flash">Google Gemini 2.0 Flash</option>
-                  <option value="gemini-1.5-pro">Google Gemini 1.5 Pro</option>
-                  <option value="ollama-local">Ollama Local Model</option>
-                </select>
+                  onChange={(newModelId) => setDefaultModel(newModelId)}
+                />
               </div>
 
               <div className="space-y-1.5">

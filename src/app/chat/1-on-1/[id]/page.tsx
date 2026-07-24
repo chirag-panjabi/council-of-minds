@@ -9,6 +9,7 @@ import type { ChatMessage, ChatSession, Persona } from '@/types';
 import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download, Paperclip, EyeOff, UploadCloud, Layers, UserCheck } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
+import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -74,6 +75,7 @@ export default function OneOnOneChatPage() {
 
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>('gpt-4o');
+  const [selectedProvider, setSelectedProvider] = useState<ModelProvider>('openai');
   const [contextRetention, setContextRetention] = useState<'stateless' | 'summary' | 'hybrid' | 'infinite'>(
     chatSession?.contextRetention || 'hybrid'
   );
@@ -262,7 +264,7 @@ export default function OneOnOneChatPage() {
     }
 
     try {
-      const provider = 'openai';
+      const provider = selectedProvider || (selectedModel.startsWith('gemini') ? 'gemini' : selectedModel.startsWith('claude') ? 'anthropic' : selectedModel.startsWith('ollama') ? 'ollama' : 'openai');
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
       let sendHistory = [...activeMessages, userMessageObj];
@@ -413,24 +415,14 @@ export default function OneOnOneChatPage() {
               </select>
             </div>
 
-            {/* Model Selector */}
-            <div className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]">
-              <Cpu className="w-3.5 h-3.5 text-[var(--color-accent)]" />
-              <select
-                value={selectedModel}
-                onChange={(e) => setSelectedModel(e.target.value)}
-                aria-label="Select execution model target"
-                className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
-              >
-                <option value="gpt-4o">GPT-4o</option>
-                <option value="gpt-4o-mini">GPT-4o Mini</option>
-                <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                <option value="gemini-2.5-flash">Gemini 2.5 Flash</option>
-                <option value="gemini-2.0-flash">Gemini 2.0 Flash</option>
-                <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                <option value="ollama-local">Ollama Local</option>
-              </select>
-            </div>
+            {/* Dynamic Real-Time Provider & Model Selector */}
+            <DynamicModelSelector
+              value={selectedModel}
+              onChange={(newModelId, newProvider) => {
+                setSelectedModel(newModelId);
+                setSelectedProvider(newProvider);
+              }}
+            />
 
             {/* Incognito Mode Toggle */}
             <button

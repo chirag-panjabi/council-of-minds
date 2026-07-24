@@ -19,6 +19,15 @@ const MODEL_PRICING: Record<string, { input: number; output: number }> = {
   'ollama-local': { input: 0, output: 0 },
 };
 
+export function getModelPricing(model: string): { input: number; output: number } {
+  if (model.includes('ollama') || model.includes('local')) return { input: 0, output: 0 };
+  if (MODEL_PRICING[model]) return MODEL_PRICING[model];
+  if (model.includes('mini') || model.includes('flash') || model.includes('haiku')) {
+    return { input: 0.00015, output: 0.0006 };
+  }
+  return { input: 0.002, output: 0.008 };
+}
+
 export default function AnalyticsPage() {
   const usageRecords = useLiveQuery(() => db.usage.orderBy('timestamp').reverse().toArray()) || [];
   const chats = useLiveQuery(() => db.chats.toArray()) || [];
@@ -37,7 +46,7 @@ export default function AnalyticsPage() {
 
   // Calculate estimated BYOK spend
   const estimatedSpend = usageRecords.reduce((acc, r) => {
-    const pricing = MODEL_PRICING[r.model] || { input: 0.002, output: 0.006 };
+    const pricing = getModelPricing(r.model);
     const promptCost = ((r.promptTokens || 0) / 1000) * pricing.input;
     const completionCost = ((r.completionTokens || 0) / 1000) * pricing.output;
     return acc + promptCost + completionCost;
