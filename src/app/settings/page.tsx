@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
+import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText } from 'lucide-react';
+import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
@@ -11,6 +12,7 @@ import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicMode
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N4 */
 
 export default function SettingsPage() {
+  const personas = useLiveQuery(() => db.personas.toArray()) || [];
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
@@ -30,6 +32,12 @@ export default function SettingsPage() {
       return localStorage.getItem('framework-engine:default-model') || 'gpt-4o';
     }
     return 'gpt-4o';
+  });
+  const [defaultPersonaId, setDefaultPersonaId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('framework-engine:default-persona-id') || '';
+    }
+    return '';
   });
   const [showKeys, setShowKeys] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -66,6 +74,9 @@ export default function SettingsPage() {
     localStorage.setItem('framework-engine:personal-profile', personalProfile.trim());
     localStorage.setItem('framework-engine:default-provider', defaultProvider);
     localStorage.setItem('framework-engine:default-model', defaultModel);
+    if (defaultPersonaId) {
+      localStorage.setItem('framework-engine:default-persona-id', defaultPersonaId);
+    }
 
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
@@ -427,27 +438,63 @@ export default function SettingsPage() {
           </div>
 
           {/* Global Default Provider & Model Targets */}
-          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-6">
             <div className="space-y-1 border-b border-[var(--color-border-hairline)] pb-4">
               <h2 className="font-display text-xl text-[var(--color-ink)] flex items-center gap-2">
-                <Cpu className="w-5 h-5 text-[var(--color-accent)]" /> Global Default Provider & Model Targets
+                <Cpu className="w-5 h-5 text-[var(--color-accent)]" /> Global Default Targets
               </h2>
               <p className="text-xs text-[var(--color-ink-muted)]">
-                Pre-selects your preferred AI provider and model target across all new 1-on-1 chats and Council debates.
+                Pre-selects your preferred AI provider, model target, and default persona for new dialogues.
               </p>
             </div>
 
-            <div className="flex items-center gap-4">
-              <label className="text-xs font-mono text-[var(--color-ink)]">Default Target:</label>
-              <DynamicModelSelector
-                value={defaultModel}
-                onChange={(newModelId, newProvider) => {
-                  setDefaultModel(newModelId);
-                  setDefaultProvider(newProvider);
-                  localStorage.setItem('framework-engine:default-provider', newProvider);
-                  localStorage.setItem('framework-engine:default-model', newModelId);
-                }}
-              />
+            <div className="space-y-4">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <label className="text-xs font-mono text-[var(--color-ink)] flex items-center gap-2">
+                  <Cpu className="w-4 h-4 text-[var(--color-accent)]" /> Default AI Model Target:
+                </label>
+                <DynamicModelSelector
+                  value={defaultModel}
+                  onChange={(newModelId, newProvider) => {
+                    setDefaultModel(newModelId);
+                    setDefaultProvider(newProvider);
+                    localStorage.setItem('framework-engine:default-provider', newProvider);
+                    localStorage.setItem('framework-engine:default-model', newModelId);
+                  }}
+                />
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-4 border-t border-[var(--color-border-hairline)]">
+                <div className="space-y-0.5">
+                  <label className="text-xs font-mono text-[var(--color-ink)] flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-[var(--color-accent)]" /> Default 1-on-1 Persona:
+                  </label>
+                  <p className="text-[11px] text-[var(--color-ink-muted)]">
+                    Automatically starts new 1-on-1 dialogues with this persona.
+                  </p>
+                </div>
+
+                <select
+                  value={defaultPersonaId}
+                  onChange={(e) => {
+                    setDefaultPersonaId(e.target.value);
+                    localStorage.setItem('framework-engine:default-persona-id', e.target.value);
+                  }}
+                  className="px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] font-mono min-w-[240px]"
+                >
+                  <option value="" disabled>-- Select Default Persona --</option>
+                  <optgroup label="⚡ Official Built-in Personas">
+                    {personas.filter((p) => p.isSystem || p.id.startsWith('persona-')).map((p) => (
+                      <option key={p.id} value={p.id}>⚡ {p.name} ({p.role})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎨 Custom User Personas">
+                    {personas.filter((p) => !p.isSystem && !p.id.startsWith('persona-')).map((p) => (
+                      <option key={p.id} value={p.id}>🎨 {p.name} ({p.role})</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
             </div>
           </div>
 

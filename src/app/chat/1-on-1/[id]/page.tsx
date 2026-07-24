@@ -28,8 +28,13 @@ export default function OneOnOneChatPage() {
       const initNewSession = async () => {
         let targetPersonaId = personaQueryParam;
         if (!targetPersonaId) {
-          const firstPersona = await db.personas.toCollection().first();
-          targetPersonaId = firstPersona?.id || 'persona-1';
+          const savedDefaultId = typeof window !== 'undefined' ? localStorage.getItem('framework-engine:default-persona-id') : null;
+          if (savedDefaultId && (await db.personas.get(savedDefaultId))) {
+            targetPersonaId = savedDefaultId;
+          } else {
+            const firstPersona = await db.personas.toCollection().first();
+            targetPersonaId = firstPersona?.id || 'persona-1';
+          }
         }
 
         const targetPersona = await db.personas.get(targetPersonaId);

@@ -2,17 +2,22 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User } from 'lucide-react';
+import { useLiveQuery } from 'dexie-react-hooks';
+import { db } from '@/lib/db';
+import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
 
 export default function OnboardingPage() {
   const router = useRouter();
+  const personas = useLiveQuery(() => db.personas.toArray()) || [];
+
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'gemini' | 'ollama'>('openai');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [systemProfile, setSystemProfile] = useState('');
+  const [selectedPersonaId, setSelectedPersonaId] = useState<string>('2cfc4b5b-ba28-5fc5-97f3-79186fc174d1');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -58,6 +63,10 @@ export default function OnboardingPage() {
         localStorage.setItem('framework-engine:default-model', topDiscoveredModel);
       }
 
+      if (selectedPersonaId) {
+        localStorage.setItem('framework-engine:default-persona-id', selectedPersonaId);
+      }
+
       if (systemProfile.trim()) {
         localStorage.setItem('framework-engine:system-profile', systemProfile.trim());
       }
@@ -73,6 +82,9 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => {
+    if (selectedPersonaId) {
+      localStorage.setItem('framework-engine:default-persona-id', selectedPersonaId);
+    }
     if (systemProfile.trim()) {
       localStorage.setItem('framework-engine:system-profile', systemProfile.trim());
     }
@@ -204,6 +216,27 @@ export default function OnboardingPage() {
               </p>
             </div>
           )}
+
+          {/* Default Persona Selection Card */}
+          <div className="space-y-2 pt-2 border-t border-[var(--color-border-hairline)]">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span className="flex items-center gap-1.5 font-semibold text-[var(--color-ink)]">
+                <UserCheck className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Choose Default Thought Partner
+              </span>
+              <span>1-on-1 Chats</span>
+            </div>
+            <select
+              value={selectedPersonaId}
+              onChange={(e) => setSelectedPersonaId(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
+              {personas.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.isSystem || p.id.startsWith('persona-') ? '⚡' : '🎨'} {p.name} — {p.role}
+                </option>
+              ))}
+            </select>
+          </div>
 
           {/* Optional Personal System Profile Textarea */}
           <div className="space-y-2 pt-2 border-t border-[var(--color-border-hairline)]">
