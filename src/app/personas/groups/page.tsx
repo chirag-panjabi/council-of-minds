@@ -100,11 +100,17 @@ export default function PersonaGroupsPage() {
     if (selectedPersonaIds.includes(id)) {
       const next = selectedPersonaIds.filter((pId) => pId !== id);
       setSelectedPersonaIds(next);
-      if (synthesizerId === id) setSynthesizerId(next[0] || '');
+      if (synthesizerId === id) {
+        const defaultSynth = (typeof window !== 'undefined' ? localStorage.getItem('framework-engine:default-synthesizer-id') : null) || DEFAULT_SYNTHESIZER_ID;
+        setSynthesizerId(defaultSynth);
+      }
     } else {
       const next = [...selectedPersonaIds, id];
       setSelectedPersonaIds(next);
-      if (!synthesizerId) setSynthesizerId(id);
+      if (!synthesizerId) {
+        const defaultSynth = (typeof window !== 'undefined' ? localStorage.getItem('framework-engine:default-synthesizer-id') : null) || DEFAULT_SYNTHESIZER_ID;
+        setSynthesizerId(defaultSynth);
+      }
     }
   };
 
@@ -362,15 +368,42 @@ export default function PersonaGroupsPage() {
                     <select
                       value={synthesizerId}
                       onChange={(e) => setSynthesizerId(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono"
+                      className="w-full px-3 py-2 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
                     >
-                      {personas
-                        .filter((p) => selectedPersonaIds.includes(p.id))
-                        .map((p) => (
-                          <option key={p.id} value={p.id}>
-                            Synthesizer: {p.name} ({p.role})
-                          </option>
-                        ))}
+                      <option value="" disabled>-- Select Council Synthesizer / Judge --</option>
+                      
+                      {/* Designated Default Judge */}
+                      <optgroup label="⚖️ Default / Designated Judge">
+                        {personas
+                          .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.id.includes('neural-judge'))
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              ⚖️ {p.name} ({p.role})
+                            </option>
+                          ))}
+                      </optgroup>
+
+                      {/* Active Panel Debaters */}
+                      <optgroup label="👥 Active Panel Debaters">
+                        {personas
+                          .filter((p) => selectedPersonaIds.includes(p.id) && p.id !== DEFAULT_SYNTHESIZER_ID && !p.id.includes('neural-judge'))
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              👥 {p.name} ({p.role})
+                            </option>
+                          ))}
+                      </optgroup>
+
+                      {/* All Other Library Personas */}
+                      <optgroup label="📚 Other Library Personas">
+                        {personas
+                          .filter((p) => !selectedPersonaIds.includes(p.id) && p.id !== DEFAULT_SYNTHESIZER_ID && !p.id.includes('neural-judge'))
+                          .map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.isSystem ? '⚡' : '🎨'} {p.name} ({p.role})
+                            </option>
+                          ))}
+                      </optgroup>
                     </select>
                   </div>
                 )}
