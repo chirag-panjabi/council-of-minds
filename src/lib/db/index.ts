@@ -1,5 +1,38 @@
 import Dexie, { type Table } from 'dexie';
 import type { Persona, PersonaGroup, ChatSession, ChatMessage, MessageAttachment, UsageRecord } from '@/types';
+import generatedPersonasRaw from '@/lib/db/fixtures/generated-personas.json';
+
+function formatGeneratedPersona(p: any): Persona {
+  const nameStr = p.name || 'AI Persona';
+  let roleStr = 'AI Thought Partner';
+  if (nameStr.includes('(')) {
+    roleStr = nameStr.split('(')[1].replace(')', '').trim();
+  } else if (nameStr.includes('Framework')) {
+    roleStr = 'Philosophical Framework';
+  } else if (nameStr.includes('CTO')) {
+    roleStr = 'Technology Strategy';
+  } else if (nameStr.includes('VC') || nameStr.includes('Partner')) {
+    roleStr = 'Venture Capital';
+  }
+
+  return {
+    id: p.id,
+    name: p.name,
+    role: roleStr,
+    description: p.description || 'Analytical thought partner and reasoning framework.',
+    systemPrompt: p.instructions || p.systemPrompt || '',
+    recommendedModel: p.recommended_model || p.recommendedModel || 'GPT-4o',
+    tags: p.tags || ['AI', 'Philosophy', 'Strategy'],
+    isArchived: Boolean(p.isArchived),
+    isSystem: true,
+    isCustom: false,
+    isFavorite: Boolean(p.isFavorite),
+    welcomeMessage: p.welcome_message || p.welcomeMessage,
+    uiColor: p.ui_color || p.uiColor || 'indigo',
+    createdAt: p.createdAt || Date.now(),
+    updatedAt: p.updatedAt || Date.now(),
+  };
+}
 
 export class CouncilDatabase extends Dexie {
   personas!: Table<Persona, string>;
@@ -20,6 +53,21 @@ export class CouncilDatabase extends Dexie {
       attachments: 'id, messageId, createdAt',
       usage: 'id, chatId, personaId, model, timestamp',
     });
+
+    this.version(2).stores({
+      personas: 'id, name, isArchived, isSystem, isCustom, isFavorite, createdAt, *tags',
+    }).upgrade(async (tx) => {
+      const existingPersonas = await tx.table('personas').toArray();
+      const existingIds = new Set(existingPersonas.map((p: Persona) => p.id));
+
+      const newOfficialPersonas = (generatedPersonasRaw as any[])
+        .map(formatGeneratedPersona)
+        .filter((p) => !existingIds.has(p.id));
+
+      if (newOfficialPersonas.length > 0) {
+        await tx.table('personas').bulkAdd(newOfficialPersonas);
+      }
+    });
   }
 }
 
@@ -27,59 +75,14 @@ export const db = new CouncilDatabase();
 
 // Seed initial default personas on database creation
 db.on('populate', (tx) => {
-  const initialPersonas: Persona[] = [
-    {
-      id: 'stoic-philosopher',
-      name: 'Marcus Aurelius',
-      role: 'Stoic Philosopher',
-      description: 'Focuses on what is within control, emotional mastery, and duties to the cosmos.',
-      systemPrompt: 'You speak from the perspective of Marcus Aurelius. Analyze dilemmas by separating what is within the user control from what is outside it. Offer calm, structured Stoic wisdom without preaching.',
-      recommendedModel: 'GPT-4o',
-      tags: ['Philosophy', 'Stoicism', 'Personal Growth'],
-      isArchived: false,
-      createdAt: Date.now(),
-    },
-    {
-      id: 'skeptical-vc',
-      name: 'Skeptical Partner',
-      role: 'Venture Capital Partner',
-      description: 'Stress-tests business assumptions, unit economics, market size, and defensibility.',
-      systemPrompt: 'You are a skeptical Silicon Valley VC partner reviewing pitch decks. Ask tough questions about TAM, retention, moat, CAC, and unit economics. Be constructive but uncompromising on clarity.',
-      recommendedModel: 'Claude 3.5 Sonnet',
-      tags: ['Business', 'Strategy', 'Red Teaming'],
-      isArchived: false,
-      createdAt: Date.now(),
-    },
-    {
-      id: 'socratic-tutor',
-      name: 'Socratic Guide',
-      role: 'Socratic Method Tutor',
-      description: 'Never gives direct advice; asks deep non-directive probing questions to uncover root causes.',
-      systemPrompt: 'You are a Socratic tutor. Never offer direct advice or solutions. Instead, respond to every user statement with 1 or 2 targeted questions that help them discover their own underlying assumptions.',
-      recommendedModel: 'Gemini 2.5 Flash',
-      tags: ['Reflection', 'Learning', 'Socratic'],
-      isArchived: false,
-      createdAt: Date.now(),
-    },
-    {
-      id: 'pragmatic-cto',
-      name: 'Pragmatic CTO',
-      role: 'Chief Technology Officer',
-      description: 'Focuses on technical trade-offs, architecture complexity, maintenance burden, and execution speed.',
-      systemPrompt: 'You are a pragmatic CTO. Evaluate software architectures by balancing speed-to-market against long-term architectural debt. Highlight sharp edges, failure modes, and operational trade-offs.',
-      recommendedModel: 'GPT-4o',
-      tags: ['Engineering', 'Architecture', 'Tech'],
-      isArchived: false,
-      createdAt: Date.now(),
-    },
-  ];
+  const initialPersonas = (generatedPersonasRaw as any[]).map(formatGeneratedPersona);
 
   const initialGroup: PersonaGroup = {
     id: 'founders-council',
-    name: 'Founders Strategy Council',
+    name: 'Executive Leadership Board',
     description: 'A multi-agent council for stress-testing business strategies and trade-offs.',
-    personaIds: ['skeptical-vc', 'pragmatic-cto', 'stoic-philosopher'],
-    synthesizerPersonaId: 'stoic-philosopher',
+    personaIds: initialPersonas.slice(0, 3).map((p) => p.id),
+    synthesizerPersonaId: initialPersonas[0]?.id,
     createdAt: Date.now(),
   };
 

@@ -10,8 +10,14 @@ export interface Persona {
   recommendedModel?: string;
   tags: string[];
   isArchived: boolean;
+  isSystem?: boolean;
+  isCustom?: boolean;
+  isFavorite?: boolean;
+  welcomeMessage?: string;
+  uiColor?: string;
   voiceId?: string;
   createdAt: number;
+  updatedAt?: number;
 }
 
 export interface PersonaGroup {
