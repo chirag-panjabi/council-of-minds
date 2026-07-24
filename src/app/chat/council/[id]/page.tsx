@@ -6,13 +6,14 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
 import type { ChatMessage, ChatSession, Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X, Layers } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
+import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -110,6 +111,7 @@ export default function CouncilChatPage() {
   });
   const [autoPilotCap, setAutoPilotCap] = useState<number>(6);
   const [turnExecutionMode, setTurnExecutionMode] = useState<'round_robin' | 'dynamic_moderator' | 'free_dialectic'>('round_robin');
+  const [contextRetention, setContextRetention] = useState<'stateless' | 'summary' | 'hybrid' | 'infinite'>('hybrid');
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeSpeakerIndex, setActiveSpeakerIndex] = useState<number | null>(null);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
@@ -120,6 +122,9 @@ export default function CouncilChatPage() {
     }
     if (chatSession?.autoPilotCap) {
       setAutoPilotCap(chatSession.autoPilotCap);
+    }
+    if (chatSession?.contextRetention) {
+      setContextRetention(chatSession.contextRetention);
     }
   }, [chatSession]);
 
@@ -134,6 +139,13 @@ export default function CouncilChatPage() {
     setAutoPilotCap(cap);
     if (chatId && chatId !== 'new') {
       await db.chats.update(chatId, { autoPilotCap: cap });
+    }
+  };
+
+  const handleContextRetentionChange = async (retention: 'stateless' | 'summary' | 'hybrid' | 'infinite') => {
+    setContextRetention(retention);
+    if (chatId && chatId !== 'new') {
+      await db.chats.update(chatId, { contextRetention: retention });
     }
   };
 
@@ -342,9 +354,15 @@ export default function CouncilChatPage() {
         : (selectedProvider || 'openai');
       const apiKey = localStorage.getItem(`framework-engine:api-key:${turnProvider}`) || '';
 
-      const enhancedSystemPrompt = `${speaker.systemPrompt || ''}\n\n--- COUNCIL DEBATE DIRECTIVE ---\nYou are participating in a multi-agent Council debate as ${speaker.name} (${speaker.role}). Formulate your own independent, concise analysis based on the conversation so far.\nCRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:' or '[${speaker.name} (${speaker.role})]:'). Write ONLY your direct response.`;
+      const basePrompt = `${speaker.systemPrompt || ''}\n\n--- COUNCIL DEBATE DIRECTIVE ---\nYou are participating in a multi-agent Council debate as ${speaker.name} (${speaker.role}). Formulate your own independent, concise analysis based on the conversation so far.\nCRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:' or '[${speaker.name} (${speaker.role})]:'). Write ONLY your direct response.`;
 
-      const apiMessages = conversationHistory.map((m) => {
+      const { systemPrompt: activeSystemPrompt, messages: retentionMessages } = buildMessagesForRetention(
+        conversationHistory,
+        contextRetention,
+        basePrompt
+      );
+
+      const apiMessages = retentionMessages.map((m) => {
         const mSpeaker = allPersonas.find((p) => p.id === m.personaId);
         if (m.role === 'assistant' && m.personaId === speaker.id) {
           return {
@@ -373,7 +391,7 @@ export default function CouncilChatPage() {
         },
         body: JSON.stringify({
           model: turnModel,
-          systemPrompt: enhancedSystemPrompt,
+          systemPrompt: activeSystemPrompt,
           messages: apiMessages,
         }),
         signal: abortControllerRef.current?.signal,
@@ -669,6 +687,25 @@ export default function CouncilChatPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Context Strategy Selector */}
+            <div
+              className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]"
+              title="Context Retention Strategy"
+            >
+              <Layers className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+              <select
+                value={contextRetention}
+                onChange={(e) => handleContextRetentionChange(e.target.value as any)}
+                aria-label="Select Context Retention Strategy"
+                className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
+              >
+                <option value="hybrid">🧠 Hybrid Context</option>
+                <option value="summary">📜 Summary Buffer</option>
+                <option value="stateless">⚡ Stateless</option>
+                <option value="infinite">♾️ Infinite Window</option>
+              </select>
+            </div>
+
             {/* Turn Execution Mode Selector */}
             <div
               className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]"

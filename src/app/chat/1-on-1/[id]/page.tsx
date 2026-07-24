@@ -12,6 +12,7 @@ import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
+import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -336,14 +337,14 @@ export default function OneOnOneChatPage() {
       const provider = selectedProvider || (selectedModel.startsWith('gemini') ? 'gemini' : selectedModel.startsWith('claude') ? 'anthropic' : selectedModel.startsWith('ollama') ? 'ollama' : 'openai');
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
-      let sendHistory = [...activeMessages, userMessageObj];
-      if (contextRetention === 'stateless') {
-        sendHistory = [userMessageObj];
-      } else if (contextRetention === 'summary' && sendHistory.length > 6) {
-        sendHistory = sendHistory.slice(-6);
-      }
+      const fullHistory = [...activeMessages, userMessageObj];
+      const { systemPrompt: activeSystemPrompt, messages: retentionMessages } = buildMessagesForRetention(
+        fullHistory,
+        contextRetention,
+        persona.systemPrompt
+      );
 
-      const apiMessages = sendHistory.map((m) => ({
+      const apiMessages = retentionMessages.map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -357,7 +358,7 @@ export default function OneOnOneChatPage() {
         },
         body: JSON.stringify({
           model: selectedModel,
-          systemPrompt: persona.systemPrompt,
+          systemPrompt: activeSystemPrompt,
           messages: apiMessages,
         }),
         signal: abortControllerRef.current?.signal,
