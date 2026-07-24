@@ -256,8 +256,17 @@ export default function CouncilChatPage() {
     }
 
     try {
-      const provider = selectedProvider || (selectedModel.startsWith('gemini') ? 'gemini' : selectedModel.startsWith('claude') ? 'anthropic' : selectedModel.startsWith('ollama') ? 'ollama' : 'openai');
-      const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
+      const turnModel = speaker.recommendedModel || selectedModel;
+      const turnProvider = speaker.recommendedModel
+        ? (speaker.recommendedModel.startsWith('gemini')
+            ? 'gemini'
+            : speaker.recommendedModel.startsWith('claude')
+            ? 'anthropic'
+            : speaker.recommendedModel.startsWith('ollama') || speaker.recommendedModel.includes(':') || speaker.recommendedModel.includes('llama')
+            ? 'ollama'
+            : 'openai')
+        : (selectedProvider || 'openai');
+      const apiKey = localStorage.getItem(`framework-engine:api-key:${turnProvider}`) || '';
 
       const enhancedSystemPrompt = `${speaker.systemPrompt || ''}\n\n--- COUNCIL DEBATE DIRECTIVE ---\nYou are participating in a multi-agent Council debate as ${speaker.name} (${speaker.role}). Formulate your own independent, concise analysis based on the conversation so far.\nCRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:' or '[${speaker.name} (${speaker.role})]:'). Write ONLY your direct response.`;
 
@@ -285,11 +294,11 @@ export default function CouncilChatPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-provider': provider,
+          'x-provider': turnProvider,
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
-          model: selectedModel,
+          model: turnModel,
           systemPrompt: enhancedSystemPrompt,
           messages: apiMessages,
         }),

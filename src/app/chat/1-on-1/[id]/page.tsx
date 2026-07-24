@@ -80,6 +80,20 @@ export default function OneOnOneChatPage() {
     [activePersonaId]
   );
 
+  useEffect(() => {
+    if (persona?.recommendedModel) {
+      setSelectedModel(persona.recommendedModel);
+      const inferredProvider: ModelProvider = persona.recommendedModel.startsWith('gemini')
+        ? 'gemini'
+        : persona.recommendedModel.startsWith('claude')
+        ? 'anthropic'
+        : persona.recommendedModel.startsWith('ollama') || persona.recommendedModel.includes(':') || persona.recommendedModel.includes('llama')
+        ? 'ollama'
+        : 'openai';
+      setSelectedProvider(inferredProvider);
+    }
+  }, [persona?.id, persona?.recommendedModel]);
+
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>(() => {
     if (typeof window !== 'undefined') {
