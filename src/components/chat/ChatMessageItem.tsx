@@ -336,11 +336,6 @@ export function ChatMessageItem({
             <span className="font-display text-base text-[var(--color-ink)] font-semibold">
               {persona?.name || 'Assistant'}
             </span>
-            {persona?.recommendedModel && (
-              <span className="px-1.5 py-0.5 bg-[var(--color-paper-2)] border border-[var(--color-accent)]/30 rounded text-[9px] font-mono text-[var(--color-accent)] flex items-center gap-0.5">
-                <Sparkles className="w-2.5 h-2.5" /> Best with {persona.recommendedModel}
-              </span>
-            )}
           </div>
           <div className="flex items-center gap-2 text-[10px] font-mono text-[var(--color-ink-muted)]">
             <span>{persona?.role || 'AI Persona'}</span>

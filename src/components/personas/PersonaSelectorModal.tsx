@@ -224,11 +224,6 @@ export function PersonaSelectorModal({
                             CUSTOM
                           </span>
                         )}
-                        {p.recommendedModel && (
-                          <span className="px-1.5 py-0.5 bg-[var(--color-paper)] border border-[var(--color-accent)]/20 rounded text-[9px] font-mono text-[var(--color-accent)] flex items-center gap-0.5">
-                            <Sparkles className="w-2.5 h-2.5" /> Best with {p.recommendedModel}
-                          </span>
-                        )}
                       </div>
                       <div className="text-xs text-[var(--color-ink-muted)] truncate">{p.description}</div>
                     </div>

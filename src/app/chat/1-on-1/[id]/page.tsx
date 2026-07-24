@@ -469,11 +469,6 @@ export default function OneOnOneChatPage() {
               <div className="font-display text-lg text-[var(--color-ink)] flex items-center gap-2">
                 <span>{persona?.name || '1-on-1 Session'}</span>
                 <UserCheck className="w-3.5 h-3.5 text-[var(--color-accent)] opacity-0 group-hover:opacity-100 transition-opacity" />
-                {persona?.recommendedModel && (
-                  <span className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-accent)]/30 rounded text-[10px] font-mono text-[var(--color-accent)] flex items-center gap-1" title={`Persona author suggests pairing with ${persona.recommendedModel}`}>
-                    ✨ Best with {persona.recommendedModel}
-                  </span>
-                )}
                 {isIncognito && (
                   <span className="px-2 py-0.5 bg-[var(--color-warning)]/15 text-[var(--color-warning)] border border-[var(--color-warning)]/30 rounded text-[10px] font-mono font-semibold flex items-center gap-1">
                     <EyeOff className="w-3 h-3" /> Incognito

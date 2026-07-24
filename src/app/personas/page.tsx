@@ -352,11 +352,6 @@ export default function PersonaLibraryPage() {
                     </p>
 
                     <div className="flex flex-wrap items-center gap-1.5">
-                      {persona.recommendedModel && (
-                        <span className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-accent)]/30 rounded text-[10px] font-mono text-[var(--color-accent)] flex items-center gap-1">
-                          <Sparkles className="w-2.5 h-2.5" /> Best with {persona.recommendedModel}
-                        </span>
-                      )}
                       {persona.tags.map((t) => (
                         <span
                           key={t}
