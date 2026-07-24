@@ -68,7 +68,7 @@ export default function SettingsPage() {
             'x-api-key': key,
           },
           body: JSON.stringify({
-            model: provider === 'openai' ? 'gpt-4o-mini' : provider === 'anthropic' ? 'claude-3-5-sonnet' : 'gemini-1.5-flash-latest',
+            model: provider === 'openai' ? 'gpt-4o-mini' : provider === 'anthropic' ? 'claude-3-5-sonnet' : 'gemini-1.5-pro',
             messages: [{ role: 'user', content: 'ping' }],
           }),
         });

@@ -89,8 +89,8 @@ export async function POST(req: NextRequest) {
 
     if (provider === 'gemini') {
       let geminiModel = model || 'gemini-1.5-pro';
-      if (geminiModel === 'gemini-1.5-flash') {
-        geminiModel = 'gemini-1.5-flash-latest';
+      if (geminiModel.includes('flash')) {
+        geminiModel = 'gemini-1.5-pro';
       }
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
