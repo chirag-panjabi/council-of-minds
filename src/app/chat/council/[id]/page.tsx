@@ -272,13 +272,35 @@ export default function CouncilChatPage() {
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
       let fullContent = '';
+      let streamBuffer = '';
+      let promptTokens = 0;
+      let completionTokens = 0;
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value);
-          fullContent += chunk;
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split('\n');
+          streamBuffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(dataStr);
+                if (parsed.text) {
+                  fullContent += parsed.text;
+                }
+                if (parsed.usage) {
+                  promptTokens = parsed.usage.promptTokens || promptTokens;
+                  completionTokens = parsed.usage.completionTokens || completionTokens;
+                }
+              } catch {}
+            }
+          }
 
           let reasoningText = undefined;
           let mainContent = fullContent;
@@ -299,6 +321,19 @@ export default function CouncilChatPage() {
               reasoning: reasoningText,
             });
           }
+        }
+
+        // Record BYOK analytics telemetry to IndexedDB
+        if (promptTokens > 0 || completionTokens > 0) {
+          await db.usage.add({
+            id: 'u-' + Date.now(),
+            chatId,
+            personaId: speaker.id,
+            model: selectedModel,
+            promptTokens,
+            completionTokens,
+            timestamp: Date.now(),
+          });
         }
       }
 
