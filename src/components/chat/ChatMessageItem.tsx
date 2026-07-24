@@ -12,6 +12,69 @@ interface ChatMessageItemProps {
   onRegenerate?: (messageId: string) => void;
 }
 
+interface ParsedApiError {
+  title: string;
+  description: string;
+  rawPayload: string;
+}
+
+function parseApiError(content: string, details?: string): ParsedApiError {
+  const combined = `${content} ${details || ''}`;
+  let jsonObj: any = null;
+
+  // Try extracting JSON object
+  const match = combined.match(/\{[\s\S]*\}/);
+  if (match) {
+    try {
+      jsonObj = JSON.parse(match[0]);
+    } catch {}
+  }
+
+  let formattedRaw = details || content;
+  if (jsonObj) {
+    try {
+      formattedRaw = JSON.stringify(jsonObj, null, 2);
+    } catch {}
+  }
+
+  // 1. Quota / Rate Limit (HTTP 429)
+  if (combined.includes('429') || combined.includes('Quota exceeded') || combined.includes('RESOURCE_EXHAUSTED')) {
+    let cleanMsg = 'Your provider free-tier request limit has been reached for this model.';
+    if (jsonObj?.error?.message) {
+      let rawMsg = jsonObj.error.message;
+      if (rawMsg.includes('\n')) rawMsg = rawMsg.split('\n')[0];
+      rawMsg = rawMsg.replace(/Quota exceeded for metric:[\s\S]*/, '').trim();
+      if (rawMsg) cleanMsg = rawMsg;
+    }
+    return {
+      title: 'Provider Quota Exceeded (HTTP 429)',
+      description: cleanMsg,
+      rawPayload: formattedRaw,
+    };
+  }
+
+  // 2. Auth Failure (HTTP 401)
+  if (combined.includes('401') || combined.includes('Missing API Key') || combined.includes('Invalid Key')) {
+    return {
+      title: 'Authentication Failed (HTTP 401)',
+      description: 'Invalid or missing API key. Please check your provider key configuration in Settings.',
+      rawPayload: formattedRaw,
+    };
+  }
+
+  // 3. General Transport Error
+  let cleanDesc = content.replace(/^Error:\s*/, '');
+  if (cleanDesc.includes('{')) {
+    cleanDesc = 'An unexpected error occurred while communicating with the model provider API.';
+  }
+
+  return {
+    title: 'Upstream Transport Error',
+    description: cleanDesc,
+    rawPayload: formattedRaw,
+  };
+}
+
 export function ChatMessageItem({
   message,
   persona,
@@ -42,43 +105,48 @@ export function ChatMessageItem({
   };
 
   if (isErrorState) {
+    const errorInfo = parseApiError(message.content, message.errorDetails);
+
     return (
-      <div className="w-full my-4 p-4 bg-[var(--color-paper-2)] border-l-4 border-[var(--color-warning)] border-y border-r border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 shadow-xs">
+      <div className="w-full max-w-3xl my-4 p-4 bg-[var(--color-paper-2)] border-l-4 border-[var(--color-warning)] border-y border-r border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 shadow-xs font-body">
         {/* Error Header */}
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-[var(--color-warning)] font-mono text-[11px] font-semibold uppercase tracking-wider">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-[var(--color-warning)]" />
-            <span>System Event • Transport / API Failure</span>
+          <div className="flex items-center gap-2 text-[var(--color-warning)] font-mono text-[10px] font-semibold uppercase tracking-wider">
+            <AlertTriangle className="w-3.5 h-3.5 shrink-0 text-[var(--color-warning)]" />
+            <span>System Event • Provider API Error</span>
           </div>
           <span className="font-mono text-[10px] text-[var(--color-ink-muted)]">{timestampStr}</span>
         </div>
 
-        {/* Human Message Explanation */}
-        <div className="text-xs text-[var(--color-ink)] leading-relaxed font-sans font-medium">
-          {message.content.replace(/^Error:\s*/, '')}
+        {/* Clean Human Title & Description */}
+        <div className="space-y-1">
+          <h4 className="font-display text-sm font-semibold text-[var(--color-ink)]">
+            {errorInfo.title}
+          </h4>
+          <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed font-body">
+            {errorInfo.description}
+          </p>
         </div>
 
         {/* Technical Diagnostics Accordion */}
-        {(message.errorDetails || message.content.includes('{')) && (
-          <div className="border border-[var(--color-border-hairline)] rounded overflow-hidden bg-[var(--color-paper)]">
-            <button
-              type="button"
-              onClick={() => setShowReasoning(!showReasoning)}
-              className="w-full px-3 py-1.5 flex items-center justify-between text-[11px] font-mono text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] transition-colors"
-            >
-              <div className="flex items-center gap-1.5">
-                <Terminal className="w-3 h-3 text-[var(--color-warning)]" />
-                <span>Technical Diagnostics Payload</span>
-              </div>
-              {showReasoning ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
-            </button>
-            {showReasoning && (
-              <pre className="p-3 text-[11px] font-mono text-[var(--color-ink-muted)] whitespace-pre-wrap overflow-x-auto border-t border-[var(--color-border-hairline)] bg-black/5 leading-relaxed">
-                {message.errorDetails || message.content}
-              </pre>
-            )}
-          </div>
-        )}
+        <div className="border border-[var(--color-border-hairline)] rounded overflow-hidden bg-[var(--color-paper)]">
+          <button
+            type="button"
+            onClick={() => setShowReasoning(!showReasoning)}
+            className="w-full px-3 py-1.5 flex items-center justify-between text-[10px] font-mono text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper-2)] transition-colors"
+          >
+            <div className="flex items-center gap-1.5">
+              <Terminal className="w-3 h-3 text-[var(--color-warning)]" />
+              <span>Technical Diagnostics Payload</span>
+            </div>
+            {showReasoning ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
+          </button>
+          {showReasoning && (
+            <pre className="p-3 text-[10px] font-mono text-[var(--color-ink-muted)] whitespace-pre-wrap overflow-x-auto border-t border-[var(--color-border-hairline)] bg-black/5 leading-relaxed max-h-60">
+              {errorInfo.rawPayload}
+            </pre>
+          )}
+        </div>
 
         {/* 1-Click Action Recovery Chips */}
         <div className="flex items-center gap-2 pt-1 flex-wrap">
