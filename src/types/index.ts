@@ -25,7 +25,10 @@ export interface PersonaGroup {
   name: string;
   description: string;
   personaIds: string[];
+  chairmanPersonaId?: string;
+  skepticPersonaId?: string;
   synthesizerPersonaId?: string;
+  roleAssignments?: Record<string, 'chairman' | 'skeptic' | 'synthesizer' | 'member'>;
   createdAt: number;
 }
 

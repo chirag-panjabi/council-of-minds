@@ -21,6 +21,8 @@ export default function PersonaGroupsPage() {
   const [groupName, setGroupName] = useState('');
   const [groupDesc, setGroupDesc] = useState('');
   const [selectedPersonaIds, setSelectedPersonaIds] = useState<string[]>([]);
+  const [chairmanId, setChairmanId] = useState<string>('');
+  const [skepticId, setSkepticId] = useState<string>('');
   const [synthesizerId, setSynthesizerId] = useState<string>('');
   const [candidateSearch, setCandidateSearch] = useState('');
 
@@ -54,6 +56,8 @@ export default function PersonaGroupsPage() {
       setGroupName(group.name);
       setGroupDesc(group.description);
       setSelectedPersonaIds(group.personaIds || []);
+      setChairmanId(group.chairmanPersonaId || group.personaIds?.[0] || '');
+      setSkepticId(group.skepticPersonaId || group.personaIds?.[1] || '');
       setSynthesizerId(group.synthesizerPersonaId || group.personaIds?.[0] || '');
     } else {
       const defaultSynth = (typeof window !== 'undefined' ? localStorage.getItem('framework-engine:default-synthesizer-id') : null) || DEFAULT_SYNTHESIZER_ID;
@@ -61,6 +65,8 @@ export default function PersonaGroupsPage() {
       setGroupName('');
       setGroupDesc('');
       setSelectedPersonaIds([]);
+      setChairmanId('');
+      setSkepticId('');
       setSynthesizerId(defaultSynth);
     }
     setShowForm(true);
@@ -75,6 +81,8 @@ export default function PersonaGroupsPage() {
         name: groupName.trim(),
         description: groupDesc.trim(),
         personaIds: selectedPersonaIds,
+        chairmanPersonaId: chairmanId || undefined,
+        skepticPersonaId: skepticId || undefined,
         synthesizerPersonaId: synthesizerId || selectedPersonaIds[0],
       });
     } else {
@@ -83,6 +91,8 @@ export default function PersonaGroupsPage() {
         name: groupName.trim(),
         description: groupDesc.trim(),
         personaIds: selectedPersonaIds,
+        chairmanPersonaId: chairmanId || undefined,
+        skepticPersonaId: skepticId || undefined,
         synthesizerPersonaId: synthesizerId || selectedPersonaIds[0],
         createdAt: Date.now(),
       };
@@ -216,19 +226,30 @@ export default function PersonaGroupsPage() {
                         {group.description}
                       </p>
 
-                      {/* Member Avatars */}
+                      {/* Member Avatars & Roles */}
                       <div className="space-y-1.5 pt-2">
                         <div className="text-[10px] font-mono text-[var(--color-ink-muted)] uppercase">Roster Members:</div>
                         <div className="flex flex-wrap gap-1.5">
-                          {groupPersonas.map((p) => (
-                            <span
-                              key={p.id}
-                              className="px-2.5 py-1 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-full text-xs font-mono text-[var(--color-ink)] flex items-center gap-1.5"
-                            >
-                              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
-                              {p.name}
-                            </span>
-                          ))}
+                          {groupPersonas.map((p) => {
+                            const isChairman = group.chairmanPersonaId === p.id;
+                            const isSkeptic = group.skepticPersonaId === p.id;
+                            return (
+                              <span
+                                key={p.id}
+                                className={`px-2.5 py-1 rounded-full text-xs font-mono flex items-center gap-1.5 border ${
+                                  isChairman
+                                    ? 'bg-amber-500/10 text-amber-300 border-amber-500/30'
+                                    : isSkeptic
+                                    ? 'bg-purple-500/10 text-purple-300 border-purple-500/30'
+                                    : 'bg-[var(--color-paper)] border-[var(--color-border-hairline)] text-[var(--color-ink)]'
+                                }`}
+                              >
+                                <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-accent)]" />
+                                {isChairman ? '👑 ' : isSkeptic ? '⚡ ' : ''}
+                                {p.name}
+                              </span>
+                            );
+                          })}
                         </div>
                       </div>
 
@@ -373,58 +394,109 @@ export default function PersonaGroupsPage() {
                   </div>
                 </div>
 
-                {/* Phase 3.0: Synthesizer Selection */}
+                {/* Phase 3.0: Council Member Roles & Synthesizer */}
                 {selectedPersonaIds.length > 0 && (
-                  <div className="space-y-3">
+                  <div className="space-y-4 pt-2 border-t border-[var(--color-border-hairline)]">
                     <h4 className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
-                      Phase 3.0 — Synthesizer Persona
+                      Phase 3.0 — Council Member Role Assignments
                     </h4>
-                    <select
-                      value={synthesizerId}
-                      onChange={(e) => setSynthesizerId(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
-                    >
-                      <option value="" disabled>-- Select Council Synthesizer / Judge --</option>
-                      
-                      {/* Designated Default Judge */}
-                      <optgroup label="⚖️ Default / Designated Judge">
-                        {personas.filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')).length > 0 ? (
-                          personas
-                            .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator'))
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* Chairman / Opener */}
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-mono text-[var(--color-ink-muted)]">
+                          👑 Chairman / Discussion Opener
+                        </label>
+                        <select
+                          value={chairmanId}
+                          onChange={(e) => setChairmanId(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
+                        >
+                          <option value="">-- Auto-assign (First Member) --</option>
+                          {personas
+                            .filter((p) => selectedPersonaIds.includes(p.id))
                             .map((p) => (
                               <option key={p.id} value={p.id}>
-                                {formatPersonaOptionLabel(p, '⚖️ ')}
+                                👑 {p.name} ({p.role})
                               </option>
-                            ))
-                        ) : (
-                          <option value={DEFAULT_SYNTHESIZER_ID}>
-                            ⚖️ Neural Judge (Council Synthesizer)
-                          </option>
-                        )}
-                      </optgroup>
+                            ))}
+                        </select>
+                      </div>
 
-                      {/* Active Panel Debaters */}
-                      <optgroup label="👥 Active Panel Debaters">
-                        {personas
-                          .filter((p) => selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
-                          .map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {formatPersonaOptionLabel(p, '👥 ')}
-                            </option>
-                          ))}
-                      </optgroup>
+                      {/* Skeptic / Challenger */}
+                      <div className="space-y-1.5">
+                        <label className="block text-xs font-mono text-[var(--color-ink-muted)]">
+                          ⚡ Skeptic / Critical Challenger
+                        </label>
+                        <select
+                          value={skepticId}
+                          onChange={(e) => setSkepticId(e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
+                        >
+                          <option value="">-- None / Optional --</option>
+                          {personas
+                            .filter((p) => selectedPersonaIds.includes(p.id))
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                ⚡ {p.name} ({p.role})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    </div>
 
-                      {/* All Other Library Personas */}
-                      <optgroup label="📚 Other Library Personas">
-                        {personas
-                          .filter((p) => !selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
-                          .map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {formatPersonaOptionLabel(p, p.isSystem ? '⚡ ' : '🎨 ')}
+                    {/* Synthesizer Selection */}
+                    <div className="space-y-1.5">
+                      <label className="block text-xs font-mono text-[var(--color-ink-muted)]">
+                        ⚖️ Synthesizer / Final Verdict Judge
+                      </label>
+                      <select
+                        value={synthesizerId}
+                        onChange={(e) => setSynthesizerId(e.target.value)}
+                        className="w-full px-3 py-2 text-xs bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
+                      >
+                        <option value="" disabled>-- Select Council Synthesizer / Judge --</option>
+                        
+                        {/* Designated Default Judge */}
+                        <optgroup label="⚖️ Default / Designated Judge">
+                          {personas.filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')).length > 0 ? (
+                            personas
+                              .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator'))
+                              .map((p) => (
+                                <option key={p.id} value={p.id}>
+                                  {formatPersonaOptionLabel(p, '⚖️ ')}
+                                </option>
+                              ))
+                          ) : (
+                            <option value={DEFAULT_SYNTHESIZER_ID}>
+                              ⚖️ Neural Judge (Council Synthesizer)
                             </option>
-                          ))}
-                      </optgroup>
-                    </select>
+                          )}
+                        </optgroup>
+
+                        {/* Active Panel Debaters */}
+                        <optgroup label="👥 Active Panel Debaters">
+                          {personas
+                            .filter((p) => selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {formatPersonaOptionLabel(p, '👥 ')}
+                              </option>
+                            ))}
+                        </optgroup>
+
+                        {/* All Other Library Personas */}
+                        <optgroup label="📚 Other Library Personas">
+                          {personas
+                            .filter((p) => !selectedPersonaIds.includes(p.id) && !(p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')))
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {formatPersonaOptionLabel(p, p.isSystem ? '⚡ ' : '🎨 ')}
+                              </option>
+                            ))}
+                        </optgroup>
+                      </select>
+                    </div>
                   </div>
                 )}
 
