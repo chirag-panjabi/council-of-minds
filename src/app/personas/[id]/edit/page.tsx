@@ -21,7 +21,7 @@ export default function EditPersonaPage() {
   const [role, setRole] = useState('');
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [defaultModel, setDefaultModel] = useState('gpt-4o');
+  const [recommendedModel, setRecommendedModel] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [isArchived, setIsArchived] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -46,8 +46,8 @@ export default function EditPersonaPage() {
         setRole(p.role);
         setDescription(p.description);
         setSystemPrompt(p.systemPrompt);
-        setDefaultModel(p.defaultModel || 'gpt-4o');
-        setTestModel(p.defaultModel || 'gpt-4o');
+        setRecommendedModel(p.recommendedModel || '');
+        setTestModel(p.recommendedModel || 'gpt-4o');
         setTagsInput(p.tags?.join(', ') || '');
         setIsArchived(p.isArchived || false);
       }
@@ -69,7 +69,7 @@ export default function EditPersonaPage() {
       role: role.trim(),
       description: description.trim(),
       systemPrompt: systemPrompt.trim(),
-      defaultModel,
+      recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived,
     });
@@ -88,7 +88,7 @@ export default function EditPersonaPage() {
         role,
         description,
         systemPrompt,
-        defaultModel,
+        recommendedModel,
         tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
       },
     };
@@ -289,10 +289,13 @@ export default function EditPersonaPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Default Model</label>
-                <DynamicModelSelector
-                  value={defaultModel}
-                  onChange={(newModelId) => setDefaultModel(newModelId)}
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
+                <input
+                  type="text"
+                  value={recommendedModel}
+                  onChange={(e) => setRecommendedModel(e.target.value)}
+                  placeholder="e.g. Claude 3.5 Sonnet or Gemini 2.5 Flash"
+                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
 
@@ -347,9 +350,11 @@ export default function EditPersonaPage() {
                   {description || 'No description provided.'}
                 </p>
                 <div className="flex flex-wrap gap-1 pt-2">
-                  <span className="text-[10px] font-mono bg-[var(--color-accent-subtle)] text-[var(--color-accent)] px-1.5 py-0.5 rounded font-semibold">
-                    {defaultModel}
-                  </span>
+                  {recommendedModel && (
+                    <span className="text-[10px] font-mono bg-[var(--color-accent-subtle)] text-[var(--color-accent)] px-1.5 py-0.5 rounded font-semibold">
+                      ✨ Best with {recommendedModel}
+                    </span>
+                  )}
                   {tagsInput.split(',').map((t) => (
                     <span key={t} className="text-[10px] font-mono bg-[var(--color-paper-3)] text-[var(--color-ink-faint)] px-1.5 py-0.5 rounded">
                       #{t.trim()}

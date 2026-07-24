@@ -16,12 +16,7 @@ export default function NewPersonaPage() {
   const [role, setRole] = useState('');
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [defaultModel, setDefaultModel] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('framework-engine:default-model') || 'gpt-4o';
-    }
-    return 'gpt-4o';
-  });
+  const [recommendedModel, setRecommendedModel] = useState('');
   const [tagsInput, setTagsInput] = useState('Philosophy, Strategy');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -61,7 +56,7 @@ export default function NewPersonaPage() {
       if (parsed.role) setRole(parsed.role);
       if (parsed.description) setDescription(parsed.description);
       if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
-      if (parsed.defaultModel) setDefaultModel(parsed.defaultModel);
+      if (parsed.recommendedModel || parsed.defaultModel) setRecommendedModel(parsed.recommendedModel || parsed.defaultModel);
       if (parsed.tags && Array.isArray(parsed.tags)) setTagsInput(parsed.tags.join(', '));
     } catch (err: any) {
       // Fallback local heuristic generator if offline or error
@@ -91,7 +86,7 @@ export default function NewPersonaPage() {
       role: role.trim() || 'Advisor',
       description: description.trim(),
       systemPrompt: systemPrompt.trim(),
-      defaultModel,
+      recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived: false,
       createdAt: Date.now(),
@@ -194,10 +189,13 @@ export default function NewPersonaPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-1.5">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Default Model Target</label>
-              <DynamicModelSelector
-                value={defaultModel}
-                onChange={(newModelId) => setDefaultModel(newModelId)}
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
+              <input
+                type="text"
+                value={recommendedModel}
+                onChange={(e) => setRecommendedModel(e.target.value)}
+                placeholder="e.g. Claude 3.5 Sonnet or Gemini 2.5 Flash"
+                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
             </div>
 

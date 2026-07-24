@@ -89,7 +89,7 @@ export default function PersonaLibraryPage() {
         role: persona.role,
         description: persona.description,
         systemPrompt: persona.systemPrompt,
-        defaultModel: persona.defaultModel,
+        recommendedModel: persona.recommendedModel,
         tags: persona.tags,
       },
     };
@@ -121,7 +121,7 @@ export default function PersonaLibraryPage() {
         role: p.role || 'Specialist',
         description: p.description || '',
         systemPrompt: p.systemPrompt || '',
-        defaultModel: p.defaultModel || 'gpt-4o',
+        recommendedModel: p.recommendedModel || p.defaultModel || undefined,
         tags: p.tags || ['imported'],
         isArchived: false,
         createdAt: Date.now(),
@@ -323,7 +323,12 @@ export default function PersonaLibraryPage() {
                       {persona.description}
                     </p>
 
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {persona.recommendedModel && (
+                        <span className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-accent)]/30 rounded text-[10px] font-mono text-[var(--color-accent)] flex items-center gap-1">
+                          ✨ Best with {persona.recommendedModel}
+                        </span>
+                      )}
                       {persona.tags.map((t) => (
                         <span
                           key={t}

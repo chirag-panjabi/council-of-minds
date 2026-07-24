@@ -7,7 +7,7 @@ export interface Persona {
   role: string;
   description: string;
   systemPrompt: string;
-  defaultModel?: string;
+  recommendedModel?: string;
   tags: string[];
   isArchived: boolean;
   voiceId?: string;
