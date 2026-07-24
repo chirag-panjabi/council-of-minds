@@ -109,9 +109,54 @@ export default function CouncilChatPage() {
     return 'openai';
   });
   const [autoPilotCap, setAutoPilotCap] = useState<number>(6);
+  const [turnExecutionMode, setTurnExecutionMode] = useState<'round_robin' | 'dynamic_moderator' | 'free_dialectic'>('round_robin');
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeSpeakerIndex, setActiveSpeakerIndex] = useState<number | null>(null);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    if (chatSession?.turnExecutionMode) {
+      setTurnExecutionMode(chatSession.turnExecutionMode);
+    }
+  }, [chatSession]);
+
+  const handleModeChange = async (mode: 'round_robin' | 'dynamic_moderator' | 'free_dialectic') => {
+    setTurnExecutionMode(mode);
+    if (chatId && chatId !== 'new') {
+      await db.chats.update(chatId, { turnExecutionMode: mode });
+    }
+  };
+
+  const selectDynamicModeratorSpeaker = async (personas: Persona[], history: ChatMessage[]): Promise<Persona> => {
+    if (personas.length <= 1) return personas[0];
+    try {
+      const provider = selectedProvider || 'openai';
+      const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
+      const rosterSummary = personas.map((p) => `- ID: "${p.id}", Name: "${p.name}", Role: "${p.role}"`).join('\n');
+      const recentMsgs = history.slice(-4).map((m) => `${m.role.toUpperCase()}: ${m.content.slice(0, 150)}`).join('\n');
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-provider': provider,
+          'x-api-key': apiKey,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          systemPrompt: `You are a Council Moderator. Select which debater from the roster should speak next based on recent discussion. Output ONLY the persona ID string, nothing else.\n\nROSTER:\n${rosterSummary}`,
+          messages: [{ role: 'user', content: `Recent Discussion:\n${recentMsgs}\n\nWhich persona ID should speak next?` }],
+        }),
+      });
+
+      if (res.ok) {
+        const text = (await res.text()).trim().replace(/['"]/g, '');
+        const matched = personas.find((p) => p.id === text || text.includes(p.id) || text.includes(p.name));
+        if (matched) return matched;
+      }
+    } catch {}
+    return personas[history.length % personas.length];
+  };
 
   // Incognito Mode Memory State
   const [isIncognito, setIsIncognito] = useState(false);
@@ -447,13 +492,53 @@ export default function CouncilChatPage() {
     setIsStreaming(true);
 
     let currentHistory = [...activeMessages, userMessageObj];
-    const turnsToExecute = Math.min(councilPersonas.length, autoPilotCap);
 
-    for (let i = 0; i < turnsToExecute; i++) {
-      setActiveSpeakerIndex(i);
-      const speaker = councilPersonas[i];
-      const turnMsg = await executePersonaTurn(speaker, currentHistory);
-      currentHistory.push(turnMsg);
+    if (turnExecutionMode === 'dynamic_moderator') {
+      const turnsToExecute = Math.min(councilPersonas.length, autoPilotCap);
+      for (let i = 0; i < turnsToExecute; i++) {
+        const nextSpeaker = await selectDynamicModeratorSpeaker(councilPersonas, currentHistory);
+        const speakerIdx = councilPersonas.findIndex((p) => p.id === nextSpeaker.id);
+        setActiveSpeakerIndex(speakerIdx >= 0 ? speakerIdx : i);
+
+        const turnMsg = await executePersonaTurn(nextSpeaker, currentHistory);
+        currentHistory.push(turnMsg);
+      }
+    } else if (turnExecutionMode === 'free_dialectic') {
+      // Free dialectic: executes single initial speaker turn or first member, awaiting user badge clicks
+      const speaker = councilPersonas[0];
+      if (speaker) {
+        setActiveSpeakerIndex(0);
+        const turnMsg = await executePersonaTurn(speaker, currentHistory);
+        currentHistory.push(turnMsg);
+      }
+    } else {
+      // Round Robin Mode (default)
+      // Sort: Chairman (if set) -> Members -> Skeptic (if set)
+      const chairmanId = personaGroup?.chairmanPersonaId;
+      const skepticId = personaGroup?.skepticPersonaId;
+
+      let ordered = [...councilPersonas];
+      if (chairmanId || skepticId) {
+        const chairman = ordered.find((p) => p.id === chairmanId);
+        const skeptic = ordered.find((p) => p.id === skepticId);
+        const middleMembers = ordered.filter((p) => p.id !== chairmanId && p.id !== skepticId);
+
+        ordered = [
+          ...(chairman ? [chairman] : []),
+          ...middleMembers,
+          ...(skeptic ? [skeptic] : []),
+        ];
+      }
+
+      const turnsToExecute = Math.min(ordered.length, autoPilotCap);
+      for (let i = 0; i < turnsToExecute; i++) {
+        const speaker = ordered[i];
+        const origIndex = councilPersonas.findIndex((p) => p.id === speaker.id);
+        setActiveSpeakerIndex(origIndex >= 0 ? origIndex : i);
+
+        const turnMsg = await executePersonaTurn(speaker, currentHistory);
+        currentHistory.push(turnMsg);
+      }
     }
 
     setActiveSpeakerIndex(null);
@@ -541,6 +626,24 @@ export default function CouncilChatPage() {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Turn Execution Mode Selector */}
+            <div
+              className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]"
+              title="Turn Execution Mode"
+            >
+              <Cpu className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+              <select
+                value={turnExecutionMode}
+                onChange={(e) => handleModeChange(e.target.value as any)}
+                aria-label="Select Turn Execution Mode"
+                className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
+              >
+                <option value="round_robin">🔄 Round Robin</option>
+                <option value="dynamic_moderator">🧠 Dynamic Moderator</option>
+                <option value="free_dialectic">💬 Free Dialectic</option>
+              </select>
+            </div>
+
             {/* Auto-Pilot Turn Cap Selector (1 to 12 turns) */}
             <div
               className="flex items-center gap-1.5 bg-[var(--color-paper)] border border-[var(--color-border)] px-2 py-1 rounded-[var(--radius-sm)]"

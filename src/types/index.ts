@@ -55,6 +55,7 @@ export interface ChatSession {
   synthesizerId?: string;
   modelOverride?: string;
   contextRetention?: 'stateless' | 'summary' | 'hybrid' | 'infinite';
+  turnExecutionMode?: 'round_robin' | 'dynamic_moderator' | 'free_dialectic';
   createdAt: number;
   updatedAt: number;
 }
