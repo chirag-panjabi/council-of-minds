@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import type { ChatMessage, Persona } from '@/types';
 import { Copy, Check, RotateCcw, Edit2, Brain, ChevronDown, ChevronRight, Sparkles, AlertTriangle, Key, Terminal } from 'lucide-react';
+import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 
 interface ChatMessageItemProps {
   message: ChatMessage;
@@ -324,6 +325,8 @@ export function ChatMessageItem({
   }
 
   // Assistant Response (Persona)
+  const cleanedContent = cleanSpeakerPrefix(message.content);
+
   return (
     <div className="flex flex-col items-start my-6 group">
       {/* Persona Header */}
@@ -370,7 +373,13 @@ export function ChatMessageItem({
 
         {/* Message Main Body */}
         <div className="text-sm text-[var(--color-ink)] space-y-2">
-          {renderFormattedText(message.content)}
+          {cleanedContent.trim() ? (
+            renderFormattedText(cleanedContent)
+          ) : (
+            <p className="text-xs font-mono text-[var(--color-ink-muted)] italic py-1">
+              (No response returned from model turn)
+            </p>
+          )}
         </div>
 
         {/* Action Toolbar on Hover */}

@@ -11,6 +11,7 @@ import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStagi
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
+import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -256,11 +257,25 @@ export default function CouncilChatPage() {
       const provider = selectedProvider || (selectedModel.startsWith('gemini') ? 'gemini' : selectedModel.startsWith('claude') ? 'anthropic' : selectedModel.startsWith('ollama') ? 'ollama' : 'openai');
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
+      const enhancedSystemPrompt = `${speaker.systemPrompt || ''}\n\n--- COUNCIL DEBATE DIRECTIVE ---\nYou are participating in a multi-agent Council debate as ${speaker.name} (${speaker.role}). Formulate your own independent, concise analysis based on the conversation so far.\nCRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:' or '[${speaker.name} (${speaker.role})]:'). Write ONLY your direct response.`;
+
       const apiMessages = conversationHistory.map((m) => {
         const mSpeaker = allPersonas.find((p) => p.id === m.personaId);
+        if (m.role === 'assistant' && m.personaId === speaker.id) {
+          return {
+            role: 'assistant',
+            content: cleanSpeakerPrefix(m.content),
+          };
+        }
+        if (m.role === 'assistant' && mSpeaker) {
+          return {
+            role: 'user',
+            content: `[Council Deliberation — @${mSpeaker.name} (${mSpeaker.role})]:\n${cleanSpeakerPrefix(m.content)}`,
+          };
+        }
         return {
           role: m.role,
-          content: m.role === 'assistant' && mSpeaker ? `[${mSpeaker.name} (${mSpeaker.role})]: ${m.content}` : m.content,
+          content: m.content,
         };
       });
 
@@ -273,7 +288,7 @@ export default function CouncilChatPage() {
         },
         body: JSON.stringify({
           model: selectedModel,
-          systemPrompt: speaker.systemPrompt,
+          systemPrompt: enhancedSystemPrompt,
           messages: apiMessages,
         }),
       });
@@ -314,12 +329,16 @@ export default function CouncilChatPage() {
           }
 
           let reasoningText = undefined;
-          let mainContent = fullContent;
+          let mainContent = cleanSpeakerPrefix(fullContent);
 
           const thinkMatch = fullContent.match(/<think>([\s\S]*?)<\/think>/);
           if (thinkMatch) {
             reasoningText = thinkMatch[1].trim();
-            mainContent = fullContent.replace(/<think>[\s\S]*?<\/think>/, '').trim();
+            mainContent = cleanSpeakerPrefix(fullContent.replace(/<think>[\s\S]*?<\/think>/, '').trim());
+          }
+
+          if (!mainContent.trim()) {
+            mainContent = '(No response returned from model turn)';
           }
 
           if (isIncognito) {
@@ -348,7 +367,8 @@ export default function CouncilChatPage() {
         }
       }
 
-      return { ...assistantMessageObj, content: fullContent };
+      const finalCleanContent = cleanSpeakerPrefix(fullContent) || '(No response returned from model turn)';
+      return { ...assistantMessageObj, content: finalCleanContent };
     } catch (err: any) {
       let rawText = err.message || 'Turn execution failed.';
       let userFriendlySummary = 'API Request Failed';
