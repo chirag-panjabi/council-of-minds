@@ -132,7 +132,7 @@ export default function NewPersonaPage() {
     setIsSaving(true);
 
     await db.personas.add({
-      id: 'persona-' + Date.now(),
+      id: 'custom-' + Date.now(),
       name: name.trim(),
       role: role.trim() || 'Advisor',
       description: description.trim(),
@@ -140,7 +140,10 @@ export default function NewPersonaPage() {
       recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived: false,
+      isSystem: false,
+      isCustom: true,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     });
 
     router.push('/personas');

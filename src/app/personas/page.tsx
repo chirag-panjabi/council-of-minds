@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { db, isOfficialPersona } from '@/lib/db';
 import type { Persona } from '@/types';
 import { Search, Plus, Grid, List, Share2, Upload, Trash2, Edit2, Play, Copy, Check, Star, Shield, RotateCcw, GitFork, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -65,8 +65,8 @@ export default function PersonaLibraryPage() {
     if (selectedTag && !p.tags.includes(selectedTag)) return false;
 
     if (selectedCategory === 'favorites') return (favoriteIds.includes(p.id) || p.isFavorite) && !p.isArchived;
-    if (selectedCategory === 'official') return Boolean(p.isSystem || p.id.startsWith('persona-')) && !p.isArchived;
-    if (selectedCategory === 'custom') return Boolean(p.isCustom || p.id.startsWith('custom-')) && !p.isArchived;
+    if (selectedCategory === 'official') return isOfficialPersona(p) && !p.isArchived;
+    if (selectedCategory === 'custom') return !isOfficialPersona(p) && !p.isArchived;
     if (selectedCategory === 'archived') return Boolean(p.isArchived);
 
     return !p.isArchived;
@@ -191,8 +191,8 @@ export default function PersonaLibraryPage() {
         <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[var(--color-border-hairline)]">
           {(['all', 'official', 'custom', 'favorites', 'archived'] as const).map((cat) => {
             let label = 'All';
-            if (cat === 'official') label = `⚡ Official (${personas.filter((p) => !p.isArchived && (p.isSystem || p.id.startsWith('persona-'))).length})`;
-            else if (cat === 'custom') label = `🎨 Custom (${personas.filter((p) => !p.isArchived && (p.isCustom || p.id.startsWith('custom-'))).length})`;
+            if (cat === 'official') label = `⚡ Official (${personas.filter((p) => !p.isArchived && isOfficialPersona(p)).length})`;
+            else if (cat === 'custom') label = `🎨 Custom (${personas.filter((p) => !p.isArchived && !isOfficialPersona(p)).length})`;
             else if (cat === 'favorites') label = `⭐ Favorites (${favoriteIds.length})`;
             else if (cat === 'archived') label = `📦 Archived`;
             else label = `All (${personas.filter((p) => !p.isArchived).length})`;
@@ -303,7 +303,7 @@ export default function PersonaLibraryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPersonas.map((persona) => {
               const isFav = favoriteIds.includes(persona.id);
-              const isOfficial = Boolean(persona.isSystem || persona.id.startsWith('persona-'));
+              const isOfficial = isOfficialPersona(persona);
 
               return (
                 <div
@@ -419,7 +419,7 @@ export default function PersonaLibraryPage() {
           <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] divide-y divide-[var(--color-border-hairline)] overflow-hidden">
             {filteredPersonas.map((persona) => {
               const isFav = favoriteIds.includes(persona.id);
-              const isOfficial = Boolean(persona.isSystem || persona.id.startsWith('persona-'));
+              const isOfficial = isOfficialPersona(persona);
 
               return (
                 <div

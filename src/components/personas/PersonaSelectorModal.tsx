@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { db, isOfficialPersona } from '@/lib/db';
 import type { Persona } from '@/types';
 import { Search, X, Star, Plus, Check, Users, User, Shield, Sparkles } from 'lucide-react';
 import Link from 'next/link';
@@ -38,10 +38,8 @@ export function PersonaSelectorModal({
   const selectedIdsKey = selectedPersonaIds ? selectedPersonaIds.join(',') : '';
 
   useEffect(() => {
-    if (isOpen) {
-      setMarkedIds(selectedPersonaIds);
-    }
-  }, [selectedIdsKey, isOpen]);
+    setMarkedIds(selectedPersonaIds);
+  }, [selectedIdsKey]);
 
   // Load favorites from local storage key
   useEffect(() => {
@@ -99,8 +97,8 @@ export function PersonaSelectorModal({
     if (!matchesSearch) return false;
 
     if (category === 'favorites') return favoriteIds.includes(p.id) || p.isFavorite;
-    if (category === 'official') return Boolean(p.isSystem || p.id.startsWith('persona-'));
-    if (category === 'custom') return Boolean(p.isCustom || p.id.startsWith('custom-'));
+    if (category === 'official') return isOfficialPersona(p);
+    if (category === 'custom') return !isOfficialPersona(p);
     return true;
   });
 
@@ -193,7 +191,7 @@ export function PersonaSelectorModal({
             filteredPersonas.map((p) => {
               const isMarked = markedIds.includes(p.id);
               const isFav = favoriteIds.includes(p.id);
-              const isOfficial = Boolean(p.isSystem || p.id.startsWith('persona-'));
+              const isOfficial = isOfficialPersona(p);
 
               return (
                 <div

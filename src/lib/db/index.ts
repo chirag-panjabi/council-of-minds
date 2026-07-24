@@ -2,6 +2,15 @@ import Dexie, { type Table } from 'dexie';
 import type { Persona, PersonaGroup, ChatSession, ChatMessage, MessageAttachment, UsageRecord } from '@/types';
 import generatedPersonasRaw from '@/lib/db/fixtures/generated-personas.json';
 
+export function isOfficialPersona(p?: Partial<Persona> | null): boolean {
+  if (!p) return false;
+  if (p.isSystem === true) return true;
+  if (p.isCustom === true) return false;
+  if (p.id?.startsWith('official-')) return true;
+  if (p.id?.startsWith('custom-')) return false;
+  return false;
+}
+
 function formatGeneratedPersona(p: any): Persona {
   const nameStr = p.name || 'AI Persona';
   let roleStr = 'AI Thought Partner';
@@ -16,7 +25,7 @@ function formatGeneratedPersona(p: any): Persona {
   }
 
   return {
-    id: p.id,
+    id: p.id.startsWith('official-') ? p.id : `official-${p.id}`,
     name: p.name,
     role: roleStr,
     description: p.description || 'Analytical thought partner and reasoning framework.',
@@ -58,11 +67,11 @@ export class CouncilDatabase extends Dexie {
       personas: 'id, name, isArchived, isSystem, isCustom, isFavorite, createdAt, *tags',
     }).upgrade(async (tx) => {
       const existingPersonas = await tx.table('personas').toArray();
-      const existingIds = new Set(existingPersonas.map((p: Persona) => p.id));
+      const existingNames = new Set(existingPersonas.map((p: Persona) => p.name.trim().toLowerCase()));
 
       const newOfficialPersonas = (generatedPersonasRaw as any[])
         .map(formatGeneratedPersona)
-        .filter((p) => !existingIds.has(p.id));
+        .filter((p) => !existingNames.has(p.name.trim().toLowerCase()));
 
       if (newOfficialPersonas.length > 0) {
         await tx.table('personas').bulkAdd(newOfficialPersonas);
@@ -89,3 +98,35 @@ db.on('populate', (tx) => {
   tx.table('personas').bulkAdd(initialPersonas);
   tx.table('groups').add(initialGroup);
 });
+
+// Automatic persona deduplication and system flag cleanup on DB ready
+if (typeof window !== 'undefined') {
+  db.on('ready', async () => {
+    try {
+      const allPersonas = await db.personas.toArray();
+      const seenOfficialNames = new Set<string>();
+      const idsToDelete: string[] = [];
+
+      for (const p of allPersonas) {
+        if (p.isSystem || (!p.isCustom && !p.id.startsWith('custom-'))) {
+          const normName = p.name.trim().toLowerCase();
+          if (seenOfficialNames.has(normName)) {
+            idsToDelete.push(p.id);
+          } else {
+            seenOfficialNames.add(normName);
+            if (!p.isSystem) {
+              await db.personas.update(p.id, { isSystem: true, isCustom: false });
+            }
+          }
+        }
+      }
+
+      if (idsToDelete.length > 0) {
+        await db.personas.bulkDelete(idsToDelete);
+        console.log(`[CouncilDB] Deduplicated ${idsToDelete.length} duplicate persona entries.`);
+      }
+    } catch (e) {
+      console.warn('[CouncilDB] Deduplication check skipped:', e);
+    }
+  });
+}

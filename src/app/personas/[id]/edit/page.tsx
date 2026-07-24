@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
-import { db } from '@/lib/db';
+import { db, isOfficialPersona } from '@/lib/db';
 import type { Persona } from '@/types';
 import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
@@ -55,7 +55,7 @@ export default function EditPersonaPage() {
     });
   }, [personaId]);
 
-  const isOfficial = Boolean(persona?.isSystem || personaId.startsWith('persona-'));
+  const isOfficial = isOfficialPersona(persona);
 
   const handleForkPersona = async () => {
     if (!persona) return;
