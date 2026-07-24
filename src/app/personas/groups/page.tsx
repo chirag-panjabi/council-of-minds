@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
+import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
 import type { PersonaGroup } from '@/types';
 import { Users, Plus, Play, Edit2, Trash2, Copy, Search, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -42,11 +42,12 @@ export default function PersonaGroupsPage() {
       setSelectedPersonaIds(group.personaIds || []);
       setSynthesizerId(group.synthesizerPersonaId || group.personaIds?.[0] || '');
     } else {
+      const defaultSynth = (typeof window !== 'undefined' ? localStorage.getItem('framework-engine:default-synthesizer-id') : null) || DEFAULT_SYNTHESIZER_ID;
       setEditingGroupId(null);
       setGroupName('');
       setGroupDesc('');
       setSelectedPersonaIds([]);
-      setSynthesizerId('');
+      setSynthesizerId(defaultSynth);
     }
     setShowForm(true);
   };

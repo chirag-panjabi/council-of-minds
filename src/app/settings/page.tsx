@@ -3,8 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db } from '@/lib/db';
-import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck } from 'lucide-react';
+import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
+import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
@@ -38,6 +38,12 @@ export default function SettingsPage() {
       return localStorage.getItem('framework-engine:default-persona-id') || '';
     }
     return '';
+  });
+  const [defaultSynthesizerId, setDefaultSynthesizerId] = useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('framework-engine:default-synthesizer-id') || DEFAULT_SYNTHESIZER_ID;
+    }
+    return DEFAULT_SYNTHESIZER_ID;
   });
   const [showKeys, setShowKeys] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -484,12 +490,44 @@ export default function SettingsPage() {
                 >
                   <option value="" disabled>-- Select Default Persona --</option>
                   <optgroup label="⚡ Official Built-in Personas">
-                    {personas.filter((p) => p.isSystem || p.id.startsWith('persona-')).map((p) => (
+                    {personas.filter((p) => isOfficialPersona(p)).map((p) => (
                       <option key={p.id} value={p.id}>⚡ {p.name} ({p.role})</option>
                     ))}
                   </optgroup>
                   <optgroup label="🎨 Custom User Personas">
-                    {personas.filter((p) => !p.isSystem && !p.id.startsWith('persona-')).map((p) => (
+                    {personas.filter((p) => !isOfficialPersona(p)).map((p) => (
+                      <option key={p.id} value={p.id}>🎨 {p.name} ({p.role})</option>
+                    ))}
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-4 border-t border-[var(--color-border-hairline)]">
+                <div className="space-y-0.5">
+                  <label className="text-xs font-mono text-[var(--color-ink)] flex items-center gap-2">
+                    <Scale className="w-4 h-4 text-[var(--color-accent)]" /> Default Council Synthesizer / Judge:
+                  </label>
+                  <p className="text-[11px] text-[var(--color-ink-muted)]">
+                    Generates final verdicts and synthesizes trade-offs in multi-agent council debates.
+                  </p>
+                </div>
+
+                <select
+                  value={defaultSynthesizerId}
+                  onChange={(e) => {
+                    setDefaultSynthesizerId(e.target.value);
+                    localStorage.setItem('framework-engine:default-synthesizer-id', e.target.value);
+                  }}
+                  className="px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] font-mono min-w-[240px]"
+                >
+                  <option value="" disabled>-- Select Default Judge --</option>
+                  <optgroup label="⚡ Official Built-in Personas">
+                    {personas.filter((p) => isOfficialPersona(p)).map((p) => (
+                      <option key={p.id} value={p.id}>⚡ {p.name} ({p.role})</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="🎨 Custom User Personas">
+                    {personas.filter((p) => !isOfficialPersona(p)).map((p) => (
                       <option key={p.id} value={p.id}>🎨 {p.name} ({p.role})</option>
                     ))}
                   </optgroup>

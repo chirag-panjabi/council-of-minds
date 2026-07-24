@@ -2,6 +2,8 @@ import Dexie, { type Table } from 'dexie';
 import type { Persona, PersonaGroup, ChatSession, ChatMessage, MessageAttachment, UsageRecord } from '@/types';
 import generatedPersonasRaw from '@/lib/db/fixtures/generated-personas.json';
 
+export const DEFAULT_SYNTHESIZER_ID = 'official-council-neural-judge';
+
 export function isOfficialPersona(p?: Partial<Persona> | null): boolean {
   if (!p) return false;
   if (p.isSystem === true) return true;
