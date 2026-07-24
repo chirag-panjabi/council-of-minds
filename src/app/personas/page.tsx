@@ -5,16 +5,18 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Search, Plus, Grid, List, Share2, Upload, Trash2, Edit2, Play, Copy, Check, Star, Shield, RotateCcw } from 'lucide-react';
+import { Search, Plus, Grid, List, Share2, Upload, Trash2, Edit2, Play, Copy, Check, Star, Shield, RotateCcw, GitFork, Sparkles } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 11-catalogue · theme: studio · nav: N1b */
 
 export default function PersonaLibraryPage() {
+  const router = useRouter();
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
   
   const [search, setSearch] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<'all' | 'favorites' | 'custom' | 'default' | 'archived'>('all');
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'official' | 'custom' | 'favorites' | 'archived'>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
@@ -60,16 +62,29 @@ export default function PersonaLibraryPage() {
       p.tags.some((t) => t.toLowerCase().includes(search.toLowerCase()));
 
     if (!matchesSearch) return false;
-
     if (selectedTag && !p.tags.includes(selectedTag)) return false;
 
-    if (selectedCategory === 'favorites') return favoriteIds.includes(p.id);
-    if (selectedCategory === 'custom') return (!p.id.startsWith('persona-') || p.id.startsWith('custom-')) && !p.isArchived;
-    if (selectedCategory === 'default') return p.id.startsWith('persona-') && !p.isArchived;
-    if (selectedCategory === 'archived') return p.isArchived;
+    if (selectedCategory === 'favorites') return (favoriteIds.includes(p.id) || p.isFavorite) && !p.isArchived;
+    if (selectedCategory === 'official') return Boolean(p.isSystem || p.id.startsWith('persona-')) && !p.isArchived;
+    if (selectedCategory === 'custom') return Boolean(p.isCustom || p.id.startsWith('custom-')) && !p.isArchived;
+    if (selectedCategory === 'archived') return Boolean(p.isArchived);
 
     return !p.isArchived;
   });
+
+  const handleForkPersona = async (persona: Persona) => {
+    const forkedPersona: Persona = {
+      ...persona,
+      id: 'custom-' + Date.now(),
+      name: `${persona.name} (Custom)`,
+      isSystem: false,
+      isCustom: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await db.personas.add(forkedPersona);
+    router.push(`/personas/${forkedPersona.id}/edit`);
+  };
 
   const handleClearFilters = () => {
     setSearch('');
@@ -174,19 +189,28 @@ export default function PersonaLibraryPage() {
 
         {/* Category Filters Bar */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 border-b border-[var(--color-border-hairline)]">
-          {(['all', 'favorites', 'custom', 'default', 'archived'] as const).map((cat) => (
-            <button
-              key={cat}
-              onClick={() => setSelectedCategory(cat)}
-              className={`px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                selectedCategory === cat
-                  ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold'
-                  : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
-              }`}
-            >
-              {cat === 'favorites' ? `★ Favorites (${favoriteIds.length})` : cat}
-            </button>
-          ))}
+          {(['all', 'official', 'custom', 'favorites', 'archived'] as const).map((cat) => {
+            let label = 'All';
+            if (cat === 'official') label = `⚡ Official (${personas.filter((p) => !p.isArchived && (p.isSystem || p.id.startsWith('persona-'))).length})`;
+            else if (cat === 'custom') label = `🎨 Custom (${personas.filter((p) => !p.isArchived && (p.isCustom || p.id.startsWith('custom-'))).length})`;
+            else if (cat === 'favorites') label = `⭐ Favorites (${favoriteIds.length})`;
+            else if (cat === 'archived') label = `📦 Archived`;
+            else label = `All (${personas.filter((p) => !p.isArchived).length})`;
+
+            return (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={`px-3 py-1.5 rounded-full text-xs font-mono uppercase tracking-wider transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                  selectedCategory === cat
+                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold shadow-xs'
+                    : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+                }`}
+              >
+                {label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Search, Filter Pills & View Controls */}
@@ -279,7 +303,7 @@ export default function PersonaLibraryPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPersonas.map((persona) => {
               const isFav = favoriteIds.includes(persona.id);
-              const isSystemPersona = persona.id.startsWith('persona-');
+              const isOfficial = Boolean(persona.isSystem || persona.id.startsWith('persona-'));
 
               return (
                 <div
@@ -293,13 +317,17 @@ export default function PersonaLibraryPage() {
                           {persona.name.charAt(0)}
                         </div>
                         <div>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
                             <h3 className="font-display text-lg text-[var(--color-ink)] leading-tight">
                               {persona.name}
                             </h3>
-                            {isSystemPersona && (
-                              <span className="px-1.5 py-0.5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] flex items-center gap-0.5" title="Default System Persona">
-                                <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> System
+                            {isOfficial ? (
+                              <span className="px-1.5 py-0.5 bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 rounded text-[9px] font-mono text-[var(--color-accent)] font-semibold flex items-center gap-0.5" title="Official Built-in System Persona">
+                                <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> OFFICIAL
+                              </span>
+                            ) : (
+                              <span className="px-1.5 py-0.5 bg-[var(--color-paper-3)] border border-[var(--color-border)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] font-semibold" title="User Custom Persona">
+                                CUSTOM
                               </span>
                             )}
                           </div>
@@ -326,7 +354,7 @@ export default function PersonaLibraryPage() {
                     <div className="flex flex-wrap items-center gap-1.5">
                       {persona.recommendedModel && (
                         <span className="px-2 py-0.5 bg-[var(--color-paper)] border border-[var(--color-accent)]/30 rounded text-[10px] font-mono text-[var(--color-accent)] flex items-center gap-1">
-                          ✨ Best with {persona.recommendedModel}
+                          <Sparkles className="w-2.5 h-2.5" /> Best with {persona.recommendedModel}
                         </span>
                       )}
                       {persona.tags.map((t) => (
@@ -342,14 +370,25 @@ export default function PersonaLibraryPage() {
 
                   <div className="pt-4 border-t border-[var(--color-border-hairline)] flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1">
-                      <Link
-                        href={`/personas/${persona.id}/edit`}
-                        aria-label={`Edit ${persona.name}`}
-                        className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
-                        title="Edit Persona"
-                      >
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </Link>
+                      {isOfficial ? (
+                        <button
+                          onClick={() => handleForkPersona(persona)}
+                          aria-label={`Fork and customize ${persona.name}`}
+                          className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                          title="Fork & Customize Persona"
+                        >
+                          <GitFork className="w-3.5 h-3.5" />
+                        </button>
+                      ) : (
+                        <Link
+                          href={`/personas/${persona.id}/edit`}
+                          aria-label={`Edit ${persona.name}`}
+                          className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                          title="Edit Custom Persona"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </Link>
+                      )}
                       <button
                         onClick={() => handleExport(persona)}
                         aria-label={`Share ${persona.name}`}
@@ -358,7 +397,7 @@ export default function PersonaLibraryPage() {
                       >
                         <Share2 className="w-3.5 h-3.5" />
                       </button>
-                      {!isSystemPersona && (
+                      {!isOfficial && (
                         <button
                           onClick={() => handleDelete(persona.id, persona.name)}
                           aria-label={`Delete ${persona.name}`}
@@ -385,7 +424,7 @@ export default function PersonaLibraryPage() {
           <div className="border border-[var(--color-border)] rounded-[var(--radius-md)] divide-y divide-[var(--color-border-hairline)] overflow-hidden">
             {filteredPersonas.map((persona) => {
               const isFav = favoriteIds.includes(persona.id);
-              const isSystemPersona = persona.id.startsWith('persona-');
+              const isOfficial = Boolean(persona.isSystem || persona.id.startsWith('persona-'));
 
               return (
                 <div
@@ -408,12 +447,16 @@ export default function PersonaLibraryPage() {
                       {persona.name.charAt(0)}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="font-display text-base text-[var(--color-ink)] flex items-center gap-2">
+                      <div className="font-display text-base text-[var(--color-ink)] flex items-center gap-2 flex-wrap">
                         <span>{persona.name}</span>
                         <span className="text-xs font-mono text-[var(--color-ink-muted)] font-normal">({persona.role})</span>
-                        {isSystemPersona && (
-                          <span className="px-1.5 py-0.5 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] flex items-center gap-0.5">
-                            <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> System
+                        {isOfficial ? (
+                          <span className="px-1.5 py-0.5 bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 rounded text-[9px] font-mono text-[var(--color-accent)] font-semibold flex items-center gap-0.5" title="Official Built-in System Persona">
+                            <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> OFFICIAL
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-[var(--color-paper-3)] border border-[var(--color-border)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] font-semibold" title="User Custom Persona">
+                            CUSTOM
                           </span>
                         )}
                       </div>
@@ -421,17 +464,29 @@ export default function PersonaLibraryPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3 shrink-0">
-                    <Link
-                      href={`/personas/${persona.id}/edit`}
-                      aria-label={`Edit ${persona.name}`}
-                      className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Link>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {isOfficial ? (
+                      <button
+                        onClick={() => handleForkPersona(persona)}
+                        aria-label={`Fork and customize ${persona.name}`}
+                        className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                        title="Fork & Customize Persona"
+                      >
+                        <GitFork className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <Link
+                        href={`/personas/${persona.id}/edit`}
+                        aria-label={`Edit ${persona.name}`}
+                        className="p-1.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                        title="Edit Custom Persona"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Link>
+                    )}
                     <Link
                       href={`/chat/1-on-1/new?persona=${persona.id}`}
-                      className="btn-hallmark text-xs gap-1 bg-[var(--color-ink)] text-[var(--color-paper)]"
+                      className="btn-hallmark text-xs gap-1 bg-[var(--color-ink)] text-[var(--color-paper)] hover:bg-[var(--color-accent)] hover:text-white"
                     >
                       <Play className="w-3 h-3 fill-current" /> Start 1-on-1
                     </Link>
