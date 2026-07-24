@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
+import { db, DEFAULT_SYNTHESIZER_ID, ensureOfficialPersonasSynced } from '@/lib/db';
 import type { PersonaGroup } from '@/types';
 import { Users, Plus, Play, Edit2, Trash2, Copy, Search, HelpCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -27,6 +27,20 @@ export default function PersonaGroupsPage() {
   // Quick Dilemma Launcher Modal State
   const [launchingGroup, setLaunchingGroup] = useState<PersonaGroup | null>(null);
   const [dilemmaTopic, setDilemmaTopic] = useState('');
+
+  useEffect(() => {
+    ensureOfficialPersonasSynced();
+  }, []);
+
+  useEffect(() => {
+    if (showForm && !synthesizerId && personas.length > 0) {
+      const defaultSynthSetting = (typeof window !== 'undefined' ? localStorage.getItem('framework-engine:default-synthesizer-id') : null) || DEFAULT_SYNTHESIZER_ID;
+      const targetSynth = personas.find(
+        (p) => p.id === defaultSynthSetting || p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge')
+      )?.id || DEFAULT_SYNTHESIZER_ID;
+      setSynthesizerId(targetSynth);
+    }
+  }, [showForm, synthesizerId, personas]);
 
   const filteredCandidates = personas.filter(
     (p) =>
@@ -374,13 +388,19 @@ export default function PersonaGroupsPage() {
                       
                       {/* Designated Default Judge */}
                       <optgroup label="⚖️ Default / Designated Judge">
-                        {personas
-                          .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator'))
-                          .map((p) => (
-                            <option key={p.id} value={p.id}>
-                              ⚖️ {p.name} ({p.role})
-                            </option>
-                          ))}
+                        {personas.filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator')).length > 0 ? (
+                          personas
+                            .filter((p) => p.id === DEFAULT_SYNTHESIZER_ID || p.name.toLowerCase().includes('neural judge') || p.name.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('synthesizer') || p.role.toLowerCase().includes('adjudicator'))
+                            .map((p) => (
+                              <option key={p.id} value={p.id}>
+                                ⚖️ {p.name} ({p.role})
+                              </option>
+                            ))
+                        ) : (
+                          <option value={DEFAULT_SYNTHESIZER_ID}>
+                            ⚖️ Neural Judge (Council Synthesizer)
+                          </option>
+                        )}
                       </optgroup>
 
                       {/* Active Panel Debaters */}

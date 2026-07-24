@@ -106,46 +106,49 @@ db.on('populate', (tx) => {
   tx.table('groups').add(initialGroup);
 });
 
-// Automatic persona deduplication, sync, and system flag cleanup on DB ready
-if (typeof window !== 'undefined') {
-  db.on('ready', async () => {
-    try {
-      const allPersonas = await db.personas.toArray();
-      const seenOfficialNames = new Set<string>();
-      const idsToDelete: string[] = [];
+export async function ensureOfficialPersonasSynced(): Promise<void> {
+  if (typeof window === 'undefined') return;
+  try {
+    const allPersonas = await db.personas.toArray();
+    const seenOfficialNames = new Set<string>();
+    const idsToDelete: string[] = [];
 
-      for (const p of allPersonas) {
-        if (p.isSystem || (!p.isCustom && !p.id.startsWith('custom-'))) {
-          const normName = p.name.trim().toLowerCase();
-          if (seenOfficialNames.has(normName)) {
-            idsToDelete.push(p.id);
-          } else {
-            seenOfficialNames.add(normName);
-            if (!p.isSystem) {
-              await db.personas.update(p.id, { isSystem: true, isCustom: false });
-            }
+    for (const p of allPersonas) {
+      if (p.isSystem || (!p.isCustom && !p.id.startsWith('custom-'))) {
+        const normName = p.name.trim().toLowerCase();
+        if (seenOfficialNames.has(normName)) {
+          idsToDelete.push(p.id);
+        } else {
+          seenOfficialNames.add(normName);
+          if (!p.isSystem) {
+            await db.personas.update(p.id, { isSystem: true, isCustom: false });
           }
         }
       }
-
-      if (idsToDelete.length > 0) {
-        await db.personas.bulkDelete(idsToDelete);
-        console.log(`[CouncilDB] Deduplicated ${idsToDelete.length} duplicate persona entries.`);
-      }
-
-      // Check if any official personas from fixtures are missing in local IndexedDB
-      const currentPersonas = await db.personas.toArray();
-      const currentNames = new Set(currentPersonas.map((p) => p.name.trim().toLowerCase()));
-      const missingOfficial = (generatedPersonasRaw as any[])
-        .map(formatGeneratedPersona)
-        .filter((p) => !currentNames.has(p.name.trim().toLowerCase()));
-
-      if (missingOfficial.length > 0) {
-        await db.personas.bulkAdd(missingOfficial);
-        console.log(`[CouncilDB] Seeded ${missingOfficial.length} missing official personas into IndexedDB.`);
-      }
-    } catch (e) {
-      console.warn('[CouncilDB] Synchronization check skipped:', e);
     }
-  });
+
+    if (idsToDelete.length > 0) {
+      await db.personas.bulkDelete(idsToDelete);
+      console.log(`[CouncilDB] Deduplicated ${idsToDelete.length} duplicate persona entries.`);
+    }
+
+    // Check if any official personas from fixtures are missing in local IndexedDB
+    const currentPersonas = await db.personas.toArray();
+    const currentNames = new Set(currentPersonas.map((p) => p.name.trim().toLowerCase()));
+    const missingOfficial = (generatedPersonasRaw as any[])
+      .map(formatGeneratedPersona)
+      .filter((p) => !currentNames.has(p.name.trim().toLowerCase()));
+
+    if (missingOfficial.length > 0) {
+      await db.personas.bulkAdd(missingOfficial);
+      console.log(`[CouncilDB] Seeded ${missingOfficial.length} missing official personas into IndexedDB.`);
+    }
+  } catch (e) {
+    console.warn('[CouncilDB] Synchronization check skipped:', e);
+  }
+}
+
+// Trigger automatic sync immediately on module load in browser
+if (typeof window !== 'undefined') {
+  ensureOfficialPersonasSynced();
 }
