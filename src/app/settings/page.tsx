@@ -20,7 +20,14 @@ export default function SettingsPage() {
   const [personalProfile, setPersonalProfile] = useState('');
   const [showKeys, setShowKeys] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<Record<string, 'idle' | 'testing' | 'success' | 'error'>>({});
+  interface ConnectionDetail {
+    status: 'idle' | 'testing' | 'success' | 'error';
+    modelCount?: number;
+    modelNames?: string[];
+    errorMessage?: string;
+  }
+
+  const [connectionInfo, setConnectionInfo] = useState<Record<string, ConnectionDetail>>({});
 
   // Restore & Guidance Modal States
   const [restoreManifest, setRestoreManifest] = useState<BackupManifest | null>(null);
@@ -50,32 +57,45 @@ export default function SettingsPage() {
   };
 
   const handleTestConnection = async (provider: string, key: string) => {
-    setConnectionStatus((prev) => ({ ...prev, [provider]: 'testing' }));
+    setConnectionInfo((prev) => ({ ...prev, [provider]: { status: 'testing' } }));
     try {
-      if (provider === 'ollama') {
-        const res = await fetch(`${ollamaUrl}/api/tags`);
-        if (res.ok) {
-          setConnectionStatus((prev) => ({ ...prev, [provider]: 'success' }));
-        } else {
-          setConnectionStatus((prev) => ({ ...prev, [provider]: 'error' }));
-        }
-      } else {
-        const res = await fetch('/api/validate-key', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-provider': provider,
-            'x-api-key': key,
+      const res = await fetch('/api/validate-key', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-provider': provider,
+          'x-api-key': key,
+          'x-ollama-url': ollamaUrl,
+        },
+      });
+
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
+        setConnectionInfo((prev) => ({
+          ...prev,
+          [provider]: {
+            status: 'success',
+            modelCount: data.modelCount,
+            modelNames: data.modelNames,
           },
-        });
-        if (res.ok) {
-          setConnectionStatus((prev) => ({ ...prev, [provider]: 'success' }));
-        } else {
-          setConnectionStatus((prev) => ({ ...prev, [provider]: 'error' }));
-        }
+        }));
+      } else {
+        setConnectionInfo((prev) => ({
+          ...prev,
+          [provider]: {
+            status: 'error',
+            errorMessage: data.error || `Validation failed (${res.status})`,
+          },
+        }));
       }
-    } catch (e) {
-      setConnectionStatus((prev) => ({ ...prev, [provider]: 'error' }));
+    } catch (e: any) {
+      setConnectionInfo((prev) => ({
+        ...prev,
+        [provider]: {
+          status: 'error',
+          errorMessage: e.message || 'Connection failed',
+        },
+      }));
     }
   };
 
@@ -221,8 +241,17 @@ export default function SettingsPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
                   <span>OpenAI API Key (sk-...)</span>
-                  {connectionStatus['openai'] === 'success' && <span className="text-emerald-600">✓ Connected</span>}
-                  {connectionStatus['openai'] === 'error' && <span className="text-[var(--color-error)]">✕ Error</span>}
+                  {connectionInfo['openai']?.status === 'testing' && <span className="text-[var(--color-accent)] font-mono animate-pulse">Testing...</span>}
+                  {connectionInfo['openai']?.status === 'success' && (
+                    <span className="text-emerald-600 font-mono text-xs" title={connectionInfo['openai'].modelNames?.join(', ')}>
+                      ✓ Validated ({connectionInfo['openai'].modelCount || 0} models)
+                    </span>
+                  )}
+                  {connectionInfo['openai']?.status === 'error' && (
+                    <span className="text-[var(--color-error)] font-mono text-xs">
+                      ✕ {connectionInfo['openai'].errorMessage || 'Error'}
+                    </span>
+                  )}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -235,7 +264,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleTestConnection('openai', openaiKey)}
-                    disabled={!openaiKey.trim() || connectionStatus['openai'] === 'testing'}
+                    disabled={!openaiKey.trim() || connectionInfo['openai']?.status === 'testing'}
                     className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
                   >
                     Test
@@ -247,8 +276,17 @@ export default function SettingsPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
                   <span>Anthropic API Key (sk-ant-...)</span>
-                  {connectionStatus['anthropic'] === 'success' && <span className="text-emerald-600">✓ Connected</span>}
-                  {connectionStatus['anthropic'] === 'error' && <span className="text-[var(--color-error)]">✕ Error</span>}
+                  {connectionInfo['anthropic']?.status === 'testing' && <span className="text-[var(--color-accent)] font-mono animate-pulse">Testing...</span>}
+                  {connectionInfo['anthropic']?.status === 'success' && (
+                    <span className="text-emerald-600 font-mono text-xs">
+                      ✓ Validated ({connectionInfo['anthropic'].modelCount || 0} models)
+                    </span>
+                  )}
+                  {connectionInfo['anthropic']?.status === 'error' && (
+                    <span className="text-[var(--color-error)] font-mono text-xs">
+                      ✕ {connectionInfo['anthropic'].errorMessage || 'Error'}
+                    </span>
+                  )}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -261,7 +299,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleTestConnection('anthropic', anthropicKey)}
-                    disabled={!anthropicKey.trim() || connectionStatus['anthropic'] === 'testing'}
+                    disabled={!anthropicKey.trim() || connectionInfo['anthropic']?.status === 'testing'}
                     className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
                   >
                     Test
@@ -273,8 +311,17 @@ export default function SettingsPage() {
               <div className="space-y-1.5">
                 <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
                   <span>Google Gemini API Key (AIzaSy...)</span>
-                  {connectionStatus['gemini'] === 'success' && <span className="text-emerald-600">✓ Connected</span>}
-                  {connectionStatus['gemini'] === 'error' && <span className="text-[var(--color-error)]">✕ Error</span>}
+                  {connectionInfo['gemini']?.status === 'testing' && <span className="text-[var(--color-accent)] font-mono animate-pulse">Testing...</span>}
+                  {connectionInfo['gemini']?.status === 'success' && (
+                    <span className="text-emerald-600 font-mono text-xs" title={connectionInfo['gemini'].modelNames?.join(', ')}>
+                      ✓ Validated ({connectionInfo['gemini'].modelCount || 0} models)
+                    </span>
+                  )}
+                  {connectionInfo['gemini']?.status === 'error' && (
+                    <span className="text-[var(--color-error)] font-mono text-xs">
+                      ✕ {connectionInfo['gemini'].errorMessage || 'Error'}
+                    </span>
+                  )}
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -287,7 +334,7 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleTestConnection('gemini', geminiKey)}
-                    disabled={!geminiKey.trim() || connectionStatus['gemini'] === 'testing'}
+                    disabled={!geminiKey.trim() || connectionInfo['gemini']?.status === 'testing'}
                     className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
                   >
                     Test
@@ -329,7 +376,20 @@ export default function SettingsPage() {
               </label>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-mono text-[var(--color-ink)]">Local Server URL</label>
+                <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
+                  <span>Local Server URL</span>
+                  {connectionInfo['ollama']?.status === 'testing' && <span className="text-[var(--color-accent)] font-mono animate-pulse">Testing...</span>}
+                  {connectionInfo['ollama']?.status === 'success' && (
+                    <span className="text-emerald-600 font-mono text-xs">
+                      ✓ Connected ({connectionInfo['ollama'].modelCount || 0} models)
+                    </span>
+                  )}
+                  {connectionInfo['ollama']?.status === 'error' && (
+                    <span className="text-[var(--color-error)] font-mono text-xs">
+                      ✕ {connectionInfo['ollama'].errorMessage || 'Unreachable'}
+                    </span>
+                  )}
+                </label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -341,9 +401,10 @@ export default function SettingsPage() {
                   <button
                     type="button"
                     onClick={() => handleTestConnection('ollama', '')}
-                    className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+                    disabled={connectionInfo['ollama']?.status === 'testing'}
+                    className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
                   >
-                    Test Local Ping
+                    Test
                   </button>
                 </div>
               </div>

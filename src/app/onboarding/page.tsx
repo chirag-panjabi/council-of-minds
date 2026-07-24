@@ -40,12 +40,13 @@ export default function OnboardingPage() {
             'Content-Type': 'application/json',
             'x-provider': selectedProvider,
             'x-api-key': apiKey.trim(),
+            'x-ollama-url': ollamaUrl,
           },
         });
 
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error(`Validation failed (${res.status}): ${errText}`);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || `Validation failed (${res.status})`);
         }
 
         // Store key locally

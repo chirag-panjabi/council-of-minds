@@ -15,7 +15,6 @@ export async function POST(req: NextRequest) {
     }
 
     if (provider === 'gemini') {
-      // Query Google AI Studio Native Model Listing Endpoint
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
       const res = await fetch(url, { method: 'GET' });
 
@@ -25,11 +24,17 @@ export async function POST(req: NextRequest) {
       }
 
       const data = await res.json();
-      const models = (data.models || [])
-        .map((m: any) => m.name.replace('models/', ''))
-        .filter((name: string) => name.includes('gemini'));
+      const rawModels = data.models || [];
+      const modelNames = rawModels
+        .filter((m: any) => m.supportedGenerationMethods?.includes('generateContent'))
+        .map((m: any) => m.name.replace('models/', ''));
 
-      return NextResponse.json({ success: true, provider: 'gemini', models });
+      return NextResponse.json({
+        success: true,
+        provider: 'gemini',
+        modelCount: modelNames.length,
+        modelNames: modelNames.slice(0, 5),
+      });
     }
 
     if (provider === 'openai') {
@@ -43,7 +48,17 @@ export async function POST(req: NextRequest) {
         return new NextResponse(errorText, { status: res.status });
       }
 
-      return NextResponse.json({ success: true, provider: 'openai' });
+      const data = await res.json();
+      const modelNames = (data.data || [])
+        .filter((m: any) => m.id.startsWith('gpt-') || m.id.startsWith('o1') || m.id.startsWith('o3'))
+        .map((m: any) => m.id);
+
+      return NextResponse.json({
+        success: true,
+        provider: 'openai',
+        modelCount: modelNames.length,
+        modelNames: modelNames.slice(0, 5),
+      });
     }
 
     if (provider === 'anthropic') {
@@ -66,7 +81,34 @@ export async function POST(req: NextRequest) {
         return new NextResponse(errorText, { status: res.status });
       }
 
-      return NextResponse.json({ success: true, provider: 'anthropic' });
+      return NextResponse.json({
+        success: true,
+        provider: 'anthropic',
+        modelCount: 4,
+        modelNames: ['claude-3-5-sonnet', 'claude-3-5-haiku', 'claude-3-7-sonnet', 'claude-3-opus'],
+      });
+    }
+
+    if (provider === 'ollama') {
+      const ollamaUrl = req.headers.get('x-ollama-url') || 'http://localhost:11434';
+      const res = await fetch(`${ollamaUrl}/api/tags`).catch(() => null);
+
+      if (!res || !res.ok) {
+        return NextResponse.json(
+          { error: 'Ollama local server not reachable at ' + ollamaUrl },
+          { status: 503 }
+        );
+      }
+
+      const data = await res.json();
+      const modelNames = (data.models || []).map((m: any) => m.name);
+
+      return NextResponse.json({
+        success: true,
+        provider: 'ollama',
+        modelCount: modelNames.length,
+        modelNames: modelNames.slice(0, 5),
+      });
     }
 
     return NextResponse.json({ error: 'Unsupported provider: ' + provider }, { status: 400 });
