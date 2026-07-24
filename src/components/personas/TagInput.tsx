@@ -163,7 +163,7 @@ export function TagInput({ tags, onChange, placeholder = 'Type a tag and press E
                   onClick={() => toggleExistingTag(t)}
                   className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-mono transition-all ${
                     isSelected
-                      ? 'bg-[var(--color-accent)] text-white font-semibold shadow-xs'
+                      ? 'bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent)]/40 font-semibold shadow-xs'
                       : 'bg-[var(--color-paper-2)] text-[var(--color-ink-muted)] border border-[var(--color-border-hairline)] hover:text-[var(--color-ink)] hover:border-[var(--color-accent)]/50'
                   }`}
                 >

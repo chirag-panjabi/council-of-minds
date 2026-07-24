@@ -150,7 +150,7 @@ export default function NewPersonaPage() {
     <Shell>
       <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8">
         {/* N1b Navigation Header */}
-        <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
+        <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pt-3 pb-4">
           <Link
             href="/personas"
             aria-label="Back to Persona Library"
@@ -242,19 +242,17 @@ export default function NewPersonaPage() {
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
-                  <DynamicModelSelector
-                    value={recommendedModel}
-                    onChange={(modelId) => setRecommendedModel(modelId)}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
+                <DynamicModelSelector
+                  value={recommendedModel}
+                  onChange={(modelId) => setRecommendedModel(modelId)}
+                />
+              </div>
 
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
-                  <TagInput tags={tags} onChange={setTags} />
-                </div>
+              <div className="space-y-1.5">
+                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
+                <TagInput tags={tags} onChange={setTags} />
               </div>
 
               <div className="space-y-1.5">

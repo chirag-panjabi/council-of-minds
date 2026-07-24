@@ -207,7 +207,7 @@ export default function EditPersonaPage() {
     <Shell>
       <div className="p-6 md:p-10 max-w-6xl mx-auto space-y-8">
         {/* N1b Navigation Header */}
-        <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
+        <header className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pt-3 pb-4">
           <Link
             href="/personas"
             aria-label="Back to Persona Library"
@@ -333,22 +333,17 @@ export default function EditPersonaPage() {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
-                <input
-                  type="text"
-                  value={recommendedModel}
-                  onChange={(e) => setRecommendedModel(e.target.value)}
-                  placeholder="e.g. Claude 3.5 Sonnet or Gemini 2.5 Flash"
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
+              <DynamicModelSelector
+                value={recommendedModel}
+                onChange={(modelId) => setRecommendedModel(modelId)}
+              />
+            </div>
 
-              <div className="space-y-1.5">
-                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
-                <TagInput tags={tags} onChange={setTags} />
-              </div>
+            <div className="space-y-1.5">
+              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
+              <TagInput tags={tags} onChange={setTags} />
             </div>
 
             <div className="space-y-1.5">
