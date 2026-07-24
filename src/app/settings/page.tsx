@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID, formatPersonaOptionLabel } from '@/lib/db';
 import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
+import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
@@ -229,18 +230,7 @@ export default function SettingsPage() {
     }
   };
 
-  const handleWipeData = async () => {
-    const confirmation = prompt('DANGER ZONE: Type "DELETE" to permanently wipe all local database records.');
-    if (confirmation === 'DELETE') {
-      await db.messages.clear();
-      await db.chats.clear();
-      await db.personas.clear();
-      await db.groups.clear();
-      await db.usage.clear();
-      alert('All local database records have been permanently cleared.');
-      window.location.reload();
-    }
-  };
+  const [showClearDataModal, setShowClearDataModal] = useState(false);
 
   return (
     <Shell>
@@ -250,6 +240,17 @@ export default function SettingsPage() {
           isOpen={showGuidanceModal}
           onClose={() => setShowGuidanceModal(false)}
           ollamaUrl={ollamaUrl}
+        />
+
+        {/* Clear Data Modal */}
+        <ClearDataModal
+          isOpen={showClearDataModal}
+          onClose={() => setShowClearDataModal(false)}
+          onCleared={(scope) => {
+            if (scope !== 'full' && scope !== 'settings') {
+              alert('Selected local data cleared successfully!');
+            }
+          }}
         />
 
         {/* Restore Preview Modal */}
@@ -634,10 +635,10 @@ export default function SettingsPage() {
 
             <button
               type="button"
-              onClick={handleWipeData}
+              onClick={() => setShowClearDataModal(true)}
               className="btn-hallmark text-xs text-[var(--color-error)] border-[var(--color-error)]/30 hover:bg-[var(--color-error)]/10 gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-error)] ml-auto"
             >
-              <Trash2 className="w-3.5 h-3.5" /> Wipe Local Database
+              <Trash2 className="w-3.5 h-3.5" /> Clear Local Data
             </button>
           </div>
         </div>
