@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu } from 'lucide-react';
+import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
@@ -54,8 +54,34 @@ export default function EditPersonaPage() {
     });
   }, [personaId]);
 
+  const isOfficial = Boolean(persona?.isSystem || personaId.startsWith('persona-'));
+
+  const handleForkPersona = async () => {
+    if (!persona) return;
+    const forkedPersona: Persona = {
+      ...persona,
+      id: 'custom-' + Date.now(),
+      name: `${persona.name} (Custom)`,
+      systemPrompt,
+      role,
+      description,
+      recommendedModel: recommendedModel || undefined,
+      tags: tagsInput.split(',').map((t) => t.trim()).filter(Boolean),
+      isSystem: false,
+      isCustom: true,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+    await db.personas.add(forkedPersona);
+    router.push(`/personas/${forkedPersona.id}/edit`);
+  };
+
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (isOfficial) {
+      handleForkPersona();
+      return;
+    }
     if (!name.trim() || !systemPrompt.trim()) return;
 
     setIsSaving(true);
@@ -197,6 +223,29 @@ export default function EditPersonaPage() {
           </div>
         </header>
 
+        {isOfficial && (
+          <div className="p-4 bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 rounded-[var(--radius-md)] flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <Shield className="w-5 h-5 text-[var(--color-accent)] shrink-0" />
+              <div>
+                <div className="text-xs font-mono font-semibold text-[var(--color-accent)] uppercase tracking-wider flex items-center gap-1.5">
+                  ⚡ Official System Persona — Read-Only Preset
+                </div>
+                <div className="text-xs text-[var(--color-ink-muted)] pt-0.5">
+                  Official system prompts are read-only baseline references. Click <strong>"Fork & Customize"</strong> to create an editable custom copy.
+                </div>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleForkPersona}
+              className="btn-hallmark text-xs bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] gap-1.5 shrink-0 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)]"
+            >
+              <GitFork className="w-3.5 h-3.5" /> Fork & Customize
+            </button>
+          </div>
+        )}
+
         {saveSuccess && (
           <div className="p-3 bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border border-[var(--color-accent)]/30 rounded text-xs font-mono flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" /> Persona successfully updated!
@@ -325,13 +374,23 @@ export default function EditPersonaPage() {
             </div>
 
             <div className="flex justify-end pt-2">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                <Save className="w-4 h-4" /> {isSaving ? 'Saving Changes...' : 'Save Changes'}
-              </button>
+              {isOfficial ? (
+                <button
+                  type="button"
+                  onClick={handleForkPersona}
+                  className="btn-hallmark text-xs bg-[var(--color-accent)] text-white hover:bg-[var(--color-accent-hover)] gap-1.5 focus:outline-none focus:ring-2 focus:ring-[var(--color-focus)] font-semibold"
+                >
+                  <GitFork className="w-4 h-4 text-white" /> Fork & Create Custom Persona
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="btn-hallmark btn-hallmark-primary text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Save className="w-4 h-4" /> {isSaving ? 'Saving Changes...' : 'Save Changes'}
+                </button>
+              )}
             </div>
           </form>
 

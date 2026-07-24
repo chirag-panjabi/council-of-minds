@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
-import { Search, X, Star, Plus, Check, Users, User } from 'lucide-react';
+import { Search, X, Star, Plus, Check, Users, User, Shield, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 
 /* Hallmark · genre: editorial · macrostructure: 08-modal · theme: studio */
@@ -31,7 +31,7 @@ export function PersonaSelectorModal({
   const personas = useLiveQuery(() => db.personas.filter((p) => !p.isArchived).toArray()) || [];
   
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState<'all' | 'favorites' | 'custom' | 'default'>('all');
+  const [category, setCategory] = useState<'all' | 'official' | 'custom' | 'favorites'>('all');
   const [markedIds, setMarkedIds] = useState<string[]>(selectedPersonaIds);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
 
@@ -98,9 +98,9 @@ export function PersonaSelectorModal({
 
     if (!matchesSearch) return false;
 
-    if (category === 'favorites') return favoriteIds.includes(p.id);
-    if (category === 'custom') return p.id.startsWith('custom-') || !p.id.startsWith('persona-');
-    if (category === 'default') return p.id.startsWith('persona-');
+    if (category === 'favorites') return favoriteIds.includes(p.id) || p.isFavorite;
+    if (category === 'official') return Boolean(p.isSystem || p.id.startsWith('persona-'));
+    if (category === 'custom') return Boolean(p.isCustom || p.id.startsWith('custom-'));
     return true;
   });
 
@@ -156,19 +156,27 @@ export function PersonaSelectorModal({
           </div>
 
           <div className="flex items-center gap-1.5 overflow-x-auto">
-            {(['all', 'favorites', 'custom', 'default'] as const).map((cat) => (
-              <button
-                key={cat}
-                onClick={() => setCategory(cat)}
-                className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-wider transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                  category === cat
-                    ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold'
-                    : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
-                }`}
-              >
-                {cat === 'favorites' ? `★ Favorites (${favoriteIds.length})` : cat}
-              </button>
-            ))}
+            {(['all', 'official', 'custom', 'favorites'] as const).map((cat) => {
+              let label = 'All';
+              if (cat === 'official') label = `⚡ Official (${personas.filter((p) => p.isSystem || p.id.startsWith('persona-')).length})`;
+              else if (cat === 'custom') label = `🎨 Custom (${personas.filter((p) => p.isCustom || p.id.startsWith('custom-')).length})`;
+              else if (cat === 'favorites') label = `⭐ Favorites (${favoriteIds.length})`;
+              else label = `All (${personas.length})`;
+
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`px-3 py-1 rounded-full text-xs font-mono uppercase tracking-wider transition-colors shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                    category === cat
+                      ? 'bg-[var(--color-ink)] text-[var(--color-paper)] font-semibold'
+                      : 'bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -185,6 +193,7 @@ export function PersonaSelectorModal({
             filteredPersonas.map((p) => {
               const isMarked = markedIds.includes(p.id);
               const isFav = favoriteIds.includes(p.id);
+              const isOfficial = Boolean(p.isSystem || p.id.startsWith('persona-'));
 
               return (
                 <div
@@ -201,11 +210,25 @@ export function PersonaSelectorModal({
                       {p.name.charAt(0)}
                     </div>
                     <div className="truncate min-w-0">
-                      <div className="font-display text-sm text-[var(--color-ink)] flex items-center gap-2">
+                      <div className="font-display text-sm text-[var(--color-ink)] flex items-center gap-2 flex-wrap">
                         <span>{p.name}</span>
                         <span className="text-[10px] font-mono text-[var(--color-ink-muted)] font-normal">
                           ({p.role})
                         </span>
+                        {isOfficial ? (
+                          <span className="px-1.5 py-0.5 bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 rounded text-[9px] font-mono text-[var(--color-accent)] font-semibold flex items-center gap-0.5">
+                            <Shield className="w-2.5 h-2.5 text-[var(--color-accent)]" /> OFFICIAL
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 bg-[var(--color-paper-3)] border border-[var(--color-border)] rounded text-[9px] font-mono text-[var(--color-ink-muted)] font-semibold">
+                            CUSTOM
+                          </span>
+                        )}
+                        {p.recommendedModel && (
+                          <span className="px-1.5 py-0.5 bg-[var(--color-paper)] border border-[var(--color-accent)]/20 rounded text-[9px] font-mono text-[var(--color-accent)] flex items-center gap-0.5">
+                            <Sparkles className="w-2.5 h-2.5" /> Best with {p.recommendedModel}
+                          </span>
+                        )}
                       </div>
                       <div className="text-xs text-[var(--color-ink-muted)] truncate">{p.description}</div>
                     </div>
