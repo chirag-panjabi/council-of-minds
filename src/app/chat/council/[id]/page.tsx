@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
 import type { ChatMessage, ChatSession, Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
@@ -202,6 +202,15 @@ export default function CouncilChatPage() {
     setActiveDebaterIds(combinedIds);
     if (!isIncognito && chatId !== 'new') {
       db.chats.update(chatId, { personaIds: combinedIds, updatedAt: Date.now() });
+    }
+  };
+
+  const handleRemoveDebater = (personaId: string) => {
+    if (activeDebaterIds.length <= 1) return;
+    const remainingIds = activeDebaterIds.filter((id) => id !== personaId);
+    setActiveDebaterIds(remainingIds);
+    if (!isIncognito && chatId !== 'new') {
+      db.chats.update(chatId, { personaIds: remainingIds, updatedAt: Date.now() });
     }
   };
 
@@ -719,20 +728,40 @@ export default function CouncilChatPage() {
           <div className="flex items-center gap-2">
             <span className="text-[10px] font-mono uppercase tracking-widest text-[var(--color-ink-muted)] shrink-0">Debaters:</span>
             {councilPersonas.map((p, idx) => (
-              <button
+              <div
                 key={p.id}
-                onClick={() => handleTriggerSinglePersona(p)}
-                disabled={isStreaming}
-                aria-label={`Trigger reply from ${p.name}`}
-                className={`px-2.5 py-1 rounded-full text-xs font-mono border flex items-center gap-1.5 transition-all shrink-0 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                className={`px-2.5 py-1 rounded-full text-xs font-mono border flex items-center gap-1.5 transition-all shrink-0 ${
                   activeSpeakerIndex === idx
                     ? 'bg-[var(--color-accent)] text-white border-[var(--color-accent)] shadow-xs animate-pulse'
                     : 'bg-[var(--color-paper-2)] border-[var(--color-border)] text-[var(--color-ink)] hover:border-[var(--color-accent)]'
                 }`}
               >
-                <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] shrink-0" />
-                <span>@{p.name}</span>
-              </button>
+                <button
+                  type="button"
+                  onClick={() => handleTriggerSinglePersona(p)}
+                  disabled={isStreaming}
+                  aria-label={`Trigger reply from ${p.name}`}
+                  className="flex items-center gap-1.5 focus:outline-none cursor-pointer"
+                >
+                  <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] shrink-0" />
+                  <span>@{p.name}</span>
+                </button>
+                {councilPersonas.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveDebater(p.id);
+                    }}
+                    disabled={isStreaming}
+                    aria-label={`Remove ${p.name} from active council`}
+                    className="ml-0.5 p-0.5 rounded-full hover:bg-red-500/20 hover:text-red-500 text-[var(--color-ink-muted)] transition-colors cursor-pointer focus:outline-none"
+                    title={`Remove ${p.name} from Council`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
             ))}
 
             <button
