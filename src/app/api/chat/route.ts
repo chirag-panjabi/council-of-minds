@@ -3,6 +3,30 @@ import { redactSensitiveData } from '@/lib/utils/redact';
 
 export const runtime = 'edge';
 
+const FALLBACK_CHAINS: Record<string, string[]> = {
+  // OpenAI
+  'gpt-4o': ['gpt-4o-mini', 'gpt-3.5-turbo'],
+  'o3-mini': ['gpt-4o-mini'],
+  'o1': ['gpt-4o', 'gpt-4o-mini'],
+
+  // Anthropic
+  'claude-3-7-sonnet-20250219': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
+  'claude-3-5-sonnet-20241022': ['claude-3-5-haiku-20241022'],
+  'claude-3-opus-20240229': ['claude-3-5-sonnet-20241022', 'claude-3-5-haiku-20241022'],
+
+  // Gemini
+  'gemini-2.5-flash': ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'],
+  'gemini-1.5-pro': ['gemini-2.5-flash', 'gemini-2.0-flash'],
+};
+
+function getModelCandidates(provider: string, primaryModel: string): string[] {
+  const fallbacks = FALLBACK_CHAINS[primaryModel] || [];
+  const candidates = [primaryModel, ...fallbacks];
+
+  // Deduplicate
+  return Array.from(new Set(candidates));
+}
+
 export async function POST(req: NextRequest) {
   try {
     const provider = req.headers.get('x-provider') || 'openai';
@@ -16,7 +40,7 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { model, messages, systemPrompt, temperature = 0.7 } = body;
+    const { model: requestedModel = 'default', messages, systemPrompt, temperature = 0.7 } = body;
 
     const fullMessages = systemPrompt
       ? [{ role: 'system', content: systemPrompt }, ...messages]
@@ -24,271 +48,367 @@ export async function POST(req: NextRequest) {
 
     const encoder = new TextEncoder();
     const decoder = new TextDecoder();
+    const RETRIABLE_STATUSES = [404, 429, 500, 502, 503, 504];
 
+    // 1. OpenAI Provider
     if (provider === 'openai') {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: model || 'gpt-4o',
-          messages: fullMessages,
-          stream: true,
-          temperature,
-          stream_options: { include_usage: true },
-        }),
-      });
+      const candidates = getModelCandidates('openai', requestedModel || 'gpt-4o');
+      let lastErrorText = '';
+      let lastStatus = 500;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
-      }
+      for (let i = 0; i < candidates.length; i++) {
+        const currentModel = candidates[i];
+        const isFallback = currentModel !== requestedModel;
 
-      let buffer = '';
-      const transformStream = new TransformStream({
-        transform(chunk, controller) {
-          buffer += decoder.decode(chunk, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            messages: fullMessages,
+            stream: true,
+            temperature,
+            stream_options: { include_usage: true },
+          }),
+        });
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data: ')) {
-              const dataStr = trimmed.slice(6);
-              if (dataStr === '[DONE]') {
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                continue;
-              }
-              try {
-                const parsed = JSON.parse(dataStr);
-                const text = parsed.choices?.[0]?.delta?.content;
-                if (text) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-                }
-                if (parsed.usage) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                    usage: {
-                      promptTokens: parsed.usage.prompt_tokens || 0,
-                      completionTokens: parsed.usage.completion_tokens || 0,
-                    }
-                  })}\n\n`));
-                }
-              } catch {}
-            }
+        if (!response.ok) {
+          lastErrorText = await response.text();
+          lastStatus = response.status;
+          if (RETRIABLE_STATUSES.includes(response.status) && i < candidates.length - 1) {
+            continue; // Failover to next candidate in chain
           }
-        },
-        flush(controller) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        },
-      });
+          return new NextResponse(redactSensitiveData(lastErrorText), { status: lastStatus });
+        }
 
-      return new NextResponse(response.body!.pipeThrough(transformStream), {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
+        // Stream Success
+        let buffer = '';
+        let hasSentFallbackMeta = false;
+
+        const transformStream = new TransformStream({
+          start(controller) {
+            if (isFallback && !hasSentFallbackMeta) {
+              hasSentFallbackMeta = true;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ meta: { fallbackModel: currentModel, originalModel: requestedModel } })}\n\n`)
+              );
+            }
+          },
+          transform(chunk, controller) {
+            buffer += decoder.decode(chunk, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('data: ')) {
+                const dataStr = trimmed.slice(6);
+                if (dataStr === '[DONE]') {
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                  continue;
+                }
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  const text = parsed.choices?.[0]?.delta?.content;
+                  if (text) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+                  }
+                  if (parsed.usage) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                      usage: {
+                        promptTokens: parsed.usage.prompt_tokens || 0,
+                        completionTokens: parsed.usage.completion_tokens || 0,
+                      }
+                    })}\n\n`));
+                  }
+                } catch {}
+              }
+            }
+          },
+          flush(controller) {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          },
+        });
+
+        return new NextResponse(response.body!.pipeThrough(transformStream), {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+          },
+        });
+      }
     }
 
+    // 2. Anthropic Provider
     if (provider === 'anthropic') {
+      const candidates = getModelCandidates('anthropic', requestedModel || 'claude-3-5-sonnet-20241022');
       const anthropicMessages = messages.map((m: any) => ({
         role: m.role === 'assistant' ? 'assistant' : 'user',
         content: m.content,
       }));
 
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey!,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: model || 'claude-3-5-sonnet-20241022',
-          system: systemPrompt || undefined,
-          messages: anthropicMessages,
-          max_tokens: 4096,
-          stream: true,
-        }),
-      });
+      let lastErrorText = '';
+      let lastStatus = 500;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
-      }
+      for (let i = 0; i < candidates.length; i++) {
+        const currentModel = candidates[i];
+        const isFallback = currentModel !== requestedModel;
 
-      let buffer = '';
-      const transformStream = new TransformStream({
-        transform(chunk, controller) {
-          buffer += decoder.decode(chunk, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+        const response = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': apiKey!,
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            system: systemPrompt || undefined,
+            messages: anthropicMessages,
+            max_tokens: 4096,
+            stream: true,
+          }),
+        });
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data: ')) {
-              const dataStr = trimmed.slice(6);
-              try {
-                const parsed = JSON.parse(dataStr);
-                if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`));
-                }
-                if (parsed.type === 'message_delta' && parsed.usage) {
-                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                    usage: {
-                      promptTokens: 0,
-                      completionTokens: parsed.usage.output_tokens || 0,
-                    }
-                  })}\n\n`));
-                }
-              } catch {}
-            }
+        if (!response.ok) {
+          lastErrorText = await response.text();
+          lastStatus = response.status;
+          if (RETRIABLE_STATUSES.includes(response.status) && i < candidates.length - 1) {
+            continue;
           }
-        },
-        flush(controller) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        },
-      });
+          return new NextResponse(redactSensitiveData(lastErrorText), { status: lastStatus });
+        }
 
-      return new NextResponse(response.body!.pipeThrough(transformStream), {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
+        let buffer = '';
+        let hasSentFallbackMeta = false;
+
+        const transformStream = new TransformStream({
+          start(controller) {
+            if (isFallback && !hasSentFallbackMeta) {
+              hasSentFallbackMeta = true;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ meta: { fallbackModel: currentModel, originalModel: requestedModel } })}\n\n`)
+              );
+            }
+          },
+          transform(chunk, controller) {
+            buffer += decoder.decode(chunk, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('data: ')) {
+                const dataStr = trimmed.slice(6);
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  if (parsed.type === 'content_block_delta' && parsed.delta?.text) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: parsed.delta.text })}\n\n`));
+                  }
+                  if (parsed.type === 'message_delta' && parsed.usage) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                      usage: {
+                        promptTokens: 0,
+                        completionTokens: parsed.usage.output_tokens || 0,
+                      }
+                    })}\n\n`));
+                  }
+                } catch {}
+              }
+            }
+          },
+          flush(controller) {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          },
+        });
+
+        return new NextResponse(response.body!.pipeThrough(transformStream), {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+          },
+        });
+      }
     }
 
+    // 3. Gemini Provider
     if (provider === 'gemini') {
-      const geminiModel = model || 'gemini-2.5-flash';
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
-
+      const candidates = getModelCandidates('gemini', requestedModel || 'gemini-2.5-flash');
       const contents = messages.map((m: any) => ({
         role: m.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: m.content }],
       }));
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-          contents,
-        }),
-      });
+      let lastErrorText = '';
+      let lastStatus = 500;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
-      }
+      for (let i = 0; i < candidates.length; i++) {
+        const currentModel = candidates[i];
+        const isFallback = currentModel !== requestedModel;
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:streamGenerateContent?alt=sse&key=${apiKey}`;
 
-      let buffer = '';
-      const transformStream = new TransformStream({
-        transform(chunk, controller) {
-          buffer += decoder.decode(chunk, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
+            contents,
+          }),
+        });
 
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (trimmed.startsWith('data: ')) {
-              const dataStr = trimmed.slice(6);
-              if (dataStr === '[DONE]') {
-                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-                continue;
+        if (!response.ok) {
+          lastErrorText = await response.text();
+          lastStatus = response.status;
+          if (RETRIABLE_STATUSES.includes(response.status) && i < candidates.length - 1) {
+            continue;
+          }
+          return new NextResponse(redactSensitiveData(lastErrorText), { status: lastStatus });
+        }
+
+        let buffer = '';
+        let hasSentFallbackMeta = false;
+
+        const transformStream = new TransformStream({
+          start(controller) {
+            if (isFallback && !hasSentFallbackMeta) {
+              hasSentFallbackMeta = true;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ meta: { fallbackModel: currentModel, originalModel: requestedModel } })}\n\n`)
+              );
+            }
+          },
+          transform(chunk, controller) {
+            buffer += decoder.decode(chunk, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (trimmed.startsWith('data: ')) {
+                const dataStr = trimmed.slice(6);
+                if (dataStr === '[DONE]') {
+                  controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                  continue;
+                }
+                try {
+                  const parsed = JSON.parse(dataStr);
+                  const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                  if (text) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+                  }
+                  if (parsed.usageMetadata) {
+                    controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                      usage: {
+                        promptTokens: parsed.usageMetadata.promptTokenCount || 0,
+                        completionTokens: parsed.usageMetadata.candidatesTokenCount || 0,
+                      }
+                    })}\n\n`));
+                  }
+                } catch {}
               }
+            }
+          },
+          flush(controller) {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          },
+        });
+
+        return new NextResponse(response.body!.pipeThrough(transformStream), {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+          },
+        });
+      }
+    }
+
+    // 4. Ollama Local Provider
+    if (provider === 'ollama') {
+      const ollamaUrl = req.headers.get('x-ollama-url') || 'http://localhost:11434';
+      const candidates = getModelCandidates('ollama', requestedModel || 'llama3');
+      let lastErrorText = '';
+      let lastStatus = 500;
+
+      for (let i = 0; i < candidates.length; i++) {
+        const currentModel = candidates[i];
+        const isFallback = currentModel !== requestedModel;
+
+        const response = await fetch(`${ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: currentModel,
+            prompt: messages[messages.length - 1]?.content || '',
+            system: systemPrompt,
+            stream: true,
+          }),
+        });
+
+        if (!response.ok) {
+          lastErrorText = await response.text();
+          lastStatus = response.status;
+          if (RETRIABLE_STATUSES.includes(response.status) && i < candidates.length - 1) {
+            continue;
+          }
+          return new NextResponse(redactSensitiveData(lastErrorText), { status: lastStatus });
+        }
+
+        let buffer = '';
+        let hasSentFallbackMeta = false;
+
+        const transformStream = new TransformStream({
+          start(controller) {
+            if (isFallback && !hasSentFallbackMeta) {
+              hasSentFallbackMeta = true;
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ meta: { fallbackModel: currentModel, originalModel: requestedModel } })}\n\n`)
+              );
+            }
+          },
+          transform(chunk, controller) {
+            buffer += decoder.decode(chunk, { stream: true });
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+
+            for (const line of lines) {
+              const trimmed = line.trim();
+              if (!trimmed) continue;
               try {
-                const parsed = JSON.parse(dataStr);
-                const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+                const parsed = JSON.parse(trimmed);
+                const text = parsed.response;
                 if (text) {
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
                 }
-                if (parsed.usageMetadata) {
+                if (parsed.prompt_eval_count || parsed.eval_count) {
                   controller.enqueue(encoder.encode(`data: ${JSON.stringify({
                     usage: {
-                      promptTokens: parsed.usageMetadata.promptTokenCount || 0,
-                      completionTokens: parsed.usageMetadata.candidatesTokenCount || 0,
+                      promptTokens: parsed.prompt_eval_count || 0,
+                      completionTokens: parsed.eval_count || 0,
                     }
                   })}\n\n`));
                 }
               } catch {}
             }
-          }
-        },
-        flush(controller) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        },
-      });
+          },
+          flush(controller) {
+            controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          },
+        });
 
-      return new NextResponse(response.body!.pipeThrough(transformStream), {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
-    }
-
-    if (provider === 'ollama') {
-      const ollamaUrl = req.headers.get('x-ollama-url') || 'http://localhost:11434';
-      const response = await fetch(`${ollamaUrl}/api/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: model || 'llama3',
-          prompt: messages[messages.length - 1]?.content || '',
-          system: systemPrompt,
-          stream: true,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: response.status });
+        return new NextResponse(response.body!.pipeThrough(transformStream), {
+          headers: {
+            'Content-Type': 'text/event-stream',
+            'Cache-Control': 'no-cache',
+            Connection: 'keep-alive',
+          },
+        });
       }
-
-      let buffer = '';
-      const transformStream = new TransformStream({
-        transform(chunk, controller) {
-          buffer += decoder.decode(chunk, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed) continue;
-            try {
-              const parsed = JSON.parse(trimmed);
-              const text = parsed.response;
-              if (text) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
-              }
-              if (parsed.prompt_eval_count || parsed.eval_count) {
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({
-                  usage: {
-                    promptTokens: parsed.prompt_eval_count || 0,
-                    completionTokens: parsed.eval_count || 0,
-                  }
-                })}\n\n`));
-              }
-            } catch {}
-          }
-        },
-        flush(controller) {
-          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-        },
-      });
-
-      return new NextResponse(response.body!.pipeThrough(transformStream), {
-        headers: {
-          'Content-Type': 'text/event-stream',
-          'Cache-Control': 'no-cache',
-          Connection: 'keep-alive',
-        },
-      });
     }
 
     return NextResponse.json({ error: 'Unsupported provider: ' + redactSensitiveData(provider) }, { status: 400 });
