@@ -9,6 +9,7 @@ import type { Persona } from '@/types';
 import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
 import { TagInput } from '@/components/personas/TagInput';
+import { AdvancedRulesBuilder, PersonaRule, formatRulesBlock, parseRulesFromPrompt } from '@/components/personas/AdvancedRulesBuilder';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -36,6 +37,7 @@ export default function EditPersonaPage() {
   const [testPrompt, setTestPrompt] = useState('');
   const [testModel, setTestModel] = useState('gpt-4o');
   const [testResponse, setTestResponse] = useState('');
+  const [advancedRules, setAdvancedRules] = useState<PersonaRule[]>([]);
   const [isTesting, setIsTesting] = useState(false);
 
   useEffect(() => {
@@ -46,7 +48,11 @@ export default function EditPersonaPage() {
         setName(p.name);
         setRole(p.role);
         setDescription(p.description);
-        setSystemPrompt(p.systemPrompt);
+
+        const { basePrompt, rules } = parseRulesFromPrompt(p.systemPrompt);
+        setSystemPrompt(basePrompt);
+        setAdvancedRules(rules);
+
         setRecommendedModel(p.recommendedModel || '');
         setTestModel(p.recommendedModel || 'gpt-4o');
         setTags(p.tags || []);
@@ -59,11 +65,12 @@ export default function EditPersonaPage() {
 
   const handleForkPersona = async () => {
     if (!persona) return;
+    const finalPrompt = systemPrompt.trim() + formatRulesBlock(advancedRules);
     const forkedPersona: Persona = {
       ...persona,
       id: 'custom-' + Date.now(),
       name: `${persona.name} (Custom)`,
-      systemPrompt,
+      systemPrompt: finalPrompt,
       role,
       description,
       recommendedModel: recommendedModel || undefined,
@@ -87,11 +94,13 @@ export default function EditPersonaPage() {
 
     setIsSaving(true);
 
+    const finalPrompt = systemPrompt.trim() + formatRulesBlock(advancedRules);
+
     await db.personas.update(personaId, {
       name: name.trim(),
       role: role.trim(),
       description: description.trim(),
-      systemPrompt: systemPrompt.trim(),
+      systemPrompt: finalPrompt,
       recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived,
@@ -359,6 +368,9 @@ export default function EditPersonaPage() {
                 className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
               />
             </div>
+
+            {/* Advanced Rules Builder */}
+            <AdvancedRulesBuilder rules={advancedRules} onChange={setAdvancedRules} />
 
             <div className="flex justify-end pt-2">
               {isOfficial ? (

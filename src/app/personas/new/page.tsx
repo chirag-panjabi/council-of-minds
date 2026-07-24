@@ -7,6 +7,7 @@ import { db } from '@/lib/db';
 import { ArrowLeft, Save, Sparkles, Wand2, Brain, Send, Cpu } from 'lucide-react';
 import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
 import { TagInput } from '@/components/personas/TagInput';
+import { AdvancedRulesBuilder, PersonaRule, formatRulesBlock } from '@/components/personas/AdvancedRulesBuilder';
 import Link from 'next/link';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: atelier · nav: N1b · footer: Ft4 */
@@ -19,6 +20,7 @@ export default function NewPersonaPage() {
   const [systemPrompt, setSystemPrompt] = useState('');
   const [recommendedModel, setRecommendedModel] = useState('');
   const [tags, setTags] = useState<string[]>(['philosophy', 'strategy']);
+  const [advancedRules, setAdvancedRules] = useState<PersonaRule[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
   // AI Quick-Generate State
@@ -102,7 +104,7 @@ export default function NewPersonaPage() {
         },
         body: JSON.stringify({
           model: testModel,
-          systemPrompt: systemPrompt.trim() || `You are ${name || 'an advisor'}.`,
+          systemPrompt: systemPrompt + formatRulesBlock(advancedRules),
           messages: [{ role: 'user', content: testPrompt }],
         }),
       });
@@ -131,12 +133,14 @@ export default function NewPersonaPage() {
 
     setIsSaving(true);
 
+    const finalSystemPrompt = systemPrompt.trim() + formatRulesBlock(advancedRules);
+
     await db.personas.add({
       id: 'custom-' + Date.now(),
       name: name.trim(),
       role: role.trim() || 'Advisor',
       description: description.trim(),
-      systemPrompt: systemPrompt.trim(),
+      systemPrompt: finalSystemPrompt,
       recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived: false,
@@ -272,6 +276,9 @@ export default function NewPersonaPage() {
                   className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
                 />
               </div>
+
+              {/* Advanced Rules Builder */}
+              <AdvancedRulesBuilder rules={advancedRules} onChange={setAdvancedRules} />
 
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-[var(--color-border-hairline)]">
                 <Link href="/personas" className="btn-hallmark text-xs focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]">
