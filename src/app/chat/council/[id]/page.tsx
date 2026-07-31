@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
 import type { ChatMessage, ChatSession, Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X, Layers, Search } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X, Layers, Search, Calculator, DollarSign } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
@@ -15,6 +15,7 @@ import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
 import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
 import { InSessionSearchOverlay } from '@/components/chat/InSessionSearchOverlay';
+import { calculateCouncilCostAndTokens } from '@/lib/utils/providerCapabilities';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -113,9 +114,17 @@ export default function CouncilChatPage() {
   const [autoPilotCap, setAutoPilotCap] = useState<number>(6);
   const [turnExecutionMode, setTurnExecutionMode] = useState<'round_robin' | 'dynamic_moderator' | 'free_dialectic'>('round_robin');
   const [contextRetention, setContextRetention] = useState<'stateless' | 'summary' | 'hybrid' | 'infinite'>('hybrid');
+  const [isCostModalOpen, setIsCostModalOpen] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [activeSpeakerIndex, setActiveSpeakerIndex] = useState<number | null>(null);
   const [expandedReasoningIds, setExpandedReasoningIds] = useState<Record<string, boolean>>({});
+
+  const costEstimate = calculateCouncilCostAndTokens(
+    activeDebaterIds.length,
+    autoPilotCap,
+    selectedModel,
+    selectedProvider
+  );
 
   useEffect(() => {
     if (chatSession?.turnExecutionMode) {
@@ -760,6 +769,16 @@ export default function CouncilChatPage() {
               }}
             />
 
+            {/* Cost & Token Estimation Calculator Button */}
+            <button
+              onClick={() => setIsCostModalOpen(!isCostModalOpen)}
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] font-mono text-[var(--color-accent)] border-[var(--color-accent)]/30"
+              title="View Estimated Token Budget and API Cost Breakdown"
+            >
+              <Calculator className="w-3.5 h-3.5" />
+              <span>{costEstimate.isLocal ? 'Free (Local)' : `~$${costEstimate.estimatedCostUsd.toFixed(3)}`}</span>
+            </button>
+
             {/* Incognito Toggle */}
             <button
               onClick={() => {
@@ -814,6 +833,74 @@ export default function CouncilChatPage() {
           }}
           matchCount={filteredMessages.length}
         />
+
+        {/* Cost & Token Estimation Calculator Popover Modal */}
+        {isCostModalOpen && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-lg)] max-w-md w-full p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-3">
+                <div className="flex items-center gap-2">
+                  <Calculator className="w-5 h-5 text-[var(--color-accent)]" />
+                  <h3 className="text-sm font-semibold text-[var(--color-ink)] font-mono">
+                    Council Debate Cost & Token Budget
+                  </h3>
+                </div>
+                <button
+                  onClick={() => setIsCostModalOpen(false)}
+                  className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="space-y-3 font-mono text-xs">
+                <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] space-y-1">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase tracking-wider">Active Configuration</div>
+                  <div className="text-[var(--color-ink)] font-semibold">
+                    {activeDebaterIds.length} Active Debaters • Cap: {autoPilotCap} Turns • {selectedModel} ({selectedProvider})
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)]">
+                    <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Est. Input Tokens</div>
+                    <div className="text-sm font-semibold text-[var(--color-ink)] mt-1">
+                      ~{costEstimate.estimatedInputTokens.toLocaleString()}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)]">
+                    <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Est. Output Tokens</div>
+                    <div className="text-sm font-semibold text-[var(--color-ink)] mt-1">
+                      ~{costEstimate.estimatedOutputTokens.toLocaleString()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 rounded-[var(--radius-sm)] flex items-center justify-between">
+                  <div>
+                    <div className="text-[10px] uppercase text-[var(--color-accent)] font-semibold">Total Estimated Cost</div>
+                    <div className="text-[10px] text-[var(--color-ink-muted)]">
+                      {costEstimate.isLocal ? 'Local Ollama Daemon (No API Charges)' : 'Pay-as-you-go API Token Proxy Rate'}
+                    </div>
+                  </div>
+                  <div className="text-lg font-bold text-[var(--color-accent)]">
+                    {costEstimate.isLocal ? '$0.00' : `~$${costEstimate.estimatedCostUsd.toFixed(4)}`}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end pt-2">
+                <button
+                  onClick={() => setIsCostModalOpen(false)}
+                  className="px-4 py-1.5 text-xs font-mono bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)] text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors"
+                >
+                  Close Calculator
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Debater Roster Strip with + Add Agent Button */}
         <div className="px-6 py-2 bg-[var(--color-paper)] border-b border-[var(--color-border-hairline)] flex items-center justify-between overflow-x-auto gap-4">

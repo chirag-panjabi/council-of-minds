@@ -139,7 +139,6 @@ export function getModelCapability(modelId: string, provider: ModelProvider = 'o
     };
   }
 
-  // Fallback defaults for custom models
   return {
     modelId,
     provider,
@@ -150,5 +149,57 @@ export function getModelCapability(modelId: string, provider: ModelProvider = 'o
     maxContextTokens: 32000,
     maxOutputTokens: 4096,
     recommendedUse: 'Custom Provider Model',
+  };
+}
+
+export interface CouncilCostEstimate {
+  estimatedInputTokens: number;
+  estimatedOutputTokens: number;
+  totalTokens: number;
+  estimatedCostUsd: number;
+  isLocal: boolean;
+}
+
+export function calculateCouncilCostAndTokens(
+  debaterCount: number,
+  turnsCap: number,
+  modelId: string,
+  provider: ModelProvider = 'openai'
+): CouncilCostEstimate {
+  if (provider === 'ollama') {
+    return {
+      estimatedInputTokens: debaterCount * turnsCap * 600,
+      estimatedOutputTokens: debaterCount * turnsCap * 350,
+      totalTokens: debaterCount * turnsCap * 950,
+      estimatedCostUsd: 0,
+      isLocal: true,
+    };
+  }
+
+  // Estimated per-turn token averages
+  const estInput = Math.max(1, debaterCount) * Math.max(1, turnsCap) * 750;
+  const estOutput = Math.max(1, debaterCount) * Math.max(1, turnsCap) * 350;
+  const totalTokens = estInput + estOutput;
+
+  // Rate per 1k tokens (input / output)
+  let inputRatePer1k = 0.0025; // default gpt-4o ($2.50 / 1M)
+  let outputRatePer1k = 0.01; // default gpt-4o ($10.00 / 1M)
+
+  if (modelId.includes('mini') || modelId.includes('haiku') || modelId.includes('flash')) {
+    inputRatePer1k = 0.00015;
+    outputRatePer1k = 0.0006;
+  } else if (modelId.includes('claude-3-7') || modelId.includes('claude-3-5-sonnet') || modelId.includes('gpt-4o')) {
+    inputRatePer1k = 0.003;
+    outputRatePer1k = 0.015;
+  }
+
+  const cost = (estInput / 1000) * inputRatePer1k + (estOutput / 1000) * outputRatePer1k;
+
+  return {
+    estimatedInputTokens: estInput,
+    estimatedOutputTokens: estOutput,
+    totalTokens,
+    estimatedCostUsd: Number(cost.toFixed(4)),
+    isLocal: false,
   };
 }
