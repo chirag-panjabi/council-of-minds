@@ -6,7 +6,7 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
 import type { ChatMessage, ChatSession, Persona } from '@/types';
-import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X, Layers } from 'lucide-react';
+import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X, Layers, Search } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
@@ -14,6 +14,7 @@ import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
 import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
+import { InSessionSearchOverlay } from '@/components/chat/InSessionSearchOverlay';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -204,7 +205,13 @@ export default function CouncilChatPage() {
     setActiveSpeakerIndex(null);
   };
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const activeMessages = isIncognito ? incognitoMessages : dbMessages;
+  const filteredMessages = searchQuery.trim()
+    ? activeMessages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    : activeMessages;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -771,6 +778,18 @@ export default function CouncilChatPage() {
               {isIncognito ? 'Incognito On' : 'Incognito'}
             </button>
 
+            {/* Search Toggle Button */}
+            <button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              aria-label="Toggle Conversation Search"
+              className={`btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isSearchOpen ? 'bg-[var(--color-accent-subtle)] border-[var(--color-accent)] text-[var(--color-accent)]' : ''
+              }`}
+              title="Search conversation (Cmd+F / Ctrl+F)"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
+
             {/* Export Session Transcript Button */}
             <button
               onClick={handleExportTranscript}
@@ -783,6 +802,18 @@ export default function CouncilChatPage() {
             </button>
           </div>
         </header>
+
+        {/* In-Session Search Overlay */}
+        <InSessionSearchOverlay
+          isOpen={isSearchOpen}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClose={() => {
+            setIsSearchOpen(false);
+            setSearchQuery('');
+          }}
+          matchCount={filteredMessages.length}
+        />
 
         {/* Debater Roster Strip with + Add Agent Button */}
         <div className="px-6 py-2 bg-[var(--color-paper)] border-b border-[var(--color-border-hairline)] flex items-center justify-between overflow-x-auto gap-4">
@@ -856,7 +887,7 @@ export default function CouncilChatPage() {
               </p>
             </div>
           ) : (
-            activeMessages.map((msg) => {
+            filteredMessages.map((msg) => {
               const speakerPersona = allPersonas.find((p) => p.id === msg.personaId);
               return (
                 <ChatMessageItem

@@ -6,13 +6,14 @@ import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { ChatMessage, ChatSession, Persona } from '@/types';
-import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download, Paperclip, EyeOff, UploadCloud, Layers, UserCheck } from 'lucide-react';
+import { Send, Square, ChevronDown, ChevronRight, Brain, Cpu, Download, Paperclip, EyeOff, UploadCloud, Layers, UserCheck, Search } from 'lucide-react';
 import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
 import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
+import { InSessionSearchOverlay } from '@/components/chat/InSessionSearchOverlay';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -137,7 +138,13 @@ export default function OneOnOneChatPage() {
     setIsStreaming(false);
   };
 
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+
   const activeMessages = isIncognito ? incognitoMessages : dbMessages;
+  const filteredMessages = searchQuery.trim()
+    ? activeMessages.filter((m) => m.content.toLowerCase().includes(searchQuery.toLowerCase()))
+    : activeMessages;
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -566,6 +573,18 @@ export default function OneOnOneChatPage() {
               {isIncognito ? 'Incognito On' : 'Incognito'}
             </button>
 
+            {/* Search Toggle Button */}
+            <button
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              aria-label="Toggle Conversation Search"
+              className={`btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isSearchOpen ? 'bg-[var(--color-accent-subtle)] border-[var(--color-accent)] text-[var(--color-accent)]' : ''
+              }`}
+              title="Search conversation (Cmd+F / Ctrl+F)"
+            >
+              <Search className="w-3.5 h-3.5" />
+            </button>
+
             {/* Export Session Transcript Button */}
             <button
               onClick={handleExportTranscript}
@@ -579,6 +598,18 @@ export default function OneOnOneChatPage() {
           </div>
         </header>
 
+        {/* In-Session Search Overlay */}
+        <InSessionSearchOverlay
+          isOpen={isSearchOpen}
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          onClose={() => {
+            setIsSearchOpen(false);
+            setSearchQuery('');
+          }}
+          matchCount={filteredMessages.length}
+        />
+
         {/* Message Stream */}
         <div className="flex-1 overflow-y-auto p-4 md:p-8 space-y-4 max-w-4xl mx-auto w-full">
           {activeMessages.length === 0 ? (
@@ -590,7 +621,7 @@ export default function OneOnOneChatPage() {
               </p>
             </div>
           ) : (
-            activeMessages.map((msg) => (
+            filteredMessages.map((msg) => (
               <ChatMessageItem
                 key={msg.id}
                 message={msg}
