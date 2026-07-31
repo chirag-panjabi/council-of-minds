@@ -372,9 +372,12 @@ export default function CouncilChatPage() {
       const apiKey = localStorage.getItem(`framework-engine:api-key:${turnProvider}`) || '';
 
       const roleType = personaGroup?.chairmanPersonaId === speaker.id ? 'chairman' : personaGroup?.skepticPersonaId === speaker.id ? 'skeptic' : personaGroup?.synthesizerPersonaId === speaker.id ? 'synthesizer' : 'member';
+      const savedUserName = typeof window !== 'undefined' ? localStorage.getItem('framework-engine:user_name') || undefined : undefined;
       const basePrompt = assembleSystemPrompt({
         persona: speaker,
         councilRole: roleType,
+        userName: savedUserName,
+        sessionTopic: chatSession?.title || topicQueryParam || undefined,
         responseDirective: `CRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:'). Write ONLY your direct response.`,
       });
 

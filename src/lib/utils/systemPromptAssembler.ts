@@ -1,30 +1,58 @@
 import { Persona, PersonaRule } from '@/types';
 
-/* Hallmark · utility: systemPromptAssembler · spec: spec_prompt_system.md (§9.1) */
+/* Hallmark · utility: systemPromptAssembler · spec: spec_prompt_system.md (§9.1 & §9.2) */
 
 export interface SystemPromptAssemblyOptions {
   persona: Persona;
   councilRole?: 'chairman' | 'skeptic' | 'synthesizer' | 'member';
   summaryBuffer?: string;
   responseDirective?: string;
+  userName?: string;
+  sessionTopic?: string;
+}
+
+function expandTemplateVariables(text: string, userName?: string, sessionTopic?: string): string {
+  if (!text) return '';
+
+  const now = new Date();
+  const dateFormatted = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const effectiveUserName = userName?.trim() || 'User';
+  const effectiveTopic = sessionTopic?.trim() || 'General Inquiry';
+
+  return text
+    .replace(/\{\{\s*user_name\s*\}\}/gi, effectiveUserName)
+    .replace(/\{\{\s*username\s*\}\}/gi, effectiveUserName)
+    .replace(/\{\{\s*current_date\s*\}\}/gi, dateFormatted)
+    .replace(/\{\{\s*date\s*\}\}/gi, dateFormatted)
+    .replace(/\{\{\s*session_topic\s*\}\}/gi, effectiveTopic)
+    .replace(/\{\{\s*topic\s*\}\}/gi, effectiveTopic);
 }
 
 export function assembleSystemPrompt(options: SystemPromptAssemblyOptions): string {
-  const { persona, councilRole, summaryBuffer, responseDirective } = options;
+  const { persona, councilRole, summaryBuffer, responseDirective, userName, sessionTopic } = options;
 
   const sections: string[] = [];
 
   // 1. Identity & Core Stance
+  const rawSystemPrompt = persona.systemPrompt || '';
+  const expandedSystemPrompt = expandTemplateVariables(rawSystemPrompt, userName, sessionTopic);
+
   sections.push(`## IDENTITY & PERSPECTIVE
 You are ${persona.name}, a ${persona.role || 'Council Expert'}.
-${persona.systemPrompt}`);
+${expandedSystemPrompt}`);
 
   // 2. Advanced Structured Behavioral Rules
   if (persona.advancedRules && persona.advancedRules.length > 0) {
     const activeRules = persona.advancedRules.filter((r: PersonaRule) => r.enabled !== false);
     if (activeRules.length > 0) {
       const rulesFormatted = activeRules
-        .map((r: PersonaRule) => `- [${r.category.toUpperCase()}] ${r.content}`)
+        .map((r: PersonaRule) => `- [${r.category.toUpperCase()}] ${expandTemplateVariables(r.content, userName, sessionTopic)}`)
         .join('\n');
       sections.push(`## ADVANCED BEHAVIORAL DIRECTIVES\n${rulesFormatted}`);
     }
@@ -52,7 +80,7 @@ ${persona.systemPrompt}`);
 
   // 5. Response Directive
   if (responseDirective && responseDirective.trim()) {
-    sections.push(`## CURRENT TURN DIRECTIVE\n${responseDirective.trim()}`);
+    sections.push(`## CURRENT TURN DIRECTIVE\n${expandTemplateVariables(responseDirective.trim(), userName, sessionTopic)}`);
   }
 
   return sections.join('\n\n');

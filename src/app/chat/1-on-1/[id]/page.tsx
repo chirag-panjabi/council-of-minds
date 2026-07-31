@@ -346,7 +346,12 @@ export default function OneOnOneChatPage() {
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
       const fullHistory = [...activeMessages, userMessageObj];
-      const assembledPrompt = assembleSystemPrompt({ persona });
+      const savedUserName = typeof window !== 'undefined' ? localStorage.getItem('framework-engine:user_name') || undefined : undefined;
+      const assembledPrompt = assembleSystemPrompt({
+        persona,
+        userName: savedUserName,
+        sessionTopic: chatSession?.title,
+      });
       const { systemPrompt: activeSystemPrompt, messages: retentionMessages } = buildMessagesForRetention(
         fullHistory,
         contextRetention,
