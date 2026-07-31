@@ -11,6 +11,7 @@ import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
 import { TagInput } from '@/components/personas/TagInput';
 import { AdvancedRulesBuilder, PersonaRule, formatRulesBlock, parseRulesFromPrompt } from '@/components/personas/AdvancedRulesBuilder';
 import { PersonaRevisionHistoryModal } from '@/components/personas/PersonaRevisionHistoryModal';
+import { SystemPromptTokenMeter } from '@/components/ui/SystemPromptTokenMeter';
 
 /* Hallmark · genre: editorial · macrostructure: 15-split-studio · theme: garden · nav: N1b · footer: Ft6 */
 
@@ -424,6 +425,10 @@ export default function EditPersonaPage() {
                 value={systemPrompt}
                 onChange={(e) => setSystemPrompt(e.target.value)}
                 className="w-full p-3 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
+              />
+              <SystemPromptTokenMeter
+                systemPrompt={systemPrompt + formatRulesBlock(advancedRules)}
+                modelId={recommendedModel || 'gpt-4o'}
               />
             </div>
 

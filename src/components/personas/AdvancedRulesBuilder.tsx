@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, ShieldAlert, Sparkles, Sliders, MessageSquare } from 'lucide-react';
+import { SystemPromptTokenMeter } from '@/components/ui/SystemPromptTokenMeter';
 
 /* Hallmark · component: AdvancedRulesBuilder · genre: studio · theme: studio · spec: spec_persona_library.md §3.2 */
 
@@ -93,6 +94,8 @@ export function AdvancedRulesBuilder({ rules, onChange }: AdvancedRulesBuilderPr
           {rules.length} Rule(s) Configured
         </span>
       </div>
+
+      <SystemPromptTokenMeter systemPrompt={formatRulesBlock(rules)} />
 
       {/* Existing Rules List */}
       {rules.length > 0 && (
