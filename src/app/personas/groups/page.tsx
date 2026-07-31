@@ -15,7 +15,21 @@ export default function PersonaGroupsPage() {
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
 
-  // Form State for Roster Construction Workflow (14-narrative-workflow)
+  // Overview Grid Search & Sort State
+  const [groupSearch, setGroupSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'count'>('date');
+
+  const filteredAndSortedGroups = groups
+    .filter(
+      (g) =>
+        g.name.toLowerCase().includes(groupSearch.toLowerCase()) ||
+        g.description.toLowerCase().includes(groupSearch.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy === 'name') return a.name.localeCompare(b.name);
+      if (sortBy === 'count') return (b.personaIds?.length || 0) - (a.personaIds?.length || 0);
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
   const [showForm, setShowForm] = useState(false);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
   const [groupName, setGroupName] = useState('');
@@ -164,8 +178,36 @@ export default function PersonaGroupsPage() {
         <RosterTemplateSelector />
 
         {/* Saved Roster Panels Grid */}
-        <div className="space-y-4 pt-4 border-t border-[var(--color-border-hairline)]">
-          <h2 className="font-display text-2xl text-[var(--color-ink)]">Saved Roster Panels</h2>
+        <div className="space-y-6 pt-4 border-t border-[var(--color-border-hairline)]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="font-display text-2xl text-[var(--color-ink)]">Saved Roster Panels</h2>
+
+            {/* Search and Sort Toolbar */}
+            <div className="flex items-center gap-3">
+              <div className="relative flex-1 sm:w-64">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-muted)]" />
+                <input
+                  type="text"
+                  value={groupSearch}
+                  onChange={(e) => setGroupSearch(e.target.value)}
+                  placeholder="Filter groups..."
+                  aria-label="Filter groups"
+                  className="w-full text-xs font-mono bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] pl-8 pr-3 py-1.5 text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-accent)]"
+                />
+              </div>
+
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+                aria-label="Sort groups"
+                className="text-xs font-mono bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-sm)] px-3 py-1.5 text-[var(--color-ink)] focus:outline-none cursor-pointer"
+              >
+                <option value="date">Sort: Recent</option>
+                <option value="name">Sort: Name (A-Z)</option>
+                <option value="count">Sort: Member Count</option>
+              </select>
+            </div>
+          </div>
 
           {groups.length === 0 ? (
             <div className="p-12 border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)] text-center space-y-3">
@@ -174,9 +216,16 @@ export default function PersonaGroupsPage() {
                 Create a custom debater roster or click a template preset above to get started.
               </p>
             </div>
+          ) : filteredAndSortedGroups.length === 0 ? (
+            <div className="p-12 border border-dashed border-[var(--color-border)] rounded-[var(--radius-md)] text-center space-y-3">
+              <div className="font-display text-xl text-[var(--color-ink)]">No matching groups found</div>
+              <p className="text-xs text-[var(--color-ink-muted)] max-w-sm mx-auto">
+                No persona groups match &quot;{groupSearch}&quot;. Try clearing your filter.
+              </p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {groups.map((group) => {
+              {filteredAndSortedGroups.map((group) => {
                 const groupPersonas = personas.filter((p) => group.personaIds?.includes(p.id));
                 const synth = personas.find((p) => p.id === group.synthesizerPersonaId);
 
