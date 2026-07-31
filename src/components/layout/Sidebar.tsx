@@ -201,6 +201,14 @@ export function Sidebar() {
                   );
                 })
               )}
+              {groups.length > 0 && (
+                <Link
+                  href="/personas/groups"
+                  className="block px-3 py-1 text-[11px] font-mono text-[var(--color-accent)] hover:underline"
+                >
+                  See all rosters ({groups.length}) &rarr;
+                </Link>
+              )}
             </div>
           </div>
 
