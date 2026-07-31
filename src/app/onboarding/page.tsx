@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck, CheckCircle2, Lock, Cpu, Server, ChevronLeft } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
 
@@ -12,6 +12,9 @@ export default function OnboardingPage() {
   const router = useRouter();
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
 
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
+
+  // Step 2 & 3 State
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'gemini' | 'ollama'>('openai');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -27,7 +30,6 @@ export default function OnboardingPage() {
 
     try {
       if (selectedProvider === 'ollama') {
-        // Direct browser ping to local Ollama tags endpoint
         const res = await fetch(`${ollamaUrl}/api/tags`).catch(() => null);
         if (!res || !res.ok) {
           throw new Error('Could not connect to Ollama on ' + ollamaUrl + '. Please ensure Ollama is running and CORS is enabled via OLLAMA_ORIGINS.');
@@ -38,7 +40,6 @@ export default function OnboardingPage() {
         if (!apiKey.trim()) {
           throw new Error('Please enter a valid API key.');
         }
-        // Test key via dynamic validation proxy endpoint
         const res = await fetch('/api/validate-key', {
           method: 'POST',
           headers: {
@@ -54,10 +55,7 @@ export default function OnboardingPage() {
           throw new Error(data.error || `Validation failed (${res.status})`);
         }
 
-        // Store key locally
         localStorage.setItem(`framework-engine:api-key:${selectedProvider}`, apiKey.trim());
-
-        // Save initial global default provider and model target
         const topDiscoveredModel = data.modelNames?.[0] || (selectedProvider === 'gemini' ? 'gemini-2.5-flash' : selectedProvider === 'anthropic' ? 'claude-3-5-sonnet-20241022' : 'gpt-4o');
         localStorage.setItem('framework-engine:default-provider', selectedProvider);
         localStorage.setItem('framework-engine:default-model', topDiscoveredModel);
@@ -71,7 +69,6 @@ export default function OnboardingPage() {
         localStorage.setItem('framework-engine:system-profile', systemProfile.trim());
       }
 
-      // Route to Dashboard
       localStorage.removeItem('framework-engine:has_skipped_onboarding');
       router.push('/');
     } catch (err: any) {
@@ -103,182 +100,327 @@ export default function OnboardingPage() {
       </header>
 
       {/* 12 · Letter Macrostructure Body */}
-      <main className="max-w-2xl mx-auto my-12 space-y-8">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
-            <span>Dear Thinker,</span>
-            <span className="text-[var(--color-ink-muted)] font-normal">July 2026 • Letter No. 01</span>
-          </div>
-          <h1 className="font-display text-4xl md:text-5xl font-normal text-[var(--color-ink)] leading-tight">
-            Welcome to a local-first studio for multi-perspective clarity.
-          </h1>
-          <p className="text-base text-[var(--color-ink-muted)] leading-relaxed font-body">
-            Council of Minds separates knowledge frameworks from prompt behaviors so you can watch competing personas debate complex personal and strategic dilemmas.
-          </p>
-          <div className="text-xs font-mono text-[var(--color-ink-muted)] pt-1 italic">
-            — The Council Architects
-          </div>
-        </div>
-
-        {/* Privacy & Security Disclosure Banner */}
-        <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-2">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-ink)] font-mono">
-            <ShieldCheck className="w-4 h-4 text-[var(--color-accent)]" />
-            Local Storage & Privacy Guarantee
-          </div>
-          <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
-            Your chats, custom personas, and settings are stored 100% locally in your browser’s IndexedDB. Your API keys never touch a server database and only transit the stateless proxy during active generations.
-          </p>
-        </div>
-
-        {/* Provider Setup Configuration Card */}
-        <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl text-[var(--color-ink)]">Configure Your First Provider</h2>
-            <span className="text-xs font-mono text-[var(--color-ink-muted)]">BYOK Setup</span>
-          </div>
-
-          {/* Provider Selection */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            {[
-              { id: 'openai', label: 'OpenAI' },
-              { id: 'anthropic', label: 'Anthropic' },
-              { id: 'gemini', label: 'Google Gemini' },
-              { id: 'ollama', label: 'Ollama (Local)' },
-            ].map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => {
-                  setSelectedProvider(p.id as any);
-                  setValidationError(null);
-                }}
-                className={`btn-hallmark text-xs justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
-                  selectedProvider === p.id
-                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold'
-                    : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
+      <main className="max-w-2xl mx-auto my-8 space-y-6 w-full">
+        {/* Multi-Step Wizard Indicator */}
+        <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+          {[
+            { num: 1, label: 'Privacy Architecture' },
+            { num: 2, label: 'Provider Setup' },
+            { num: 3, label: 'Personalization' },
+          ].map((s) => (
+            <button
+              key={s.num}
+              type="button"
+              onClick={() => {
+                if (s.num < currentStep || s.num === 1) setCurrentStep(s.num as any);
+              }}
+              className={`flex items-center gap-2 text-xs font-mono transition-colors ${
+                currentStep === s.num
+                  ? 'text-[var(--color-accent)] font-semibold'
+                  : currentStep > s.num
+                  ? 'text-[var(--color-ink)] hover:text-[var(--color-accent)]'
+                  : 'text-[var(--color-ink-faint)] cursor-not-allowed'
+              }`}
+            >
+              <span
+                className={`w-5 h-5 rounded-full flex items-center justify-center border text-[10px] ${
+                  currentStep === s.num
+                    ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-bold'
+                    : currentStep > s.num
+                    ? 'border-emerald-500 bg-emerald-500/10 text-emerald-600'
+                    : 'border-[var(--color-border)] text-[var(--color-ink-faint)]'
                 }`}
               >
-                {p.label}
-              </button>
-            ))}
-          </div>
+                {currentStep > s.num ? '✓' : s.num}
+              </span>
+              <span className="hidden sm:inline">{s.label}</span>
+            </button>
+          ))}
+        </div>
 
-          {/* Key Input Field */}
-          {selectedProvider !== 'ollama' ? (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <label className="font-mono text-[var(--color-ink-muted)]">API Key ({selectedProvider.toUpperCase()})</label>
-                <a
-                  href={
-                    selectedProvider === 'openai'
-                      ? 'https://platform.openai.com/api-keys'
-                      : selectedProvider === 'anthropic'
-                      ? 'https://console.anthropic.com/settings/keys'
-                      : 'https://aistudio.google.com/app/apikey'
-                  }
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-[var(--color-accent)] hover:underline focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
-                >
-                  Get API Key <ExternalLink className="w-3 h-3" />
-                </a>
+        {/* STEP 1: Privacy Architecture & Local-First Guarantee */}
+        {currentStep === 1 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
+                <span>Step 1 of 3 • Fundamental Architecture</span>
+                <span className="text-[var(--color-ink-muted)] font-normal">July 2026</span>
               </div>
-              <div className="relative">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={`sk-...`}
-                  className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)] font-mono text-[var(--color-ink)]"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowKey(!showKey)}
-                  className="absolute right-3 top-2.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
-                  aria-label={showKey ? 'Hide key' : 'Show key'}
-                >
-                  {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Ollama Local Server URL</label>
-              <input
-                type="text"
-                value={ollamaUrl}
-                onChange={(e) => setOllamaUrl(e.target.value)}
-                className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] font-mono text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-              />
-              <p className="text-xs text-[var(--color-ink-faint)]">
-                Make sure your local Ollama instance allows CORS: <code className="bg-[var(--color-paper-3)] px-1 font-mono">OLLAMA_ORIGINS="{typeof window !== 'undefined' ? window.location.origin : '*'}" ollama serve</code>
+              <h1 className="font-display text-3xl md:text-4xl font-normal text-[var(--color-ink)] leading-tight">
+                Zero-Database, Local-First Privacy Guarantee.
+              </h1>
+              <p className="text-sm text-[var(--color-ink-muted)] leading-relaxed font-body">
+                Council of Minds is built ground-up on Bring Your Own Key (BYOK) principles. Your intellectual artifacts, personas, and conversation logs remain strictly under your control.
               </p>
             </div>
-          )}
 
-          {/* Default Persona Selection Card */}
-          <div className="space-y-2 pt-2 border-t border-[var(--color-border-hairline)]">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
-              <span className="flex items-center gap-1.5 font-semibold text-[var(--color-ink)]">
-                <UserCheck className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Choose Default Thought Partner
-              </span>
-              <span>1-on-1 Chats</span>
+            {/* Privacy Pillars Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold font-mono text-[var(--color-ink)]">
+                  <Lock className="w-4 h-4 text-emerald-600" />
+                  100% Client-Side Storage
+                </div>
+                <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                  All chat history, persona definitions, and rules are stored in your browser’s local IndexedDB. No backend database exists.
+                </p>
+              </div>
+
+              <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold font-mono text-[var(--color-ink)]">
+                  <Cpu className="w-4 h-4 text-[var(--color-accent)]" />
+                  Stateless API Proxy
+                </div>
+                <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                  Your API keys only transit in-memory proxy headers during active calls. They are never written to disk or logged.
+                </p>
+              </div>
+
+              <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-md)] space-y-2">
+                <div className="flex items-center gap-2 text-xs font-semibold font-mono text-[var(--color-ink)]">
+                  <Server className="w-4 h-4 text-sky-600" />
+                  Local AI Ready
+                </div>
+                <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                  Connect Ollama, LM Studio, or LocalAI for complete air-gapped zero-cloud execution with zero internet egress.
+                </p>
+              </div>
             </div>
-            <select
-              value={selectedPersonaId}
-              onChange={(e) => setSelectedPersonaId(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-            >
-              {personas.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.isSystem || p.id.startsWith('persona-') ? '⚡' : '🎨'} {p.name} — {p.role}
-                </option>
-              ))}
-            </select>
-          </div>
 
-          {/* Optional Personal System Profile Textarea */}
-          <div className="space-y-2 pt-2 border-t border-[var(--color-border-hairline)]">
-            <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-ink-muted)]">
-              <User className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Personal System Profile (Optional)
+            {/* Privacy Guarantee Confirmation */}
+            <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-[var(--radius-md)] flex items-start gap-3">
+              <ShieldCheck className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="text-xs font-mono font-semibold text-emerald-700">Privacy Verification Standard</div>
+                <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                  You can audit your storage consumption, key inventory, and privacy footprint anytime in the Analytics drawer.
+                </p>
+              </div>
             </div>
-            <textarea
-              rows={3}
-              value={systemProfile}
-              onChange={(e) => setSystemProfile(e.target.value)}
-              placeholder="e.g. I am a founder building open source products. Include my background context when personas respond..."
-              className="w-full p-2.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)] focus:ring-1 focus:ring-[var(--color-focus)]"
-            />
-          </div>
 
-          {validationError && (
-            <div className="p-3 text-xs bg-[var(--color-error)]/10 text-[var(--color-error)] border border-[var(--color-error)]/20 rounded-[var(--radius-sm)]">
-              {validationError}
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border-hairline)]">
+              <button
+                type="button"
+                onClick={handleSkip}
+                className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] underline focus:outline-none rounded"
+              >
+                Skip Onboarding (Read-Only Mode)
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentStep(2)}
+                className="btn-hallmark btn-hallmark-primary text-xs gap-2 focus:outline-none"
+              >
+                I Understand & Agree → Setup Provider
+                <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center justify-between pt-2">
-            <button
-              type="button"
-              onClick={handleSkip}
-              className="text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] underline focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] rounded"
-            >
-              Skip for Now (Read-Only Mode)
-            </button>
-
-            <button
-              type="button"
-              onClick={handleValidateAndSave}
-              disabled={isValidating}
-              className="btn-hallmark btn-hallmark-primary text-xs gap-2 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
-            >
-              {isValidating ? 'Validating Key...' : 'Validate & Save'}
-              <ArrowRight className="w-4 h-4" />
-            </button>
           </div>
-        </div>
+        )}
+
+        {/* STEP 2: Provider Setup & Connection Validation */}
+        {currentStep === 2 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
+                <span>Step 2 of 3 • Provider Connection</span>
+                <span className="text-[var(--color-ink-muted)] font-normal">BYOK Setup</span>
+              </div>
+              <h2 className="font-display text-2xl text-[var(--color-ink)]">Configure Your First AI Provider</h2>
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                Select your preferred model host. Your API key will be validated and saved locally in browser storage.
+              </p>
+            </div>
+
+            <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
+              {/* Provider Selection */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {[
+                  { id: 'openai', label: 'OpenAI' },
+                  { id: 'anthropic', label: 'Anthropic' },
+                  { id: 'gemini', label: 'Google Gemini' },
+                  { id: 'ollama', label: 'Ollama (Local)' },
+                ].map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedProvider(p.id as any);
+                      setValidationError(null);
+                    }}
+                    className={`btn-hallmark text-xs justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                      selectedProvider === p.id
+                        ? 'border-[var(--color-accent)] bg-[var(--color-accent-subtle)] text-[var(--color-accent)] font-semibold'
+                        : 'border-[var(--color-border)] text-[var(--color-ink-muted)] hover:border-[var(--color-ink-muted)]'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Key Input Field */}
+              {selectedProvider !== 'ollama' ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <label className="font-mono text-[var(--color-ink-muted)]">API Key ({selectedProvider.toUpperCase()})</label>
+                    <a
+                      href={
+                        selectedProvider === 'openai'
+                          ? 'https://platform.openai.com/api-keys'
+                          : selectedProvider === 'anthropic'
+                          ? 'https://console.anthropic.com/settings/keys'
+                          : 'https://aistudio.google.com/app/apikey'
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[var(--color-accent)] hover:underline focus:outline-none rounded"
+                    >
+                      Get API Key <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={apiKey}
+                      onChange={(e) => setApiKey(e.target.value)}
+                      placeholder={`sk-...`}
+                      className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] focus:outline-none font-mono text-[var(--color-ink)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowKey(!showKey)}
+                      className="absolute right-3 top-2.5 text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]"
+                      aria-label={showKey ? 'Hide key' : 'Show key'}
+                    >
+                      {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Ollama Local Server URL</label>
+                  <input
+                    type="text"
+                    value={ollamaUrl}
+                    onChange={(e) => setOllamaUrl(e.target.value)}
+                    className="w-full px-3 py-2 text-sm bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] font-mono text-[var(--color-ink)] focus:outline-none"
+                  />
+                  <p className="text-xs text-[var(--color-ink-faint)]">
+                    Ensure Ollama is running and CORS is enabled: <code className="bg-[var(--color-paper-3)] px-1 font-mono">OLLAMA_ORIGINS="{typeof window !== 'undefined' ? window.location.origin : '*'}" ollama serve</code>
+                  </p>
+                </div>
+              )}
+
+              {validationError && (
+                <div className="p-3 text-xs bg-[var(--color-error)]/10 text-[var(--color-error)] border border-[var(--color-error)]/20 rounded-[var(--radius-sm)]">
+                  {validationError}
+                </div>
+              )}
+            </div>
+
+            {/* Navigation Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border-hairline)]">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(1)}
+                className="btn-hallmark text-xs gap-1 focus:outline-none"
+              >
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setCurrentStep(3)}
+                className="btn-hallmark btn-hallmark-primary text-xs gap-2 focus:outline-none"
+              >
+                Continue to Personalization <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* STEP 3: Personalization & Initial Persona Setup */}
+        {currentStep === 3 && (
+          <div className="space-y-6 animate-in fade-in duration-300">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-mono uppercase tracking-widest text-[var(--color-accent)] font-semibold">
+                <span>Step 3 of 3 • Personalization</span>
+                <span className="text-[var(--color-ink-muted)] font-normal">Thought Partner Setup</span>
+              </div>
+              <h2 className="font-display text-2xl text-[var(--color-ink)]">Choose Default Persona & System Context</h2>
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                Select your primary 1-on-1 dialogue partner and add optional context about yourself.
+              </p>
+            </div>
+
+            <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
+              {/* Default Persona Selection */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+                  <span className="flex items-center gap-1.5 font-semibold text-[var(--color-ink)]">
+                    <UserCheck className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Choose Default Thought Partner
+                  </span>
+                  <span>1-on-1 Chats</span>
+                </div>
+                <select
+                  value={selectedPersonaId}
+                  onChange={(e) => setSelectedPersonaId(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none"
+                >
+                  {personas.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.isSystem || p.id.startsWith('persona-') ? '⚡' : '🎨'} {p.name} — {p.role}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Personal System Profile Textarea */}
+              <div className="space-y-2 pt-2 border-t border-[var(--color-border-hairline)]">
+                <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-ink-muted)]">
+                  <User className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Personal System Profile (Optional)
+                </div>
+                <textarea
+                  rows={3}
+                  value={systemProfile}
+                  onChange={(e) => setSystemProfile(e.target.value)}
+                  placeholder="e.g. I am a founder building open source products. Include my background context when personas respond..."
+                  className="w-full p-2.5 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none"
+                />
+              </div>
+
+              {validationError && (
+                <div className="p-3 text-xs bg-[var(--color-error)]/10 text-[var(--color-error)] border border-[var(--color-error)]/20 rounded-[var(--radius-sm)]">
+                  {validationError}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex items-center justify-between pt-4 border-t border-[var(--color-border-hairline)]">
+              <button
+                type="button"
+                onClick={() => setCurrentStep(2)}
+                className="btn-hallmark text-xs gap-1 focus:outline-none"
+              >
+                <ChevronLeft className="w-4 h-4" /> Back
+              </button>
+
+              <button
+                type="button"
+                onClick={handleValidateAndSave}
+                disabled={isValidating}
+                className="btn-hallmark btn-hallmark-primary text-xs gap-2 focus:outline-none disabled:opacity-40"
+              >
+                {isValidating ? 'Validating & Launching...' : 'Validate & Finish Setup'}
+                <CheckCircle2 className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Ft6 Letter Close Footer */}
