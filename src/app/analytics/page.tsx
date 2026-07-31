@@ -9,6 +9,7 @@ import { StorageBreakdownCard } from '@/components/analytics/StorageBreakdownCar
 import { PersonaAnalyticsBreakdown } from '@/components/analytics/PersonaAnalyticsBreakdown';
 import { UsageProjectionCalculator } from '@/components/analytics/UsageProjectionCalculator';
 import { PeakUsageHeatmap } from '@/components/analytics/PeakUsageHeatmap';
+import { ModelEfficiencyMatrix } from '@/components/analytics/ModelEfficiencyMatrix';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N3 */
 
@@ -213,6 +214,9 @@ export default function AnalyticsPage() {
 
         {/* 24-Hour Peak Token Usage Heatmap */}
         <PeakUsageHeatmap />
+
+        {/* Model-by-Model Efficiency Comparison Matrix */}
+        <ModelEfficiencyMatrix />
 
         {/* Per-Persona Usage & Turn Analytics */}
         <PersonaAnalyticsBreakdown />
