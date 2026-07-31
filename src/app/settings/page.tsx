@@ -9,6 +9,7 @@ import { RestorePreviewModal, BackupManifest } from '@/components/settings/Resto
 import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { ProviderTestSuiteModal } from '@/components/settings/ProviderTestSuiteModal';
+import { ModelFallbackManager } from '@/components/settings/ModelFallbackManager';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
 import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup';
@@ -611,6 +612,9 @@ export default function SettingsPage() {
               </div>
             </div>
           </div>
+
+          {/* Model Fallbacks & Priority Manager */}
+          <ModelFallbackManager />
 
           {/* Section 3: Personal System Profile */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
