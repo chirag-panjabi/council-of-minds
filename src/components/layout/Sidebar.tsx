@@ -18,6 +18,9 @@ import {
   Keyboard,
   Menu,
   X,
+  Pencil,
+  Trash2,
+  Check,
 } from 'lucide-react';
 import { SearchPalette } from '@/components/search/SearchPalette';
 import { KeyboardShortcutsModal } from '@/components/ui/KeyboardShortcutsModal';
@@ -30,6 +33,24 @@ export function Sidebar() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editingTitle, setEditingTitle] = useState('');
+  const [deletingChat, setDeletingChat] = useState<{ id: string; title: string } | null>(null);
+
+  const handleSaveRename = async (id: string) => {
+    if (editingTitle.trim()) {
+      await db.chats.update(id, { title: editingTitle.trim(), updatedAt: Date.now() });
+    }
+    setEditingChatId(null);
+    setEditingTitle('');
+  };
+
+  const handleDeleteChat = async (id: string) => {
+    await db.chats.delete(id);
+    await db.messages.where('sessionId').equals(id).delete();
+    setDeletingChat(null);
+  };
 
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
@@ -253,44 +274,108 @@ export function Sidebar() {
                     {group.chats.map((c) => {
                       const href = c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`;
                       const isCurrent = pathname === href;
+                      const isEditing = editingChatId === c.id;
                       const singlePersona = c.type === '1-on-1' ? personas.find((p) => p.id === c.personaId) : null;
                       const councilPersonas = c.type === 'council' ? personas.filter((p) => c.personaIds?.includes(p.id)) : [];
 
+                      if (isEditing) {
+                        return (
+                          <div
+                            key={c.id}
+                            className="flex items-center gap-1 px-2 py-1 bg-[var(--color-paper)] border border-[var(--color-accent)]/50 rounded-[var(--radius-sm)] text-xs"
+                          >
+                            <input
+                              type="text"
+                              value={editingTitle}
+                              onChange={(e) => setEditingTitle(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveRename(c.id);
+                                if (e.key === 'Escape') setEditingChatId(null);
+                              }}
+                              autoFocus
+                              className="flex-1 bg-transparent px-1 py-0.5 text-xs text-[var(--color-ink)] focus:outline-none font-mono"
+                            />
+                            <button
+                              onClick={() => handleSaveRename(c.id)}
+                              className="p-1 hover:text-emerald-500 text-[var(--color-accent)]"
+                              title="Save title"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => setEditingChatId(null)}
+                              className="p-1 hover:text-[var(--color-ink)] text-[var(--color-ink-muted)]"
+                              title="Cancel"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        );
+                      }
+
                       return (
-                        <Link
+                        <div
                           key={c.id}
-                          href={href}
-                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs transition-colors group ${
+                          className={`group relative flex items-center justify-between px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs transition-colors ${
                             isCurrent
                               ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
                               : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
                           }`}
                         >
-                          {c.type === '1-on-1' ? (
-                            <div
-                              className="w-4 h-4 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 text-[9px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold shrink-0"
-                              title={singlePersona?.name || '1-on-1 Persona'}
+                          <Link href={href} className="flex items-center gap-2 min-w-0 flex-1">
+                            {c.type === '1-on-1' ? (
+                              <div
+                                className="w-4 h-4 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 text-[9px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold shrink-0"
+                                title={singlePersona?.name || '1-on-1 Persona'}
+                              >
+                                {singlePersona?.name?.charAt(0) || 'P'}
+                              </div>
+                            ) : (
+                              <div className="flex items-center -space-x-1 shrink-0">
+                                {councilPersonas.slice(0, 2).map((cp) => (
+                                  <div
+                                    key={cp.id}
+                                    className="w-3.5 h-3.5 rounded-full bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[8px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold"
+                                    title={cp.name}
+                                  >
+                                    {cp.name.charAt(0)}
+                                  </div>
+                                ))}
+                                {councilPersonas.length === 0 && (
+                                  <Users className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0 opacity-70" />
+                                )}
+                              </div>
+                            )}
+                            <span className="truncate flex-1">{c.title}</span>
+                          </Link>
+
+                          {/* Hover action buttons */}
+                          <div className="opacity-0 group-hover:opacity-100 flex items-center gap-1 pl-1 transition-opacity shrink-0">
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setEditingChatId(c.id);
+                                setEditingTitle(c.title);
+                              }}
+                              className="p-1 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] transition-colors"
+                              title="Rename session"
                             >
-                              {singlePersona?.name?.charAt(0) || 'P'}
-                            </div>
-                          ) : (
-                            <div className="flex items-center -space-x-1 shrink-0">
-                              {councilPersonas.slice(0, 2).map((cp) => (
-                                <div
-                                  key={cp.id}
-                                  className="w-3.5 h-3.5 rounded-full bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[8px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold"
-                                  title={cp.name}
-                                >
-                                  {cp.name.charAt(0)}
-                                </div>
-                              ))}
-                              {councilPersonas.length === 0 && (
-                                <Users className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0 opacity-70" />
-                              )}
-                            </div>
-                          )}
-                          <span className="truncate flex-1">{c.title}</span>
-                        </Link>
+                              <Pencil className="w-3 h-3" />
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setDeletingChat({ id: c.id, title: c.title });
+                              }}
+                              className="p-1 text-[var(--color-ink-muted)] hover:text-red-500 transition-colors"
+                              title="Delete session"
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </button>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
@@ -299,6 +384,35 @@ export function Sidebar() {
             </div>
           </div>
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {deletingChat && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+            <div className="bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-lg)] p-5 max-w-sm w-full space-y-4 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 text-red-600">
+                <ShieldAlert className="w-5 h-5 shrink-0" />
+                <h3 className="text-sm font-semibold text-[var(--color-ink)]">Delete Session?</h3>
+              </div>
+              <p className="text-xs text-[var(--color-ink-muted)]">
+                Are you sure you want to delete <span className="font-semibold text-[var(--color-ink)]">&quot;{deletingChat.title}&quot;</span>? This will permanently remove the chat session and transcript history from local storage.
+              </p>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  onClick={() => setDeletingChat(null)}
+                  className="px-3 py-1.5 text-xs font-mono border border-[var(--color-border)] rounded-[var(--radius-md)] hover:bg-[var(--color-paper-2)] text-[var(--color-ink)] transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteChat(deletingChat.id)}
+                  className="px-3 py-1.5 text-xs font-mono bg-red-600 hover:bg-red-700 text-white rounded-[var(--radius-md)] transition-colors shadow-xs"
+                >
+                  Delete Session
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Footer Navigation Bar */}
         <div className="p-4 border-t border-[var(--color-border-hairline)] space-y-1">
