@@ -6,7 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
 import Link from 'next/link';
-import { Users, MessageSquare, ArrowRight, Zap, Shield, Search, Plus, Trash2 } from 'lucide-react';
+import { Users, MessageSquare, ArrowRight, Zap, Shield, Search, Plus, Trash2, Brain } from 'lucide-react';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { useRouter } from 'next/navigation';
 
@@ -71,6 +71,63 @@ export default function DashboardPage() {
             Multi-persona cognitive framework for structured decision synthesis, dialectic debate, and analytical 1-on-1 dialogue.
           </p>
         </header>
+
+        {/* Primary Launch Shortcuts Banner (§5.5) */}
+        <section aria-label="Primary Launch Shortcuts" className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Link
+            href="/chat/council/new"
+            className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] hover:border-[var(--color-accent)] rounded-[var(--radius-md)] flex items-center justify-between group transition-all"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[var(--color-accent)] shrink-0 group-hover:scale-105 transition-transform">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-display text-base text-[var(--color-ink)] flex items-center gap-1.5">
+                  Start Council Debate
+                </div>
+                <div className="text-xs font-mono text-[var(--color-ink-muted)]">Multi-persona dialectic panel</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[var(--color-ink-muted)] group-hover:text-[var(--color-accent)] group-hover:translate-x-1 transition-all" />
+          </Link>
+
+          <button
+            onClick={() => setIsSelectorOpen(true)}
+            className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] hover:border-[var(--color-accent)] rounded-[var(--radius-md)] flex items-center justify-between group transition-all text-left cursor-pointer focus:outline-none"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[var(--color-accent)] shrink-0 group-hover:scale-105 transition-transform">
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-display text-base text-[var(--color-ink)] flex items-center gap-1.5">
+                  Start 1-on-1 Dialogue
+                </div>
+                <div className="text-xs font-mono text-[var(--color-ink-muted)]">Direct analytical session</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[var(--color-ink-muted)] group-hover:text-[var(--color-accent)] group-hover:translate-x-1 transition-all" />
+          </button>
+
+          <Link
+            href="/personas"
+            className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] hover:border-[var(--color-accent)] rounded-[var(--radius-md)] flex items-center justify-between group transition-all"
+          >
+            <div className="flex items-center gap-3.5">
+              <div className="w-10 h-10 rounded-[var(--radius-sm)] bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[var(--color-accent)] shrink-0 group-hover:scale-105 transition-transform">
+                <Brain className="w-5 h-5" />
+              </div>
+              <div>
+                <div className="font-display text-base text-[var(--color-ink)] flex items-center gap-1.5">
+                  Persona Library
+                </div>
+                <div className="text-xs font-mono text-[var(--color-ink-muted)]">Browse &amp; configure personas</div>
+              </div>
+            </div>
+            <ArrowRight className="w-4 h-4 text-[var(--color-ink-muted)] group-hover:text-[var(--color-accent)] group-hover:translate-x-1 transition-all" />
+          </Link>
+        </section>
 
         {/* Bento Grid Layout (Macrostructure 01) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
