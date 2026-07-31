@@ -1,13 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import type { Persona } from '@/types';
 import Link from 'next/link';
-import { Users, MessageSquare, ArrowRight, Zap, Shield, Search, Plus, Trash2, Brain } from 'lucide-react';
+import { Users, MessageSquare, ArrowRight, Zap, Shield, Search, Plus, Trash2, Brain, Sparkles, HelpCircle } from 'lucide-react';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
+import { QuickstartTourModal } from '@/components/onboarding/QuickstartTourModal';
 import { useRouter } from 'next/navigation';
 
 /* Hallmark · genre: editorial · macrostructure: 01-bento · theme: studio · nav: N1 · footer: Ft1 */
@@ -21,6 +22,16 @@ export default function DashboardPage() {
 
   const [personaSearch, setPersonaSearch] = useState('');
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [isTourOpen, setIsTourOpen] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const hasSeenTour = localStorage.getItem('framework-engine:has_seen_quickstart_tour');
+      if (!hasSeenTour) {
+        setIsTourOpen(true);
+      }
+    }
+  }, []);
 
   const totalTokens = usageRecords.reduce(
     (acc, rec) => acc + (rec.promptTokens || 0) + (rec.completionTokens || 0),
@@ -58,18 +69,34 @@ export default function DashboardPage() {
           onSelectPersona={handleSelectPersonaForChat}
         />
 
+        {/* Quickstart Tour Overlay */}
+        <QuickstartTourModal
+          isOpen={isTourOpen}
+          onClose={() => setIsTourOpen(false)}
+        />
+
         {/* Masthead Header (N1) */}
-        <header className="border-b border-[var(--color-border-hairline)] pb-6 space-y-2">
-          <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
-            <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] inline-block" />
-            Workspace Orientation • Sovereign Local Engine
+        <header className="border-b border-[var(--color-border-hairline)] pb-6 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
+              <span className="w-2 h-2 rounded-full bg-[var(--color-accent)] inline-block" />
+              Workspace Orientation • Sovereign Local Engine
+            </div>
+            <h1 className="font-display text-4xl md:text-5xl font-normal text-[var(--color-ink)] tracking-tight">
+              Council of Minds
+            </h1>
+            <p className="text-sm leading-relaxed text-[var(--color-ink-muted)] max-w-2xl font-body">
+              Multi-persona cognitive framework for structured decision synthesis, dialectic debate, and analytical 1-on-1 dialogue.
+            </p>
           </div>
-          <h1 className="font-display text-4xl md:text-5xl font-normal text-[var(--color-ink)] tracking-tight">
-            Council of Minds
-          </h1>
-          <p className="text-sm leading-relaxed text-[var(--color-ink-muted)] max-w-2xl font-body">
-            Multi-persona cognitive framework for structured decision synthesis, dialectic debate, and analytical 1-on-1 dialogue.
-          </p>
+
+          <button
+            type="button"
+            onClick={() => setIsTourOpen(true)}
+            className="btn-hallmark text-xs gap-1.5 self-start md:self-auto focus:outline-none shrink-0"
+          >
+            <HelpCircle className="w-4 h-4 text-[var(--color-accent)]" /> Quickstart Tour
+          </button>
         </header>
 
         {/* Primary Launch Shortcuts Banner (§5.5) */}
