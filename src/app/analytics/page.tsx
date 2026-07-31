@@ -8,6 +8,7 @@ import { BarChart2, Cpu, HardDrive, Trash2, Search, Download, DollarSign, Zap } 
 import { StorageBreakdownCard } from '@/components/analytics/StorageBreakdownCard';
 import { PersonaAnalyticsBreakdown } from '@/components/analytics/PersonaAnalyticsBreakdown';
 import { UsageProjectionCalculator } from '@/components/analytics/UsageProjectionCalculator';
+import { PeakUsageHeatmap } from '@/components/analytics/PeakUsageHeatmap';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N3 */
 
@@ -209,6 +210,9 @@ export default function AnalyticsPage() {
 
         {/* Cost & Usage Projection Calculator */}
         <UsageProjectionCalculator />
+
+        {/* 24-Hour Peak Token Usage Heatmap */}
+        <PeakUsageHeatmap />
 
         {/* Per-Persona Usage & Turn Analytics */}
         <PersonaAnalyticsBreakdown />
