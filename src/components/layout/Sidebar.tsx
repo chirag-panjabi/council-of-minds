@@ -32,6 +32,7 @@ export function Sidebar() {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
 
   const groups = useLiveQuery(() => db.groups.toArray()) || [];
+  const personas = useLiveQuery(() => db.personas.toArray()) || [];
   const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(30).toArray()) || [];
 
   // Close mobile drawer on route change
@@ -170,16 +171,35 @@ export function Sidebar() {
                   No saved rosters
                 </div>
               ) : (
-                groups.slice(0, 5).map((g) => (
-                  <Link
-                    key={g.id}
-                    href="/personas/groups"
-                    className="flex items-center justify-between px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors"
-                  >
-                    <span className="truncate">{g.name}</span>
-                    <ChevronRight className="w-3 h-3 opacity-50" />
-                  </Link>
-                ))
+                groups.slice(0, 5).map((g) => {
+                  const memberPersonas = personas.filter((p) => g.personaIds?.includes(p.id));
+                  return (
+                    <Link
+                      key={g.id}
+                      href={`/chat/council/new?group=${g.id}`}
+                      className="flex items-center justify-between px-3 py-1.5 rounded-[var(--radius-sm)] text-xs text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)] transition-colors group"
+                      title={`Launch Council Debate with ${g.name}`}
+                    >
+                      <span className="truncate flex-1">{g.name}</span>
+                      <div className="flex items-center -space-x-1.5 shrink-0 ml-2">
+                        {memberPersonas.slice(0, 3).map((m) => (
+                          <div
+                            key={m.id}
+                            className="w-4 h-4 rounded-full bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[9px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold"
+                            title={m.name}
+                          >
+                            {m.name.charAt(0)}
+                          </div>
+                        ))}
+                        {memberPersonas.length > 3 && (
+                          <span className="text-[9px] font-mono text-[var(--color-ink-muted)] pl-1">
+                            +{memberPersonas.length - 3}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
+                  );
+                })
               )}
             </div>
           </div>
