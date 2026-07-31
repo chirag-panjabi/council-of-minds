@@ -13,6 +13,7 @@ import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicMode
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
 import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
+import { assembleSystemPrompt } from '@/lib/utils/systemPromptAssembler';
 import { InSessionSearchOverlay } from '@/components/chat/InSessionSearchOverlay';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
@@ -345,10 +346,11 @@ export default function OneOnOneChatPage() {
       const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
 
       const fullHistory = [...activeMessages, userMessageObj];
+      const assembledPrompt = assembleSystemPrompt({ persona });
       const { systemPrompt: activeSystemPrompt, messages: retentionMessages } = buildMessagesForRetention(
         fullHistory,
         contextRetention,
-        persona.systemPrompt
+        assembledPrompt
       );
 
       const apiMessages = retentionMessages.map((m) => ({

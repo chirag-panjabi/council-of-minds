@@ -11,6 +11,13 @@ export interface PersonaRevision {
   changeNote?: string;
 }
 
+export interface PersonaRule {
+  id: string;
+  category: 'Tone' | 'Style' | 'Taboo' | 'Formatting' | string;
+  content: string;
+  enabled?: boolean;
+}
+
 export interface Persona {
   id: string;
   name: string;
@@ -18,6 +25,7 @@ export interface Persona {
   role: string;
   description: string;
   systemPrompt: string;
+  advancedRules?: PersonaRule[];
   recommendedModel?: string;
   tags: string[];
   isArchived: boolean;

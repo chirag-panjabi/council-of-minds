@@ -14,6 +14,7 @@ import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
 import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
+import { assembleSystemPrompt } from '@/lib/utils/systemPromptAssembler';
 import { InSessionSearchOverlay } from '@/components/chat/InSessionSearchOverlay';
 import { calculateCouncilCostAndTokens } from '@/lib/utils/providerCapabilities';
 
@@ -370,7 +371,12 @@ export default function CouncilChatPage() {
         : (selectedProvider || 'openai');
       const apiKey = localStorage.getItem(`framework-engine:api-key:${turnProvider}`) || '';
 
-      const basePrompt = `${speaker.systemPrompt || ''}\n\n--- COUNCIL DEBATE DIRECTIVE ---\nYou are participating in a multi-agent Council debate as ${speaker.name} (${speaker.role}). Formulate your own independent, concise analysis based on the conversation so far.\nCRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:' or '[${speaker.name} (${speaker.role})]:'). Write ONLY your direct response.`;
+      const roleType = personaGroup?.chairmanPersonaId === speaker.id ? 'chairman' : personaGroup?.skepticPersonaId === speaker.id ? 'skeptic' : personaGroup?.synthesizerPersonaId === speaker.id ? 'synthesizer' : 'member';
+      const basePrompt = assembleSystemPrompt({
+        persona: speaker,
+        councilRole: roleType,
+        responseDirective: `CRITICAL DIRECTIVE: Do NOT prepend your name or role in brackets to your response (e.g. do NOT write '[${speaker.name}]:'). Write ONLY your direct response.`,
+      });
 
       const { systemPrompt: activeSystemPrompt, messages: retentionMessages } = buildMessagesForRetention(
         conversationHistory,
