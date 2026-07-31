@@ -35,6 +35,18 @@ export function Sidebar() {
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
   const recentChats = useLiveQuery(() => db.chats.orderBy('updatedAt').reverse().limit(30).toArray()) || [];
 
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const startOfYesterday = startOfToday - 86400000;
+  const startOf7Days = startOfToday - 6 * 86400000;
+
+  const dateGroups: { label: string; chats: typeof recentChats }[] = [
+    { label: 'Today', chats: recentChats.filter((c) => c.updatedAt >= startOfToday) },
+    { label: 'Yesterday', chats: recentChats.filter((c) => c.updatedAt >= startOfYesterday && c.updatedAt < startOfToday) },
+    { label: 'Previous 7 Days', chats: recentChats.filter((c) => c.updatedAt >= startOf7Days && c.updatedAt < startOfYesterday) },
+    { label: 'Older', chats: recentChats.filter((c) => c.updatedAt < startOf7Days) },
+  ].filter((g) => g.chats.length > 0);
+
   // Close mobile drawer on route change
   useEffect(() => {
     setIsMobileOpen(false);
@@ -227,35 +239,42 @@ export function Sidebar() {
                 ⌘K
               </button>
             </div>
-            <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 scrollbar-thin">
+            <div className="max-h-56 overflow-y-auto space-y-3 pr-1 scrollbar-thin">
               {recentChats.length === 0 ? (
                 <div className="px-3 py-2 text-[11px] font-mono text-[var(--color-ink-muted)] italic border border-dashed border-[var(--color-border-hairline)] rounded-[var(--radius-sm)]">
                   No active sessions yet
                 </div>
               ) : (
-                recentChats.map((c) => {
-                  const href = c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`;
-                  const isCurrent = pathname === href;
+                dateGroups.map((group) => (
+                  <div key={group.label} className="space-y-0.5">
+                    <div className="px-2 py-0.5 text-[9px] font-mono uppercase tracking-wider text-[var(--color-ink-muted)] opacity-75">
+                      {group.label}
+                    </div>
+                    {group.chats.map((c) => {
+                      const href = c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`;
+                      const isCurrent = pathname === href;
 
-                  return (
-                    <Link
-                      key={c.id}
-                      href={href}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs transition-colors group ${
-                        isCurrent
-                          ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
-                          : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
-                      }`}
-                    >
-                      {c.type === 'council' ? (
-                        <Users className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
-                      ) : (
-                        <MessageSquare className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
-                      )}
-                      <span className="truncate flex-1">{c.title}</span>
-                    </Link>
-                  );
-                })
+                      return (
+                        <Link
+                          key={c.id}
+                          href={href}
+                          className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] text-xs transition-colors group ${
+                            isCurrent
+                              ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
+                              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+                          }`}
+                        >
+                          {c.type === 'council' ? (
+                            <Users className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
+                          ) : (
+                            <MessageSquare className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
+                          )}
+                          <span className="truncate flex-1">{c.title}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))
               )}
             </div>
           </div>
