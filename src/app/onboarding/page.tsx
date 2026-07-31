@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck, CheckCircle2, Lock, Cpu, Server, ChevronLeft } from 'lucide-react';
+import { UnifiedKeyManager } from '@/components/settings/UnifiedKeyManager';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
 
@@ -235,6 +236,12 @@ export default function OnboardingPage() {
             </div>
 
             <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
+              <UnifiedKeyManager
+                onAppliedKeys={(keys) => {
+                  setApiKey(keys[selectedProvider as keyof typeof keys] || keys.openrouter);
+                }}
+              />
+
               {/* Provider Selection */}
               <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                 {[

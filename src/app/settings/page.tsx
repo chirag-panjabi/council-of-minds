@@ -11,6 +11,7 @@ import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { ProviderTestSuiteModal } from '@/components/settings/ProviderTestSuiteModal';
 import { ModelFallbackManager } from '@/components/settings/ModelFallbackManager';
 import { LocalEndpointManager } from '@/components/settings/LocalEndpointManager';
+import { UnifiedKeyManager } from '@/components/settings/UnifiedKeyManager';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
 import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup';
@@ -320,6 +321,14 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
+              <UnifiedKeyManager
+                onAppliedKeys={(keys) => {
+                  setOpenaiKey(keys.openai);
+                  setAnthropicKey(keys.anthropic);
+                  setGeminiKey(keys.gemini);
+                }}
+              />
+
               {/* OpenAI Key Input */}
               <div className="space-y-1.5">
                 <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
