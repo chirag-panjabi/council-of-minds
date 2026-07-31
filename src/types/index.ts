@@ -68,6 +68,7 @@ export interface ChatMessage {
   role: 'user' | 'assistant' | 'system' | 'synthesizer';
   content: string;
   reasoning?: string; // Separated raw reasoning tokens (<think>...</think>)
+  model?: string;
   timestamp: number;
   isError?: boolean;
   errorDetails?: string; // Collapsible raw diagnostic JSON or stack trace
