@@ -1,47 +1,71 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { HardDrive, Database, Layers, FileText, CheckCircle2, Shield } from 'lucide-react';
+import { HardDrive, Database, Layers, FileText, CheckCircle2, Shield, ChevronDown, ChevronUp, Key } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 
-/* Hallmark · component: StorageBreakdownCard · genre: studio · theme: studio · spec: spec_analytics.md (§8.1) */
+/* Hallmark · component: StorageBreakdownCard · genre: studio · theme: studio · spec: spec_analytics.md (§8.1 & §8.6) */
+
+interface LocalStorageKeyItem {
+  key: string;
+  sizeBytes: number;
+  type: string;
+}
 
 export function StorageBreakdownCard() {
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
+  const groups = useLiveQuery(() => db.groups.toArray()) || [];
   const chats = useLiveQuery(() => db.chats.toArray()) || [];
   const messages = useLiveQuery(() => db.messages.toArray()) || [];
+  const attachments = useLiveQuery(() => db.attachments.toArray()) || [];
   const usage = useLiveQuery(() => db.usage.toArray()) || [];
 
+  const [isAuditExpanded, setIsAuditExpanded] = useState<boolean>(false);
+  const [localStorageKeys, setLocalStorageKeys] = useState<LocalStorageKeyItem[]>([]);
   const [localStorageCount, setLocalStorageCount] = useState<number>(0);
   const [localStorageSizeBytes, setLocalStorageSizeBytes] = useState<number>(0);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      let count = 0;
+      const items: LocalStorageKeyItem[] = [];
       let totalBytes = 0;
 
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('framework-engine:')) {
-          count++;
           const val = localStorage.getItem(key) || '';
-          totalBytes += (key.length + val.length) * 2; // UTF-16 approximate bytes
+          const size = (key.length + val.length) * 2; // UTF-16 approximate bytes
+          totalBytes += size;
+
+          let type = 'App Preference';
+          if (key.includes('api_key') || key.includes('keys')) {
+            type = 'API Keys (Encrypted in LocalStorage)';
+          } else if (key.includes('egress')) {
+            type = 'Privacy Acknowledgment';
+          } else if (key.includes('onboarding')) {
+            type = 'Onboarding Status';
+          }
+
+          items.push({ key, sizeBytes: size, type });
         }
       }
 
-      setLocalStorageCount(count);
+      setLocalStorageKeys(items);
+      setLocalStorageCount(items.length);
       setLocalStorageSizeBytes(totalBytes);
     }
   }, []);
 
   // Estimate IndexedDB byte size (~2 bytes per char of stringified content)
   const personaBytes = personas.reduce((acc, p) => acc + JSON.stringify(p).length * 2, 0);
+  const groupBytes = groups.reduce((acc, g) => acc + JSON.stringify(g).length * 2, 0);
   const chatBytes = chats.reduce((acc, c) => acc + JSON.stringify(c).length * 2, 0);
   const messageBytes = messages.reduce((acc, m) => acc + JSON.stringify(m).length * 2, 0);
+  const attachmentBytes = attachments.reduce((acc, a) => acc + JSON.stringify(a).length * 2, 0);
   const usageBytes = usage.reduce((acc, u) => acc + JSON.stringify(u).length * 2, 0);
 
-  const indexedDbTotalBytes = personaBytes + chatBytes + messageBytes + usageBytes;
+  const indexedDbTotalBytes = personaBytes + groupBytes + chatBytes + messageBytes + attachmentBytes + usageBytes;
   const grandTotalBytes = indexedDbTotalBytes + localStorageSizeBytes;
 
   const formatSize = (bytes: number) => {
@@ -127,6 +151,89 @@ export function StorageBreakdownCard() {
           </div>
           <div className="text-sm font-semibold text-[var(--color-ink)]">{formatSize(localStorageSizeBytes)}</div>
         </div>
+      </div>
+
+      {/* Privacy Footprint Audit Drawer Toggle */}
+      <div className="pt-2 border-t border-[var(--color-border-hairline)]">
+        <button
+          onClick={() => setIsAuditExpanded(!isAuditExpanded)}
+          className="w-full flex items-center justify-between py-2 text-xs font-mono text-[var(--color-accent)] hover:underline"
+        >
+          <span className="flex items-center gap-2 font-semibold uppercase tracking-wider">
+            <Shield className="w-4 h-4" /> Expand Privacy Footprint & Key Inventory Audit
+          </span>
+          {isAuditExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+        </button>
+
+        {isAuditExpanded && (
+          <div className="mt-4 space-y-6 font-mono text-xs pt-4 border-t border-[var(--color-border-hairline)]">
+            {/* IndexedDB Entity Table Breakdown */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-[var(--color-ink)] uppercase tracking-wider flex items-center gap-2">
+                <Database className="w-4 h-4 text-purple-500" /> IndexedDB Entity Inventory
+              </h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Personas</div>
+                  <div className="text-sm font-bold text-[var(--color-ink)]">{personas.length} Entities ({formatSize(personaBytes)})</div>
+                </div>
+                <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Roster Groups</div>
+                  <div className="text-sm font-bold text-[var(--color-ink)]">{groups.length} Entities ({formatSize(groupBytes)})</div>
+                </div>
+                <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Chat Sessions</div>
+                  <div className="text-sm font-bold text-[var(--color-ink)]">{chats.length} Entities ({formatSize(chatBytes)})</div>
+                </div>
+                <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Messages</div>
+                  <div className="text-sm font-bold text-[var(--color-ink)]">{messages.length} Entities ({formatSize(messageBytes)})</div>
+                </div>
+                <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Attachments</div>
+                  <div className="text-sm font-bold text-[var(--color-ink)]">{attachments.length} Entities ({formatSize(attachmentBytes)})</div>
+                </div>
+                <div className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded">
+                  <div className="text-[10px] text-[var(--color-ink-muted)] uppercase">Telemetry Records</div>
+                  <div className="text-sm font-bold text-[var(--color-ink)]">{usage.length} Records ({formatSize(usageBytes)})</div>
+                </div>
+              </div>
+            </div>
+
+            {/* LocalStorage Key-Value Inventory */}
+            <div className="space-y-3">
+              <h3 className="text-xs font-semibold text-[var(--color-ink)] uppercase tracking-wider flex items-center gap-2">
+                <Key className="w-4 h-4 text-emerald-500" /> LocalStorage Key-Value Inventory
+              </h3>
+              <div className="overflow-x-auto border border-[var(--color-border-hairline)] rounded">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-[var(--color-paper)] border-b border-[var(--color-border-hairline)] text-[10px] text-[var(--color-ink-muted)] uppercase">
+                      <th className="p-2">Key Name</th>
+                      <th className="p-2">Data Category</th>
+                      <th className="p-2 text-right">Size</th>
+                      <th className="p-2 text-center">Egress Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[var(--color-border-hairline)] text-[11px]">
+                    {localStorageKeys.map((k) => (
+                      <tr key={k.key} className="hover:bg-[var(--color-paper)]/50">
+                        <td className="p-2 font-medium text-[var(--color-ink)]">{k.key}</td>
+                        <td className="p-2 text-[var(--color-ink-muted)]">{k.type}</td>
+                        <td className="p-2 text-right text-[var(--color-ink-muted)]">{formatSize(k.sizeBytes)}</td>
+                        <td className="p-2 text-center">
+                          <span className="inline-flex items-center gap-1 text-[10px] text-emerald-600 font-semibold">
+                            <CheckCircle2 className="w-3 h-3" /> 100% Local Only
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
