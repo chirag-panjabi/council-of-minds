@@ -10,6 +10,7 @@ import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { ProviderTestSuiteModal } from '@/components/settings/ProviderTestSuiteModal';
 import { ModelFallbackManager } from '@/components/settings/ModelFallbackManager';
+import { LocalEndpointManager } from '@/components/settings/LocalEndpointManager';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
 import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup';
@@ -453,72 +454,8 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          {/* Section 2: Local Model Settings */}
-          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-4">
-            <div className="flex items-center justify-between border-b border-[var(--color-border-hairline)] pb-4">
-              <div className="space-y-1">
-                <h2 className="font-display text-xl text-[var(--color-ink)] flex items-center gap-2">
-                  <Server className="w-5 h-5 text-[var(--color-accent)]" /> Local LLM Engine (Ollama / LM Studio)
-                </h2>
-                <p className="text-xs text-[var(--color-ink-muted)]">
-                  Direct browser-to-loopback connection. Zero cloud proxy transit.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowGuidanceModal(true)}
-                className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
-              >
-                CORS & Setup Guide
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <label className="flex items-center gap-3 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={isOllamaEnabled}
-                  onChange={(e) => setIsOllamaEnabled(e.target.checked)}
-                  className="rounded border-[var(--color-border)] text-[var(--color-accent)] focus:ring-[var(--color-focus)]"
-                />
-                <span className="text-xs font-mono text-[var(--color-ink)]">Enable Local LLM Provider Loopback</span>
-              </label>
-
-              <div className="space-y-1.5">
-                <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
-                  <span>Local Server URL</span>
-                  {connectionInfo['ollama']?.status === 'testing' && <span className="text-[var(--color-accent)] font-mono animate-pulse">Testing...</span>}
-                  {connectionInfo['ollama']?.status === 'success' && (
-                    <span className="text-emerald-600 font-mono text-xs">
-                      ✓ Connected ({connectionInfo['ollama'].modelCount || 0} models)
-                    </span>
-                  )}
-                  {connectionInfo['ollama']?.status === 'error' && (
-                    <span className="text-[var(--color-error)] font-mono text-xs">
-                      ✕ {connectionInfo['ollama'].errorMessage || 'Unreachable'}
-                    </span>
-                  )}
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={ollamaUrl}
-                    onChange={(e) => setOllamaUrl(e.target.value)}
-                    placeholder="http://localhost:11434"
-                    className="flex-1 px-3 py-2 text-xs font-mono bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => handleTestConnection('ollama', '')}
-                    disabled={connectionInfo['ollama']?.status === 'testing'}
-                    className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
-                  >
-                    Test
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
+          {/* Section 2: Local LLM Engine & Endpoints Manager */}
+          <LocalEndpointManager />
 
           {/* Global Default Provider & Model Targets */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-6">
