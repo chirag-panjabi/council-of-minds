@@ -4,10 +4,11 @@ import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID, formatPersonaOptionLabel } from '@/lib/db';
-import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale } from 'lucide-react';
+import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale, Zap } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
+import { ProviderTestSuiteModal } from '@/components/settings/ProviderTestSuiteModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
 import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup';
@@ -63,6 +64,7 @@ export default function SettingsPage() {
   const [restoreManifest, setRestoreManifest] = useState<BackupManifest | null>(null);
   const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [showGuidanceModal, setShowGuidanceModal] = useState(false);
+  const [activeDiagnosticProvider, setActiveDiagnosticProvider] = useState<string | null>(null);
 
   useEffect(() => {
     setOpenaiKey(localStorage.getItem('framework-engine:api-key:openai') || '');
@@ -263,6 +265,25 @@ export default function SettingsPage() {
           />
         )}
 
+        {/* Diagnostic Test Suite Modal */}
+        {activeDiagnosticProvider && (
+          <ProviderTestSuiteModal
+            isOpen={Boolean(activeDiagnosticProvider)}
+            onClose={() => setActiveDiagnosticProvider(null)}
+            provider={activeDiagnosticProvider}
+            apiKey={
+              activeDiagnosticProvider === 'openai'
+                ? openaiKey
+                : activeDiagnosticProvider === 'anthropic'
+                ? anthropicKey
+                : activeDiagnosticProvider === 'gemini'
+                ? geminiKey
+                : ''
+            }
+            ollamaUrl={ollamaUrl}
+          />
+        )}
+
         {/* Page Header (N4) */}
         <header className="border-b border-[var(--color-border-hairline)] pb-6 space-y-2">
           <h1 className="font-display text-4xl font-normal text-[var(--color-ink)]">
@@ -329,6 +350,15 @@ export default function SettingsPage() {
                   >
                     Test
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDiagnosticProvider('openai')}
+                    disabled={!openaiKey.trim()}
+                    className="btn-hallmark text-xs gap-1 bg-[var(--color-paper)] text-[var(--color-accent)] border-[var(--color-accent)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+                    title="Run 4-check automated pre-call diagnostic suite"
+                  >
+                    <Zap className="w-3 h-3" /> Diagnostic
+                  </button>
                 </div>
               </div>
 
@@ -364,6 +394,15 @@ export default function SettingsPage() {
                   >
                     Test
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDiagnosticProvider('anthropic')}
+                    disabled={!anthropicKey.trim()}
+                    className="btn-hallmark text-xs gap-1 bg-[var(--color-paper)] text-[var(--color-accent)] border-[var(--color-accent)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+                    title="Run 4-check automated pre-call diagnostic suite"
+                  >
+                    <Zap className="w-3 h-3" /> Diagnostic
+                  </button>
                 </div>
               </div>
 
@@ -398,6 +437,15 @@ export default function SettingsPage() {
                     className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
                   >
                     Test
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDiagnosticProvider('gemini')}
+                    disabled={!geminiKey.trim()}
+                    className="btn-hallmark text-xs gap-1 bg-[var(--color-paper)] text-[var(--color-accent)] border-[var(--color-accent)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+                    title="Run 4-check automated pre-call diagnostic suite"
+                  >
+                    <Zap className="w-3 h-3" /> Diagnostic
                   </button>
                 </div>
               </div>
