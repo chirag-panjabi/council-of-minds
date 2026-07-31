@@ -6,6 +6,7 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { BarChart2, Cpu, HardDrive, Trash2, Search, Download, DollarSign, Zap } from 'lucide-react';
 import { StorageBreakdownCard } from '@/components/analytics/StorageBreakdownCard';
+import { PersonaAnalyticsBreakdown } from '@/components/analytics/PersonaAnalyticsBreakdown';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N3 */
 
@@ -204,6 +205,9 @@ export default function AnalyticsPage() {
 
         {/* Client Storage Breakdown & Footprint Audit */}
         <StorageBreakdownCard />
+
+        {/* Per-Persona Usage & Turn Analytics */}
+        <PersonaAnalyticsBreakdown />
 
         {/* Model Breakdown & Filter Pills */}
         <div className="space-y-4">
