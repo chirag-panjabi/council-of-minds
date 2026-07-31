@@ -253,6 +253,8 @@ export function Sidebar() {
                     {group.chats.map((c) => {
                       const href = c.type === 'council' ? `/chat/council/${c.id}` : `/chat/1-on-1/${c.id}`;
                       const isCurrent = pathname === href;
+                      const singlePersona = c.type === '1-on-1' ? personas.find((p) => p.id === c.personaId) : null;
+                      const councilPersonas = c.type === 'council' ? personas.filter((p) => c.personaIds?.includes(p.id)) : [];
 
                       return (
                         <Link
@@ -264,10 +266,28 @@ export function Sidebar() {
                               : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
                           }`}
                         >
-                          {c.type === 'council' ? (
-                            <Users className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
+                          {c.type === '1-on-1' ? (
+                            <div
+                              className="w-4 h-4 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 text-[9px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold shrink-0"
+                              title={singlePersona?.name || '1-on-1 Persona'}
+                            >
+                              {singlePersona?.name?.charAt(0) || 'P'}
+                            </div>
                           ) : (
-                            <MessageSquare className="w-3 h-3 text-[var(--color-accent)] shrink-0 opacity-70 group-hover:opacity-100" />
+                            <div className="flex items-center -space-x-1 shrink-0">
+                              {councilPersonas.slice(0, 2).map((cp) => (
+                                <div
+                                  key={cp.id}
+                                  className="w-3.5 h-3.5 rounded-full bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[8px] font-mono flex items-center justify-center text-[var(--color-accent)] font-semibold"
+                                  title={cp.name}
+                                >
+                                  {cp.name.charAt(0)}
+                                </div>
+                              ))}
+                              {councilPersonas.length === 0 && (
+                                <Users className="w-3.5 h-3.5 text-[var(--color-accent)] shrink-0 opacity-70" />
+                              )}
+                            </div>
                           )}
                           <span className="truncate flex-1">{c.title}</span>
                         </Link>
