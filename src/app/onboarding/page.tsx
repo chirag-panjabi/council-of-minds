@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
-import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck, CheckCircle2, Lock, Cpu, Server, ChevronLeft } from 'lucide-react';
+import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck, CheckCircle2, Lock, Cpu, Server, ChevronLeft, Zap } from 'lucide-react';
 import { UnifiedKeyManager } from '@/components/settings/UnifiedKeyManager';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
@@ -20,10 +20,64 @@ export default function OnboardingPage() {
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
-  const [systemProfile, setSystemProfile] = useState('');
   const [selectedPersonaId, setSelectedPersonaId] = useState<string>('2cfc4b5b-ba28-5fc5-97f3-79186fc174d1');
+  const [systemProfile, setSystemProfile] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  const [quickTestState, setQuickTestState] = useState<{
+    status: 'idle' | 'testing' | 'success' | 'error';
+    latencyMs?: number;
+    message?: string;
+  }>({ status: 'idle' });
+
+  const handleQuickTestConnection = async () => {
+    setQuickTestState({ status: 'testing' });
+    const startTime = Date.now();
+
+    try {
+      if (selectedProvider === 'ollama') {
+        const res = await fetch(`${ollamaUrl}/api/tags`).catch(() => null);
+        const latencyMs = Date.now() - startTime;
+        if (!res || !res.ok) {
+          throw new Error('Local server unreachable or CORS blocked.');
+        }
+        setQuickTestState({
+          status: 'success',
+          latencyMs,
+          message: `Verified local connection in ${latencyMs}ms`,
+        });
+      } else {
+        if (!apiKey.trim()) {
+          throw new Error('Please enter an API key to test.');
+        }
+        const res = await fetch('/api/validate-key', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-provider': selectedProvider,
+            'x-api-key': apiKey.trim(),
+            'x-ollama-url': ollamaUrl,
+          },
+        });
+        const latencyMs = Date.now() - startTime;
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || !data.success) {
+          throw new Error(data.error || `Key validation failed (${res.status})`);
+        }
+        setQuickTestState({
+          status: 'success',
+          latencyMs,
+          message: `Verified (${data.modelCount || 1} models, ${latencyMs}ms echo)`,
+        });
+      }
+    } catch (err: any) {
+      setQuickTestState({
+        status: 'error',
+        message: err.message || 'Connection test failed',
+      });
+    }
+  };
 
   const handleValidateAndSave = async () => {
     setIsValidating(true);
@@ -320,6 +374,32 @@ export default function OnboardingPage() {
                   </p>
                 </div>
               )}
+
+              {/* Quick-Test Connection Action */}
+              <div className="pt-2 border-t border-[var(--color-border-hairline)] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleQuickTestConnection}
+                  disabled={quickTestState.status === 'testing' || (selectedProvider !== 'ollama' && !apiKey.trim())}
+                  className="btn-hallmark text-xs gap-1.5 focus:outline-none disabled:opacity-40"
+                >
+                  <Zap className="w-3.5 h-3.5 text-[var(--color-accent)]" />
+                  {quickTestState.status === 'testing' ? 'Testing Connection...' : 'Quick-Test Connection (1-token echo)'}
+                </button>
+
+                {quickTestState.status === 'success' && (
+                  <span className="text-xs font-mono text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30 flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    {quickTestState.message}
+                  </span>
+                )}
+
+                {quickTestState.status === 'error' && (
+                  <span className="text-xs font-mono text-[var(--color-error)] bg-[var(--color-error)]/10 px-2.5 py-1 rounded border border-[var(--color-error)]/20">
+                    ✕ {quickTestState.message}
+                  </span>
+                )}
+              </div>
 
               {validationError && (
                 <div className="p-3 text-xs bg-[var(--color-error)]/10 text-[var(--color-error)] border border-[var(--color-error)]/20 rounded-[var(--radius-sm)]">
