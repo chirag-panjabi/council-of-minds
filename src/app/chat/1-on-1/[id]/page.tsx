@@ -388,11 +388,14 @@ export default function OneOnOneChatPage() {
       let streamBuffer = '';
       let promptTokens = 0;
       let completionTokens = 0;
+      let cachedTokens = 0;
+      let reasoningTokens = 0;
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
+
           streamBuffer += decoder.decode(value, { stream: true });
           const lines = streamBuffer.split('\n');
           streamBuffer = lines.pop() || '';
@@ -410,6 +413,8 @@ export default function OneOnOneChatPage() {
                 if (parsed.usage) {
                   promptTokens = parsed.usage.promptTokens || promptTokens;
                   completionTokens = parsed.usage.completionTokens || completionTokens;
+                  cachedTokens = parsed.usage.cachedTokens || cachedTokens;
+                  reasoningTokens = parsed.usage.reasoningTokens || reasoningTokens;
                 }
               } catch {}
             }
@@ -436,8 +441,8 @@ export default function OneOnOneChatPage() {
           }
         }
 
-        // Record BYOK analytics telemetry to IndexedDB
-        if (promptTokens > 0 || completionTokens > 0) {
+        // Record BYOK analytics telemetry to IndexedDB (zero persistence if Incognito)
+        if (!isIncognito && (promptTokens > 0 || completionTokens > 0)) {
           await db.usage.add({
             id: 'u-' + Date.now(),
             chatId,
@@ -445,8 +450,9 @@ export default function OneOnOneChatPage() {
             model: selectedModel,
             promptTokens,
             completionTokens,
+            cachedTokens,
             timestamp: Date.now(),
-          });
+          } as any);
         }
       }
     } catch (err: any) {

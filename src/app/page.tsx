@@ -212,8 +212,8 @@ export default function DashboardPage() {
                 <span className="text-xs font-mono uppercase tracking-wider text-[var(--color-ink-muted)] flex items-center gap-2">
                   <Zap className="w-4 h-4 text-[var(--color-accent)]" /> Token Telemetry
                 </span>
-                <Link href="/analytics" className="text-xs font-mono text-[var(--color-accent)] hover:underline">
-                  Details
+                <Link href="/analytics" className="text-xs font-mono text-[var(--color-accent)] hover:underline flex items-center gap-1">
+                  View Details <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
 

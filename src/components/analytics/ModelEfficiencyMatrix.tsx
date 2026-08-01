@@ -13,6 +13,7 @@ interface ModelStats {
   turns: number;
   promptTokens: number;
   completionTokens: number;
+  reasoningTokens: number;
   totalTokens: number;
   totalLatencyMs: number;
   avgLatencyMs: number;
@@ -35,6 +36,7 @@ export function ModelEfficiencyMatrix() {
         turns: 0,
         promptTokens: 0,
         completionTokens: 0,
+        reasoningTokens: 0,
         totalTokens: 0,
         totalLatencyMs: 0,
         avgLatencyMs: 0,
@@ -44,6 +46,7 @@ export function ModelEfficiencyMatrix() {
 
     const prompt = r.promptTokens || 0;
     const completion = r.completionTokens || 0;
+    const reasoning = (r as any).reasoningTokens || 0;
     const latency = (r as any).latencyMs || 0;
     const pricing = getModelPricing(model);
     const cost = (prompt / 1000) * pricing.input + (completion / 1000) * pricing.output;
@@ -51,6 +54,7 @@ export function ModelEfficiencyMatrix() {
     statsMap[model].turns += 1;
     statsMap[model].promptTokens += prompt;
     statsMap[model].completionTokens += completion;
+    statsMap[model].reasoningTokens += reasoning;
     statsMap[model].totalTokens += prompt + completion;
     statsMap[model].totalLatencyMs += latency;
     statsMap[model].cost += cost;
@@ -65,12 +69,12 @@ export function ModelEfficiencyMatrix() {
   if (modelList.length === 0) {
     const defaultModels = ['gpt-4o', 'claude-3-5-sonnet', 'gemini-2.5-flash', 'ollama-local'];
     defaultModels.forEach((model) => {
-      const pricing = getModelPricing(model);
       modelList.push({
         model,
         turns: 0,
         promptTokens: 0,
         completionTokens: 0,
+        reasoningTokens: 0,
         totalTokens: 0,
         totalLatencyMs: 0,
         avgLatencyMs: 0,
@@ -111,11 +115,11 @@ export function ModelEfficiencyMatrix() {
           <div className="flex items-center gap-2">
             <Cpu className="w-5 h-5 text-[var(--color-accent)]" />
             <h2 className="font-mono text-sm font-semibold uppercase tracking-wider text-[var(--color-ink)]">
-              Model-by-Model Efficiency Comparison Matrix
+              Model Breakdown Table & Efficiency Matrix
             </h2>
           </div>
           <p className="text-xs text-[var(--color-ink-muted)] mt-1">
-            Side-by-side performance audit comparing model latency, token efficiency, unit rate pricing, and spend.
+            Side-by-side performance audit comparing input/output/reasoning token breakdown, latency, unit rate pricing, and spend.
           </p>
         </div>
       </div>
@@ -134,6 +138,9 @@ export function ModelEfficiencyMatrix() {
                   Turns <ArrowUpDown className="w-3 h-3" />
                 </span>
               </th>
+              <th className="pb-3 font-semibold text-right">Input Tokens</th>
+              <th className="pb-3 font-semibold text-right">Output Tokens</th>
+              <th className="pb-3 font-semibold text-right">Reasoning</th>
               <th
                 className="pb-3 font-semibold text-right cursor-pointer hover:text-[var(--color-ink)]"
                 onClick={() => toggleSort('tokens')}
@@ -174,7 +181,12 @@ export function ModelEfficiencyMatrix() {
                     {m.model}
                   </td>
                   <td className="py-3 text-right text-[var(--color-ink)] font-semibold">{m.turns}</td>
+                  <td className="py-3 text-right text-[var(--color-ink-muted)]">{m.promptTokens.toLocaleString()}</td>
+                  <td className="py-3 text-right text-[var(--color-ink-muted)]">{m.completionTokens.toLocaleString()}</td>
                   <td className="py-3 text-right text-[var(--color-ink-muted)]">
+                    {m.reasoningTokens > 0 ? m.reasoningTokens.toLocaleString() : '—'}
+                  </td>
+                  <td className="py-3 text-right text-[var(--color-accent)] font-semibold">
                     {m.totalTokens.toLocaleString()}
                   </td>
                   <td className="py-3 text-right text-[var(--color-ink-muted)]">

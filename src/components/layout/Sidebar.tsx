@@ -188,6 +188,18 @@ export function Sidebar() {
               <MessageSquare className="w-4 h-4 text-[var(--color-accent)]" />
               <span>Persona Groups</span>
             </Link>
+
+            <Link
+              href="/analytics"
+              className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+                isActive('/analytics')
+                  ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold shadow-xs border border-[var(--color-border-hairline)]'
+                  : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4 text-[var(--color-accent)]" />
+              <span>Analytics & Telemetry</span>
+            </Link>
           </nav>
 
           {/* Saved Groups Section */}

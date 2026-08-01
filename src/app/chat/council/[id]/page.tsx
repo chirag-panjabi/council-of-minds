@@ -430,6 +430,8 @@ export default function CouncilChatPage() {
       let streamBuffer = '';
       let promptTokens = 0;
       let completionTokens = 0;
+      let cachedTokens = 0;
+      let reasoningTokens = 0;
 
       if (reader) {
         while (true) {
@@ -452,6 +454,8 @@ export default function CouncilChatPage() {
                 if (parsed.usage) {
                   promptTokens = parsed.usage.promptTokens || promptTokens;
                   completionTokens = parsed.usage.completionTokens || completionTokens;
+                  cachedTokens = parsed.usage.cachedTokens || cachedTokens;
+                  reasoningTokens = parsed.usage.reasoningTokens || reasoningTokens;
                 }
               } catch {}
             }
@@ -482,8 +486,8 @@ export default function CouncilChatPage() {
           }
         }
 
-        // Record BYOK analytics telemetry to IndexedDB
-        if (promptTokens > 0 || completionTokens > 0) {
+        // Record BYOK analytics telemetry to IndexedDB (zero persistence if Incognito)
+        if (!isIncognito && (promptTokens > 0 || completionTokens > 0)) {
           await db.usage.add({
             id: 'u-' + Date.now(),
             chatId,
@@ -491,8 +495,10 @@ export default function CouncilChatPage() {
             model: selectedModel,
             promptTokens,
             completionTokens,
+            cachedTokens,
+            reasoningTokens,
             timestamp: Date.now(),
-          });
+          } as any);
         }
       }
 
