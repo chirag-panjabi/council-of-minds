@@ -1,4 +1,4 @@
-export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'mock';
 
 export interface ModelCapability {
   modelId: string;

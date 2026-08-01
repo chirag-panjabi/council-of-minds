@@ -32,16 +32,43 @@ export async function POST(req: NextRequest) {
   try {
     const provider = req.headers.get('x-provider') || 'openai';
     const apiKey = req.headers.get('x-api-key');
+    const body = await req.json();
+    const { model: requestedModel = 'default', messages, systemPrompt, temperature = 0.7 } = body;
 
-    if (!apiKey && provider !== 'ollama') {
+    if (!apiKey && provider !== 'ollama' && provider !== 'mock' && requestedModel !== 'mock-dialectic') {
       return NextResponse.json(
         { error: 'Missing API Key for provider: ' + provider },
         { status: 401 }
       );
     }
 
-    const body = await req.json();
-    const { model: requestedModel = 'default', messages, systemPrompt, temperature = 0.7 } = body;
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
+
+    // Mock / Dry-Run Provider Handler (Gap 11.2)
+    if (provider === 'mock' || requestedModel === 'mock-dialectic' || requestedModel?.startsWith('mock/')) {
+      const mockStream = new ReadableStream({
+        async start(controller) {
+          const responseText = `[Mock Dialectic Stream] Synthetic response generated for offline dry-run testing. Persona active for model target '${requestedModel}'. Zero-API-key simulation completed successfully.`;
+          const words = responseText.split(' ');
+          for (const word of words) {
+            controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text: word + ' ' })}\n\n`));
+            await new Promise((r) => setTimeout(r, 40));
+          }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+
+      return new NextResponse(mockStream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+          'X-Response-Model': 'mock-dialectic',
+        },
+      });
+    }
 
     // Truncate messages to fit target model context window limit
     const truncatedMessages = truncateMessagesForModel(messages, requestedModel, systemPrompt);
@@ -50,8 +77,6 @@ export async function POST(req: NextRequest) {
       ? [{ role: 'system', content: systemPrompt }, ...truncatedMessages]
       : truncatedMessages;
 
-    const encoder = new TextEncoder();
-    const decoder = new TextDecoder();
     const RETRIABLE_STATUSES = [404, 429, 500, 502, 503, 504];
 
     // 1. OpenAI Provider

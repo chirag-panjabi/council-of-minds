@@ -6,7 +6,7 @@ import { getModelCapability } from '@/lib/utils/providerCapabilities';
 
 /* Hallmark · component: DynamicModelSelector · genre: editorial · theme: studio */
 
-export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama';
+export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'mock';
 
 export interface ModelOption {
   id: string;
@@ -36,6 +36,9 @@ export const DEFAULT_FALLBACK_MODELS: Record<ModelProvider, ModelOption[]> = {
   ollama: [
     { id: 'llama3:latest', name: 'Llama 3 (Ollama)', provider: 'ollama' },
     { id: 'mistral:latest', name: 'Mistral (Ollama)', provider: 'ollama' },
+  ],
+  mock: [
+    { id: 'mock-dialectic', name: 'Mock Dialectic Engine (Zero API Key)', provider: 'mock', description: 'Simulated response stream for offline dry-run testing' },
   ],
 };
 
