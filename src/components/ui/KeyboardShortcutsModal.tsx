@@ -28,7 +28,7 @@ const SHORTCUTS: ShortcutItem[] = [
 ];
 
 export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsModalProps) {
-  // Global keydown listener for Cmd/Ctrl + /
+  // Global keydown listener for Cmd/Ctrl + / and Cmd/Ctrl + ,
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === '/') {
@@ -36,6 +36,9 @@ export function KeyboardShortcutsModal({ isOpen, onClose }: KeyboardShortcutsMod
         if (isOpen) {
           onClose();
         }
+      } else if ((e.metaKey || e.ctrlKey) && e.key === ',') {
+        e.preventDefault();
+        window.location.href = '/settings';
       } else if (e.key === 'Escape' && isOpen) {
         onClose();
       }

@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import Link from 'next/link';
 import { Shell } from '@/components/layout/Shell';
 import { AlertOctagon, RotateCcw, Home, ShieldAlert } from 'lucide-react';
+import { redactSensitiveData } from '@/lib/utils/redact';
 
 /* Hallmark · genre: editorial · macrostructure: 09-specimen-error · theme: monochroma · nav: N1a · footer: Ft6 */
 
@@ -46,7 +47,7 @@ export default function ErrorBoundary({
           <div className="space-y-3 max-w-lg mx-auto">
             <h1 className="font-display text-2xl text-[var(--color-ink)]">An Unexpected Error Occurred</h1>
             <div className="p-4 bg-[var(--color-paper-2)] border border-[var(--color-error)]/30 rounded text-xs font-mono text-[var(--color-ink-muted)] text-left leading-relaxed break-words">
-              {error.message || 'Unknown application runtime exception.'}
+              {redactSensitiveData(error.message || 'Unknown application runtime exception.')}
             </div>
           </div>
 
