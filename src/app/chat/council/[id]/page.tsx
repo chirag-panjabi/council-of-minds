@@ -7,16 +7,17 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db, DEFAULT_SYNTHESIZER_ID } from '@/lib/db';
 import type { ChatMessage, ChatSession, Persona } from '@/types';
 import { Send, Square, Play, Sparkles, ChevronDown, ChevronRight, Brain, Users, Cpu, Download, Paperclip, EyeOff, UploadCloud, Plus, Sliders, X, Layers, Search, Calculator, DollarSign } from 'lucide-react';
-import { AttachmentStaging, StagedFile } from '@/components/chat/AttachmentStaging';
+import { AttachmentStaging, StagedFile, validateAttachmentFiles } from '@/components/chat/AttachmentStaging';
 import { PersonaSelectorModal } from '@/components/personas/PersonaSelectorModal';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { ChatMessageItem } from '@/components/chat/ChatMessageItem';
 import { cleanSpeakerPrefix } from '@/lib/utils/formatters';
 import { EgressDisclosureModal } from '@/components/chat/EgressDisclosureModal';
+import { ImageLightboxModal } from '@/components/chat/ImageLightboxModal';
 import { buildMessagesForRetention } from '@/lib/utils/contextRetention';
 import { assembleSystemPrompt } from '@/lib/utils/systemPromptAssembler';
 import { InSessionSearchOverlay } from '@/components/chat/InSessionSearchOverlay';
-import { calculateCouncilCostAndTokens } from '@/lib/utils/providerCapabilities';
+import { calculateCouncilCostAndTokens, getModelCapability } from '@/lib/utils/providerCapabilities';
 
 /* Hallmark · genre: editorial · macrostructure: 05-workbench · theme: studio · nav: N5 · footer: Ft2 */
 
@@ -253,19 +254,31 @@ export default function CouncilChatPage() {
     }
   };
 
-  // Staging File Handlers
+  // Staging File Handlers with Validation (Gap 16.3) & Vision Check (Gap 16.5)
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
+  const [lightboxImage, setLightboxImage] = useState<{ src: string; alt: string } | null>(null);
+
   const handleFileSelect = (files: FileList | File[]) => {
+    setAttachmentError(null);
     const fileArray = Array.from(files);
     const validFiles: StagedFile[] = [];
+    let currentTotalSize = stagedFiles.reduce((acc, f) => acc + f.size, 0);
 
-    fileArray.forEach((file) => {
-      if (stagedFiles.length + validFiles.length >= 5) return;
-
+    for (const file of fileArray) {
       const isImage = file.type.startsWith('image/');
-      const isText = file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv');
+      const isText = file.name.endsWith('.txt') || file.name.endsWith('.md') || file.name.endsWith('.csv') || file.name.endsWith('.json');
       const isPdf = file.name.endsWith('.pdf');
 
-      if (!isImage && !isText && !isPdf) return;
+      if (!isImage && !isText && !isPdf) {
+        setAttachmentError(`Unsupported file format "${file.name}". Allowed: Images, TXT, MD, CSV, JSON, PDF.`);
+        continue;
+      }
+
+      const val = validateAttachmentFiles(stagedFiles.length + validFiles.length, currentTotalSize, file);
+      if (!val.valid) {
+        setAttachmentError(val.error || 'Attachment validation failed.');
+        break;
+      }
 
       const staged: StagedFile = {
         id: 'file-' + Date.now() + '-' + Math.random().toString(36).substr(2, 5),
@@ -286,7 +299,14 @@ export default function CouncilChatPage() {
       }
 
       validFiles.push(staged);
-    });
+      currentTotalSize += file.size;
+    }
+
+    // Vision model compatibility check (Gap 16.5)
+    const hasNewImage = validFiles.some((f) => f.type === 'image');
+    if (hasNewImage && !getModelCapability(selectedModel).supportsVision) {
+      setAttachmentError(`⚠️ Warning: Selected model "${selectedModel}" may not support image processing. Switch to gpt-4o, claude-3-5-sonnet, or gemini-2.5-flash for vision analysis.`);
+    }
 
     setStagedFiles((prev) => [...prev, ...validFiles]);
   };
@@ -302,6 +322,7 @@ export default function CouncilChatPage() {
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setIsDragging(false);
   };
 
@@ -1004,8 +1025,29 @@ export default function CouncilChatPage() {
           <div ref={messagesEndRef} />
         </div>
 
+        {/* Full-window Drag & Drop Overlay (Gap 16.1) */}
+        {isDragging && (
+          <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-xs flex flex-col items-center justify-center border-4 border-dashed border-[var(--color-accent)] text-white font-mono text-sm space-y-3 animate-in fade-in duration-150">
+            <UploadCloud className="w-12 h-12 text-[var(--color-accent)] animate-bounce" />
+            <span className="font-display text-2xl text-white">Drop files here to attach to Council debate</span>
+            <span className="text-xs text-white/70">Images (max 5MB), TXT/MD/CSV/JSON/PDF (max 1MB, total max 10MB)</span>
+          </div>
+        )}
+
+        {/* Attachment Error / Compatibility Warning Toast (Gap 16.3 & 16.5) */}
+        {attachmentError && (
+          <div className="px-4 py-2 bg-amber-500/10 border-b border-amber-500/30 text-amber-500 text-xs font-mono flex items-center justify-between">
+            <span>{attachmentError}</span>
+            <button onClick={() => setAttachmentError(null)} className="text-amber-500 hover:text-white text-xs px-1">✕</button>
+          </div>
+        )}
+
         {/* Multimodal Attachment Staging Bar */}
-        <AttachmentStaging stagedFiles={stagedFiles} onRemoveFile={handleRemoveStagedFile} />
+        <AttachmentStaging
+          stagedFiles={stagedFiles}
+          onRemoveFile={handleRemoveStagedFile}
+          onPreviewImage={(src, alt) => setLightboxImage({ src, alt })}
+        />
 
         {/* Input Bar */}
         <form onSubmit={handleSend} className="p-4 border-t border-[var(--color-border-hairline)] bg-[var(--color-paper-2)]">
@@ -1070,6 +1112,13 @@ export default function CouncilChatPage() {
           handleSend();
         }}
         onCancel={() => setIsEgressModalOpen(false)}
+      />
+
+      <ImageLightboxModal
+        isOpen={!!lightboxImage}
+        src={lightboxImage?.src}
+        alt={lightboxImage?.alt}
+        onClose={() => setLightboxImage(null)}
       />
     </Shell>
   );
