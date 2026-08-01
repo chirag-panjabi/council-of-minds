@@ -10,6 +10,7 @@ import { PersonaAnalyticsBreakdown } from '@/components/analytics/PersonaAnalyti
 import { UsageProjectionCalculator } from '@/components/analytics/UsageProjectionCalculator';
 import { PeakUsageHeatmap } from '@/components/analytics/PeakUsageHeatmap';
 import { ModelEfficiencyMatrix } from '@/components/analytics/ModelEfficiencyMatrix';
+import { TimeSeriesUsageChart } from '@/components/analytics/TimeSeriesUsageChart';
 
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N3 */
 
@@ -219,6 +220,9 @@ export default function AnalyticsPage() {
             <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Local Ollama is $0.00 / Free</div>
           </div>
         </div>
+
+        {/* Time-Series Usage Volume Chart (7D / 30D / 90D / All) */}
+        <TimeSeriesUsageChart usageRecords={usageRecords} />
 
         {/* Client Storage Breakdown & Footprint Audit */}
         <StorageBreakdownCard />
