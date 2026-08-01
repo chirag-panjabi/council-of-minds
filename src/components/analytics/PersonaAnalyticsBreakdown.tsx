@@ -17,11 +17,14 @@ export function PersonaAnalyticsBreakdown() {
   const [sortBy, setSortBy] = useState<'tokens' | 'turns' | 'cost'>('tokens');
 
   // Map per persona: turn count & token breakdown
-  const statsMap: Record<string, { turns: number; promptTokens: number; completionTokens: number; totalTokens: number; cost: number }> = {};
+  const statsMap: Record<
+    string,
+    { turns: number; promptTokens: number; completionTokens: number; totalTokens: number; cost: number; models: Record<string, number> }
+  > = {};
 
   // Initialize all active personas
   personas.forEach((p) => {
-    statsMap[p.id] = { turns: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: 0 };
+    statsMap[p.id] = { turns: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: 0, models: {} };
   });
 
   // Calculate turns from messages
@@ -44,15 +47,21 @@ export function PersonaAnalyticsBreakdown() {
       statsMap[r.personaId].completionTokens += completion;
       statsMap[r.personaId].totalTokens += total;
       statsMap[r.personaId].cost += cost;
+
+      if (r.model) {
+        statsMap[r.personaId].models[r.model] = (statsMap[r.personaId].models[r.model] || 0) + total;
+      }
     }
   });
 
   // Convert to array and filter/sort
   const personaStats = personas
     .map((p) => {
-      const stat = statsMap[p.id] || { turns: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: 0 };
+      const stat = statsMap[p.id] || { turns: 0, promptTokens: 0, completionTokens: 0, totalTokens: 0, cost: 0, models: {} };
+      const avgTokens = stat.turns > 0 ? Math.round(stat.totalTokens / stat.turns) : 0;
       return {
         persona: p,
+        avgTokens,
         ...stat,
       };
     })
@@ -75,10 +84,10 @@ export function PersonaAnalyticsBreakdown() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="font-display text-xl text-[var(--color-ink)] flex items-center gap-2">
-            <Users className="w-5 h-5 text-[var(--color-accent)]" /> Per-Persona Usage & Turn Analytics
+            <Users className="w-5 h-5 text-[var(--color-accent)]" /> Per-Persona Usage & Model Distribution
           </h2>
           <p className="text-xs font-mono text-[var(--color-ink-muted)]">
-            Breakdown of turns executed, tokens consumed, and BYOK spend per persona.
+            Breakdown of turns executed, token volume, model distribution, and average tokens per request per persona.
           </p>
         </div>
 
@@ -131,37 +140,61 @@ export function PersonaAnalyticsBreakdown() {
                 <tr className="border-b border-[var(--color-border-hairline)] bg-[var(--color-paper-2)] text-[10px] font-mono text-[var(--color-ink-muted)] uppercase tracking-wider">
                   <th className="p-3">Persona</th>
                   <th className="p-3">Role / Category</th>
-                  <th className="p-3">Turns Executed</th>
-                  <th className="p-3">Prompt Tokens</th>
-                  <th className="p-3">Completion Tokens</th>
+                  <th className="p-3">Turns</th>
                   <th className="p-3">Total Tokens</th>
+                  <th className="p-3">Avg / Request</th>
+                  <th className="p-3">Model Distribution</th>
                   <th className="p-3">Est. BYOK Spend</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--color-border-hairline)] text-xs font-mono text-[var(--color-ink)]">
-                {personaStats.map(({ persona: p, turns, promptTokens, completionTokens, totalTokens, cost }) => (
-                  <tr key={p.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
-                    <td className="p-3">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[10px] font-bold text-[var(--color-accent)] shrink-0">
-                          {p.name.charAt(0)}
+                {personaStats.map(({ persona: p, turns, totalTokens, avgTokens, models, cost }) => {
+                  const modelEntries = Object.entries(models).sort((a, b) => b[1] - a[1]);
+                  const modelTotal = modelEntries.reduce((acc, [, val]) => acc + val, 0) || 1;
+
+                  return (
+                    <tr key={p.id} className="hover:bg-[var(--color-paper-2)] transition-colors">
+                      <td className="p-3">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-6 h-6 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[10px] font-bold text-[var(--color-accent)] shrink-0">
+                            {p.name.charAt(0)}
+                          </div>
+                          <span className="font-semibold text-[var(--color-ink)]">{p.name}</span>
+                          {isOfficialPersona(p) ? (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Official</span>
+                          ) : (
+                            <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Custom</span>
+                          )}
                         </div>
-                        <span className="font-semibold text-[var(--color-ink)]">{p.name}</span>
-                        {isOfficialPersona(p) ? (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Official</span>
+                      </td>
+                      <td className="p-3 text-[var(--color-ink-muted)]">{p.role}</td>
+                      <td className="p-3 font-semibold">{turns.toLocaleString()}</td>
+                      <td className="p-3 font-semibold text-[var(--color-accent)]">{totalTokens.toLocaleString()}</td>
+                      <td className="p-3 font-mono text-[var(--color-ink-muted)]">{avgTokens.toLocaleString()} t/req</td>
+                      <td className="p-3">
+                        {modelEntries.length === 0 ? (
+                          <span className="text-[10px] text-[var(--color-ink-muted)] font-mono">No usage recorded</span>
                         ) : (
-                          <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">Custom</span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {modelEntries.map(([modelName, tokens]) => {
+                              const pct = Math.round((tokens / modelTotal) * 100);
+                              return (
+                                <span
+                                  key={modelName}
+                                  className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-paper-2)] border border-[var(--color-border)] text-[var(--color-ink)]"
+                                  title={`${modelName}: ${tokens.toLocaleString()} tokens (${pct}%)`}
+                                >
+                                  {modelName}: <strong className="text-[var(--color-accent)]">{pct}%</strong>
+                                </span>
+                              );
+                            })}
+                          </div>
                         )}
-                      </div>
-                    </td>
-                    <td className="p-3 text-[var(--color-ink-muted)]">{p.role}</td>
-                    <td className="p-3 font-semibold">{turns.toLocaleString()} turn(s)</td>
-                    <td className="p-3 text-[var(--color-ink-muted)]">{promptTokens.toLocaleString()}</td>
-                    <td className="p-3 text-[var(--color-ink-muted)]">{completionTokens.toLocaleString()}</td>
-                    <td className="p-3 font-semibold text-[var(--color-accent)]">{totalTokens.toLocaleString()}</td>
-                    <td className="p-3 text-emerald-600 font-semibold">${cost.toFixed(4)}</td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="p-3 text-emerald-600 font-semibold">${cost.toFixed(4)}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
