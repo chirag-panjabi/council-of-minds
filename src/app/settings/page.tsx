@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID, formatPersonaOptionLabel } from '@/lib/db';
-import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale, Zap } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale, Zap, RotateCcw } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
 import { ClearDataModal } from '@/components/settings/ClearDataModal';
 import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
@@ -19,6 +20,7 @@ import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup
 /* Hallmark · genre: editorial · macrostructure: 04-stat-led · theme: studio · nav: N4 */
 
 export default function SettingsPage() {
+  const router = useRouter();
   const personas = useLiveQuery(() => db.personas.toArray()) || [];
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
@@ -630,6 +632,20 @@ export default function SettingsPage() {
                 className="hidden"
               />
             </label>
+
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== 'undefined') {
+                  localStorage.removeItem('framework-engine:has_skipped_onboarding');
+                  localStorage.removeItem('framework-engine:has_completed_onboarding');
+                }
+                router.push('/onboarding');
+              }}
+              className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
+            >
+              <RotateCcw className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Re-run Onboarding Setup
+            </button>
 
             <button
               type="button"
