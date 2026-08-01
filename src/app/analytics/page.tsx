@@ -65,6 +65,18 @@ export default function AnalyticsPage() {
 
   const topModel = Object.entries(modelBreakdown).sort((a, b) => b[1] - a[1])[0]?.[0] || 'N/A';
 
+  // Most Active Persona computation
+  const personaTurnCounts: Record<string, number> = {};
+  messages.forEach((m) => {
+    if (m.personaId) {
+      personaTurnCounts[m.personaId] = (personaTurnCounts[m.personaId] || 0) + 1;
+    }
+  });
+  const topPersonaId = Object.entries(personaTurnCounts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  const topPersonaObj = personas.find((p) => p.id === topPersonaId);
+  const mostActivePersona = topPersonaObj ? topPersonaObj.name : 'N/A';
+  const topPersonaTurns = topPersonaId ? personaTurnCounts[topPersonaId] : 0;
+
   const filteredRecords = usageRecords.filter((r) => {
     if (selectedModelFilter && r.model !== selectedModelFilter) return false;
     if (searchQuery.trim()) {
@@ -153,7 +165,7 @@ export default function AnalyticsPage() {
           </div>
         </header>
 
-        {/* Hero Stat Cards */}
+        {/* Hero Stat Cards (Top KPI Cards) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {/* Card 1: Total Tokens */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
@@ -164,22 +176,38 @@ export default function AnalyticsPage() {
             <div className="font-display text-3xl text-[var(--color-ink)]">
               {totalTokens.toLocaleString()}
             </div>
-            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Across all sessions</div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Across all execution records</div>
           </div>
 
-          {/* Card 2: Avg Per Request */}
+          {/* Card 2: Most Active Persona */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
-              <span>Avg Per Request</span>
+              <span>Most Active Persona</span>
               <Zap className="w-4 h-4 text-[var(--color-accent)]" />
             </div>
-            <div className="font-display text-3xl text-[var(--color-ink)]">
-              {avgTokensPerRequest.toLocaleString()}
+            <div className="font-display text-2xl truncate text-[var(--color-ink)]" title={mostActivePersona}>
+              {mostActivePersona}
             </div>
-            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Tokens per completion</div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
+              {topPersonaTurns} message turns recorded
+            </div>
           </div>
 
-          {/* Card 3: Estimated BYOK Spend */}
+          {/* Card 3: Most Active Model */}
+          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
+            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
+              <span>Most Active Model</span>
+              <Cpu className="w-4 h-4 text-[var(--color-accent)]" />
+            </div>
+            <div className="font-mono text-xl truncate text-[var(--color-ink)]" title={topModel}>
+              {topModel}
+            </div>
+            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
+              {(modelBreakdown[topModel] || 0).toLocaleString()} tokens processed
+            </div>
+          </div>
+
+          {/* Card 4: Estimated BYOK Spend */}
           <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
             <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
               <span>Estimated BYOK Spend</span>
@@ -189,20 +217,6 @@ export default function AnalyticsPage() {
               ${estimatedSpend.toFixed(3)}
             </div>
             <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">Local Ollama is $0.00 / Free</div>
-          </div>
-
-          {/* Card 4: Database Footprint */}
-          <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--color-ink-muted)]">
-              <span>IndexedDB Storage</span>
-              <HardDrive className="w-4 h-4 text-[var(--color-accent)]" />
-            </div>
-            <div className="font-display text-3xl text-[var(--color-ink)]">
-              {chats.length + messages.length + personas.length}
-            </div>
-            <div className="text-[10px] font-mono text-[var(--color-ink-muted)]">
-              {chats.length} Chats • {messages.length} Msgs
-            </div>
           </div>
         </div>
 
