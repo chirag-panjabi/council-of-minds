@@ -1,6 +1,7 @@
 'use client';
 
 import { Sidebar } from './Sidebar';
+import { ReadOnlyBanner } from './ReadOnlyBanner';
 import { SearchPalette } from '@/components/search/SearchPalette';
 import { useUIStore } from '@/lib/stores/useUIStore';
 import { Menu } from 'lucide-react';
@@ -14,6 +15,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <SearchPalette />
 
       <div className="flex-1 flex flex-col min-w-0">
+        <ReadOnlyBanner />
+
+        {/* Mobile Header Trigger if sidebar is closed */}
         {/* Mobile Header Trigger if sidebar is closed */}
         {!isSidebarOpen && (
           <header className="p-3 border-b border-[var(--color-border-hairline)] flex items-center justify-between sticky top-0 bg-[var(--color-paper)]/90 backdrop-blur-xs z-20">
