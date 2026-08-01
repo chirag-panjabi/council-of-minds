@@ -13,19 +13,37 @@ export function ClientHydrationGuard({ children }: { children: React.ReactNode }
 
     if (typeof window === 'undefined') return;
 
-    // Check if onboarding was skipped
+    // Check if onboarding was skipped or completed
     const hasSkipped = localStorage.getItem('framework-engine:has_skipped_onboarding') === 'true';
+    const hasCompleted = localStorage.getItem('framework-engine:has_completed_onboarding') === 'true';
 
-    // Check if any provider key is saved
-    const hasOpenAI = Boolean(localStorage.getItem('framework-engine:api-key:openai'));
-    const hasAnthropic = Boolean(localStorage.getItem('framework-engine:api-key:anthropic'));
-    const hasGemini = Boolean(localStorage.getItem('framework-engine:api-key:gemini'));
-    const hasOllama = Boolean(localStorage.getItem('framework-engine:ollama-enabled') === 'true');
+    // Check if any provider key is saved across all naming conventions
+    const hasOpenAI = Boolean(
+      localStorage.getItem('framework-engine:api-key:openai') ||
+      localStorage.getItem('framework-engine:openai-key')
+    );
+    const hasAnthropic = Boolean(
+      localStorage.getItem('framework-engine:api-key:anthropic') ||
+      localStorage.getItem('framework-engine:anthropic-key')
+    );
+    const hasGemini = Boolean(
+      localStorage.getItem('framework-engine:api-key:gemini') ||
+      localStorage.getItem('framework-engine:gemini-key')
+    );
+    const hasOpenRouter = Boolean(
+      localStorage.getItem('framework-engine:openrouter-key')
+    );
+    const hasOllama = Boolean(
+      localStorage.getItem('framework-engine:ollama-enabled') === 'true'
+    );
 
-    const isConfigured = hasOpenAI || hasAnthropic || hasGemini || hasOllama;
+    const isConfigured = hasOpenAI || hasAnthropic || hasGemini || hasOpenRouter || hasOllama;
 
-    // If not configured and onboarding not skipped, redirect unconfigured session to /onboarding
-    if (!isConfigured && !hasSkipped && pathname !== '/onboarding') {
+    // Public pages that bypass onboarding redirect
+    const isPublicPage = pathname === '/onboarding' || pathname === '/privacy';
+
+    // If not configured, not skipped, and not completed, redirect unconfigured session to /onboarding
+    if (!isConfigured && !hasSkipped && !hasCompleted && !isPublicPage) {
       router.push('/onboarding');
     }
   }, [pathname, router]);
