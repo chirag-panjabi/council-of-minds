@@ -379,7 +379,7 @@ export default function CouncilChatPage() {
       chatId,
       personaId: speaker.id,
       role: 'assistant',
-      content: '',
+      content: 'Thinking...',
       model: turnModel,
       timestamp: Date.now(),
     };
