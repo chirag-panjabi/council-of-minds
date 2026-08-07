@@ -17,7 +17,6 @@ export default function OnboardingPage() {
 
   // Step 2 & 3 State
   const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'gemini' | 'openrouter' | 'ollama'>('openai');
-  const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>('gpt-4o');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
@@ -120,9 +119,17 @@ export default function OnboardingPage() {
           throw new Error(data.error || `Validation failed (${res.status})`);
         }
 
+        const defaultModelMap: Record<string, string> = {
+          openrouter: 'openrouter/auto',
+          openai: 'gpt-4o',
+          anthropic: 'claude-3-5-sonnet-20241022',
+          gemini: 'gemini-2.5-flash',
+          ollama: 'llama3.2',
+        };
+
         localStorage.setItem(`framework-engine:api-key:${selectedProvider}`, apiKey.trim());
         localStorage.setItem('framework-engine:default-provider', selectedProvider);
-        localStorage.setItem('framework-engine:default-model', selectedDefaultModel || (data.modelNames?.[0] || 'gpt-4o'));
+        localStorage.setItem('framework-engine:default-model', defaultModelMap[selectedProvider] || data.modelNames?.[0] || 'gpt-4o');
       }
 
       if (selectedPersonaId) {
@@ -329,28 +336,6 @@ export default function OnboardingPage() {
                     {p.label}
                   </button>
                 ))}
-              </div>
-
-              {/* Default Model Target Selector */}
-              <div className="space-y-1.5 pt-2 border-t border-[var(--color-border-hairline)]">
-                <label className="text-xs font-mono text-[var(--color-ink-muted)] flex items-center justify-between">
-                  <span>Default Model Target</span>
-                  <span className="text-[10px] text-[var(--color-accent)] font-semibold uppercase">Global Fallback</span>
-                </label>
-                <select
-                  value={selectedDefaultModel}
-                  onChange={(e) => setSelectedDefaultModel(e.target.value)}
-                  className="w-full px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
-                >
-                  <option value="openrouter/auto">openrouter/auto — Dynamic Router (OpenRouter)</option>
-                  <option value="gpt-4o">gpt-4o — Flagship Multimodal (OpenAI)</option>
-                  <option value="gpt-4o-mini">gpt-4o-mini — Fast & Cost-Effective (OpenAI)</option>
-                  <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 — Deep Reasoning (Anthropic)</option>
-                  <option value="claude-3-5-haiku-20241022">claude-3-5-haiku-20241022 — Ultra-Fast (Anthropic)</option>
-                  <option value="gemini-2.5-flash">gemini-2.5-flash — High Throughput (Google)</option>
-                  <option value="gemini-2.5-pro">gemini-2.5-pro — Advanced Reasoning (Google)</option>
-                  <option value="llama3.2">llama3.2 — Local Runtime (Ollama / LocalAI)</option>
-                </select>
               </div>
 
               {/* Key Input Field */}
