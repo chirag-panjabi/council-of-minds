@@ -88,29 +88,16 @@ export default function OneOnOneChatPage() {
   useEffect(() => {
     if (chatSession?.model) {
       setSelectedModel(chatSession.model);
-    } else if (persona?.recommendedModel) {
-      setSelectedModel(persona.recommendedModel);
     }
 
     if (chatSession?.provider) {
       setSelectedProvider(chatSession.provider);
-    } else if (persona?.recommendedModel) {
-      const inferredProvider: ModelProvider = persona.recommendedModel.startsWith('openrouter') || persona.recommendedModel.includes('/')
-        ? 'openrouter'
-        : persona.recommendedModel.startsWith('gemini')
-        ? 'gemini'
-        : persona.recommendedModel.startsWith('claude')
-        ? 'anthropic'
-        : persona.recommendedModel.startsWith('ollama') || persona.recommendedModel.includes(':') || persona.recommendedModel.includes('llama')
-        ? 'ollama'
-        : 'openai';
-      setSelectedProvider(inferredProvider);
     }
 
     if (chatSession?.contextRetention) {
       setContextRetention(chatSession.contextRetention);
     }
-  }, [chatSession, persona?.id, persona?.recommendedModel]);
+  }, [chatSession, persona?.id]);
 
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>(() => {

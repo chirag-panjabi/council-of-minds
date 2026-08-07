@@ -25,7 +25,6 @@ export default function EditPersonaPage() {
   const [role, setRole] = useState('');
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [recommendedModel, setRecommendedModel] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [isArchived, setIsArchived] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -59,20 +58,6 @@ export default function EditPersonaPage() {
         setSystemPrompt(basePrompt);
         setAdvancedRules(rules);
 
-        setRecommendedModel(p.recommendedModel || '');
-        if (p.recommendedModel) {
-          setTestModel(p.recommendedModel);
-          const inferred = p.recommendedModel.startsWith('openrouter') || p.recommendedModel.includes('/')
-            ? 'openrouter'
-            : p.recommendedModel.startsWith('gemini')
-            ? 'gemini'
-            : p.recommendedModel.startsWith('claude')
-            ? 'anthropic'
-            : p.recommendedModel.startsWith('ollama') || p.recommendedModel.includes(':') || p.recommendedModel.includes('llama')
-            ? 'ollama'
-            : 'openai';
-          setTestProvider(inferred);
-        }
         setTags(p.tags || []);
         setIsArchived(p.isArchived || false);
       }
@@ -91,7 +76,6 @@ export default function EditPersonaPage() {
       systemPrompt: finalPrompt,
       role,
       description,
-      recommendedModel: recommendedModel || undefined,
       tags,
       isSystem: false,
       isCustom: true,
@@ -122,7 +106,6 @@ export default function EditPersonaPage() {
       systemPrompt: persona?.systemPrompt || finalPrompt,
       role: persona?.role || role,
       description: persona?.description || description,
-      recommendedModel: persona?.recommendedModel,
       updatedAt: Date.now(),
     };
 
@@ -135,7 +118,6 @@ export default function EditPersonaPage() {
       role: role.trim(),
       description: description.trim(),
       systemPrompt: finalPrompt,
-      recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived,
       version: nextVer,
@@ -165,7 +147,6 @@ export default function EditPersonaPage() {
   const handleRestoreRevision = (rev: PersonaRevision) => {
     setRole(rev.role || role);
     setDescription(rev.description || description);
-    setRecommendedModel(rev.recommendedModel || recommendedModel);
     const { basePrompt, rules } = parseRulesFromPrompt(rev.systemPrompt);
     setSystemPrompt(basePrompt);
     setAdvancedRules(rules);
@@ -180,7 +161,6 @@ export default function EditPersonaPage() {
         role,
         description,
         systemPrompt,
-        recommendedModel,
         tags,
       },
     };
@@ -430,14 +410,6 @@ export default function EditPersonaPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
-              <DynamicModelSelector
-                value={recommendedModel}
-                onChange={(modelId) => setRecommendedModel(modelId)}
-              />
-            </div>
-
-            <div className="space-y-1.5">
               <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
               <TagInput tags={tags} onChange={setTags} />
             </div>
@@ -456,7 +428,7 @@ export default function EditPersonaPage() {
               />
               <SystemPromptTokenMeter
                 systemPrompt={systemPrompt + formatRulesBlock(advancedRules)}
-                modelId={recommendedModel || 'gpt-4o'}
+                modelId="gpt-4o"
               />
             </div>
 
@@ -499,11 +471,6 @@ export default function EditPersonaPage() {
                   {description || 'No description provided.'}
                 </p>
                 <div className="flex flex-wrap gap-1 pt-2">
-                  {recommendedModel && (
-                    <span className="text-[10px] font-mono bg-[var(--color-accent-subtle)] text-[var(--color-accent)] px-1.5 py-0.5 rounded font-semibold">
-                      ✨ Best with {recommendedModel}
-                    </span>
-                  )}
                   {tags.map((t) => (
                     <span key={t} className="text-[10px] font-mono bg-[var(--color-paper-3)] text-[var(--color-ink-faint)] px-1.5 py-0.5 rounded">
                       #{t}

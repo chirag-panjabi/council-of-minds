@@ -124,7 +124,6 @@ export default function PersonaLibraryPage() {
         role: persona.role,
         description: persona.description,
         systemPrompt: persona.systemPrompt,
-        recommendedModel: persona.recommendedModel,
         tags: persona.tags,
       },
     };
@@ -156,7 +155,6 @@ export default function PersonaLibraryPage() {
         role: p.role || 'Specialist',
         description: p.description || '',
         systemPrompt: p.systemPrompt || '',
-        recommendedModel: p.recommendedModel || p.defaultModel || undefined,
         tags: p.tags || ['imported'],
         isArchived: false,
         createdAt: Date.now(),

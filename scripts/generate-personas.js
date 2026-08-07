@@ -64,7 +64,6 @@ const personas = files.map(file => {
     isFavorite: false,
     isArchived: false,
     ui_color: meta.ui_color,
-    recommended_model: meta.recommended_model,
     is_council_member: meta.is_council_member === 'true',
     welcome_message: meta.welcome_message,
     price: meta.price ? parseFloat(meta.price) : 0,

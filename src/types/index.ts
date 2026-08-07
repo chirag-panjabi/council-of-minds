@@ -6,7 +6,6 @@ export interface PersonaRevision {
   systemPrompt: string;
   role: string;
   description: string;
-  recommendedModel?: string;
   updatedAt: number;
   changeNote?: string;
 }
@@ -26,7 +25,6 @@ export interface Persona {
   description: string;
   systemPrompt: string;
   advancedRules?: PersonaRule[];
-  recommendedModel?: string;
   tags: string[];
   isArchived: boolean;
   isSystem?: boolean;

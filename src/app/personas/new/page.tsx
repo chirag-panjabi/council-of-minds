@@ -18,7 +18,6 @@ export default function NewPersonaPage() {
   const [role, setRole] = useState('');
   const [description, setDescription] = useState('');
   const [systemPrompt, setSystemPrompt] = useState('');
-  const [recommendedModel, setRecommendedModel] = useState('');
   const [tags, setTags] = useState<string[]>(['philosophy', 'strategy']);
   const [advancedRules, setAdvancedRules] = useState<PersonaRule[]>([]);
   const [isSaving, setIsSaving] = useState(false);
@@ -66,7 +65,6 @@ export default function NewPersonaPage() {
       if (parsed.role) setRole(parsed.role);
       if (parsed.description) setDescription(parsed.description);
       if (parsed.systemPrompt) setSystemPrompt(parsed.systemPrompt);
-      if (parsed.recommendedModel || parsed.defaultModel) setRecommendedModel(parsed.recommendedModel || parsed.defaultModel);
       if (parsed.tags && Array.isArray(parsed.tags)) setTags(parsed.tags.map((t: string) => t.trim()));
     } catch (err: any) {
       // Fallback local heuristic generator if offline or error
@@ -152,7 +150,6 @@ export default function NewPersonaPage() {
       role: role.trim() || 'Advisor',
       description: description.trim(),
       systemPrompt: finalSystemPrompt,
-      recommendedModel: recommendedModel.trim() || undefined,
       tags,
       isArchived: false,
       isSystem: false,
@@ -261,14 +258,6 @@ export default function NewPersonaPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Recommended Model (Optional)</label>
-                <DynamicModelSelector
-                  value={recommendedModel}
-                  onChange={(modelId) => setRecommendedModel(modelId)}
-                />
-              </div>
-
-              <div className="space-y-1.5">
                 <label className="block text-xs font-mono text-[var(--color-ink-muted)]">Persona Tags & Categories</label>
                 <TagInput tags={tags} onChange={setTags} />
               </div>
@@ -321,11 +310,6 @@ export default function NewPersonaPage() {
                   {description || 'No description provided.'}
                 </p>
                 <div className="flex flex-wrap gap-1 pt-2">
-                  {recommendedModel && (
-                    <span className="text-[10px] font-mono bg-[var(--color-accent-subtle)] text-[var(--color-accent)] px-1.5 py-0.5 rounded font-semibold">
-                      ✨ Best with {recommendedModel}
-                    </span>
-                  )}
                   {tags.map((t) => (
                     <span key={t} className="text-[10px] font-mono bg-[var(--color-paper-3)] text-[var(--color-ink-faint)] px-1.5 py-0.5 rounded">
                       #{t}

@@ -88,7 +88,6 @@ export function PersonaImportModal({
         description: candidateObj.description || '',
         systemPrompt: candidateObj.systemPrompt || candidateObj.instructions || '',
         welcomeMessage: candidateObj.welcomeMessage || candidateObj.firstMessage || undefined,
-        recommendedModel: candidateObj.recommendedModel || candidateObj.defaultModel || undefined,
         tags: Array.isArray(candidateObj.tags) ? candidateObj.tags : ['imported'],
         avatar: candidateObj.avatar || '👤',
       };
@@ -146,7 +145,6 @@ export function PersonaImportModal({
         description: parsedCandidate.description || '',
         systemPrompt: parsedCandidate.systemPrompt || '',
         welcomeMessage: parsedCandidate.welcomeMessage,
-        recommendedModel: parsedCandidate.recommendedModel,
         tags: parsedCandidate.tags || ['imported'],
         avatar: parsedCandidate.avatar || '👤',
         isArchived: false,

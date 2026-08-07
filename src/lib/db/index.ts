@@ -47,7 +47,6 @@ function formatGeneratedPersona(p: any): Persona {
     role: roleStr,
     description: p.description || 'Analytical thought partner and reasoning framework.',
     systemPrompt: p.instructions || p.systemPrompt || '',
-    recommendedModel: p.recommended_model || p.recommendedModel || 'GPT-4o',
     tags: p.tags || ['AI', 'Philosophy', 'Strategy'],
     isArchived: Boolean(p.isArchived),
     isSystem: true,
@@ -124,6 +123,12 @@ export async function ensureOfficialPersonasSynced(): Promise<void> {
     const idsToDelete: string[] = [];
 
     for (const p of allPersonas) {
+      // Strip legacy recommendedModel property from DB records
+      if ('recommendedModel' in (p as any)) {
+        delete (p as any).recommendedModel;
+        await db.personas.put(p);
+      }
+
       // Strip redundant parenthesized role suffixes stored in legacy p.name
       if (p.name && p.name.includes('(')) {
         const cleanName = p.name.split('(')[0].trim();
