@@ -12,7 +12,6 @@ import { LocalModelGuidance } from '@/components/settings/LocalModelGuidance';
 import { ProviderTestSuiteModal } from '@/components/settings/ProviderTestSuiteModal';
 import { ModelFallbackManager } from '@/components/settings/ModelFallbackManager';
 import { LocalEndpointManager } from '@/components/settings/LocalEndpointManager';
-import { UnifiedKeyManager } from '@/components/settings/UnifiedKeyManager';
 import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { generateFullBackupZip } from '@/lib/utils/exportBackup';
 import { parseBackupFile, executeBackupRestore } from '@/lib/utils/restoreBackup';
@@ -328,13 +327,49 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-4">
-              <UnifiedKeyManager
-                onAppliedKeys={(keys) => {
-                  setOpenaiKey(keys.openai);
-                  setAnthropicKey(keys.anthropic);
-                  setGeminiKey(keys.gemini);
-                }}
-              />
+              {/* OpenRouter Key Input */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-mono text-[var(--color-ink)] flex items-center justify-between">
+                  <span>OpenRouter API Key (sk-or-v1-...)</span>
+                  {connectionInfo['openrouter']?.status === 'testing' && <span className="text-[var(--color-accent)] font-mono animate-pulse">Testing...</span>}
+                  {connectionInfo['openrouter']?.status === 'success' && (
+                    <span className="text-emerald-600 font-mono text-xs" title={connectionInfo['openrouter'].modelNames?.join(', ')}>
+                      ✓ Validated ({connectionInfo['openrouter'].modelCount || 0} models)
+                    </span>
+                  )}
+                  {connectionInfo['openrouter']?.status === 'error' && (
+                    <span className="text-[var(--color-error)] font-mono text-xs">
+                      ✕ {connectionInfo['openrouter'].errorMessage || 'Error'}
+                    </span>
+                  )}
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type={showKeys ? 'text' : 'password'}
+                    value={openrouterKey}
+                    onChange={(e) => setOpenrouterKey(e.target.value)}
+                    placeholder="sk-or-v1-..."
+                    className="flex-1 px-3 py-2 text-xs font-mono bg-[var(--color-paper)] border border-[var(--color-border)] rounded text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-focus)]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleTestConnection('openrouter', openrouterKey)}
+                    disabled={!openrouterKey.trim() || connectionInfo['openrouter']?.status === 'testing'}
+                    className="btn-hallmark text-xs bg-[var(--color-paper)] focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+                  >
+                    Test
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveDiagnosticProvider('openrouter')}
+                    disabled={!openrouterKey.trim()}
+                    className="btn-hallmark text-xs gap-1 bg-[var(--color-paper)] text-[var(--color-accent)] border-[var(--color-accent)]/30 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] disabled:opacity-40"
+                    title="Run 4-check automated pre-call diagnostic suite"
+                  >
+                    <Zap className="w-3 h-3" /> Diagnostic
+                  </button>
+                </div>
+              </div>
 
               {/* OpenAI Key Input */}
               <div className="space-y-1.5">

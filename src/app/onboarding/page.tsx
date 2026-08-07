@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
 import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck, CheckCircle2, Lock, Cpu, Server, ChevronLeft, Zap } from 'lucide-react';
-import { UnifiedKeyManager } from '@/components/settings/UnifiedKeyManager';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
 
@@ -292,15 +291,6 @@ export default function OnboardingPage() {
             </div>
 
             <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
-              <UnifiedKeyManager
-                onAppliedKeys={(keys) => {
-                  setSelectedProvider('openrouter');
-                  setApiKey(keys.openrouter);
-                  setSelectedDefaultModel('openrouter/auto');
-                  setQuickTestState({ status: 'idle' });
-                }}
-              />
-
               {/* Provider Selection */}
               <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 {[
@@ -314,8 +304,13 @@ export default function OnboardingPage() {
                     key={p.id}
                     type="button"
                     onClick={() => {
-                      setSelectedProvider(p.id as any);
+                      const pId = p.id as any;
+                      setSelectedProvider(pId);
                       setValidationError(null);
+                      setQuickTestState({ status: 'idle' });
+                      if (typeof window !== 'undefined' && pId !== 'ollama') {
+                        setApiKey(localStorage.getItem(`framework-engine:api-key:${pId}`) || '');
+                      }
                     }}
                     className={`btn-hallmark text-xs justify-center transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
                       selectedProvider === p.id
@@ -339,6 +334,7 @@ export default function OnboardingPage() {
                   onChange={(e) => setSelectedDefaultModel(e.target.value)}
                   className="w-full px-3 py-2 text-xs bg-[var(--color-paper)] border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-ink)] font-mono focus:outline-none focus:border-[var(--color-focus)]"
                 >
+                  <option value="openrouter/auto">openrouter/auto — Dynamic Router (OpenRouter)</option>
                   <option value="gpt-4o">gpt-4o — Flagship Multimodal (OpenAI)</option>
                   <option value="gpt-4o-mini">gpt-4o-mini — Fast & Cost-Effective (OpenAI)</option>
                   <option value="claude-3-5-sonnet-20241022">claude-3-5-sonnet-20241022 — Deep Reasoning (Anthropic)</option>
@@ -346,7 +342,6 @@ export default function OnboardingPage() {
                   <option value="gemini-2.5-flash">gemini-2.5-flash — High Throughput (Google)</option>
                   <option value="gemini-2.5-pro">gemini-2.5-pro — Advanced Reasoning (Google)</option>
                   <option value="llama3.2">llama3.2 — Local Runtime (Ollama / LocalAI)</option>
-                  <option value="openrouter/auto">openrouter/auto — Dynamic Router (OpenRouter)</option>
                 </select>
               </div>
 
@@ -357,7 +352,9 @@ export default function OnboardingPage() {
                     <label className="font-mono text-[var(--color-ink-muted)]">API Key ({selectedProvider.toUpperCase()})</label>
                     <a
                       href={
-                        selectedProvider === 'openai'
+                        selectedProvider === 'openrouter'
+                          ? 'https://openrouter.ai/keys'
+                          : selectedProvider === 'openai'
                           ? 'https://platform.openai.com/api-keys'
                           : selectedProvider === 'anthropic'
                           ? 'https://console.anthropic.com/settings/keys'
