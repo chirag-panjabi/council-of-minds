@@ -6,7 +6,7 @@ import { getModelCapability } from '@/lib/utils/providerCapabilities';
 
 /* Hallmark · component: DynamicModelSelector · genre: editorial · theme: studio */
 
-export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'mock';
+export type ModelProvider = 'openrouter' | 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'mock';
 
 export interface ModelOption {
   id: string;
@@ -16,6 +16,14 @@ export interface ModelOption {
 }
 
 export const DEFAULT_FALLBACK_MODELS: Record<ModelProvider, ModelOption[]> = {
+  openrouter: [
+    { id: 'openrouter/auto', name: 'OpenRouter Auto (Router)', provider: 'openrouter' },
+    { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', provider: 'openrouter' },
+    { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (OpenRouter)', provider: 'openrouter' },
+    { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OpenRouter)', provider: 'openrouter' },
+    { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (OpenRouter)', provider: 'openrouter' },
+    { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OpenRouter)', provider: 'openrouter' },
+  ],
   openai: [
     { id: 'gpt-4o', name: 'GPT-4o', provider: 'openai' },
     { id: 'gpt-4o-mini', name: 'GPT-4o Mini', provider: 'openai' },
@@ -84,6 +92,7 @@ export function DynamicModelSelector({
   // Infer initial provider from model ID or localStorage default
   const inferProvider = (modelId: string): ModelProvider => {
     if (modelId) {
+      if (modelId.startsWith('openrouter') || modelId.includes('/') || modelId.includes('deepseek') || modelId.includes('meta-llama')) return 'openrouter';
       if (modelId.startsWith('gemini')) return 'gemini';
       if (modelId.startsWith('claude')) return 'anthropic';
       if (modelId.startsWith('ollama') || modelId.includes(':') || modelId.includes('llama')) return 'ollama';
@@ -93,7 +102,7 @@ export function DynamicModelSelector({
       const savedProvider = localStorage.getItem('framework-engine:default-provider') as ModelProvider;
       if (savedProvider) return savedProvider;
     }
-    return 'openai';
+    return 'openrouter';
   };
 
   const [provider, setProvider] = useState<ModelProvider>(() => inferProvider(value));
@@ -171,6 +180,7 @@ export function DynamicModelSelector({
           aria-label="Select AI Model Provider"
           className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer uppercase font-semibold"
         >
+          <option value="openrouter">OpenRouter</option>
           <option value="openai">OpenAI</option>
           <option value="anthropic">Anthropic</option>
           <option value="gemini">Google Gemini</option>
