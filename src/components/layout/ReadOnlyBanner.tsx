@@ -11,19 +11,21 @@ export function ReadOnlyBanner() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hasSkipped = localStorage.getItem('framework-engine:has_skipped_onboarding') === 'true';
-      const openaiKey = localStorage.getItem('framework-engine:openai-key');
-      const anthropicKey = localStorage.getItem('framework-engine:anthropic-key');
-      const geminiKey = localStorage.getItem('framework-engine:gemini-key');
-      const openrouterKey = localStorage.getItem('framework-engine:openrouter-key');
+      const openrouterKey = localStorage.getItem('framework-engine:api-key:openrouter') || localStorage.getItem('framework-engine:openrouter-key');
+      const geminiKey = localStorage.getItem('framework-engine:api-key:gemini') || localStorage.getItem('framework-engine:gemini-key');
+      const openaiKey = localStorage.getItem('framework-engine:api-key:openai') || localStorage.getItem('framework-engine:openai-key');
+      const anthropicKey = localStorage.getItem('framework-engine:api-key:anthropic') || localStorage.getItem('framework-engine:anthropic-key');
+      const ollamaKey = localStorage.getItem('framework-engine:api-key:ollama') || localStorage.getItem('framework-engine:ollama-enabled');
 
-      const hasAnyKey = Boolean(openaiKey || anthropicKey || geminiKey || openrouterKey);
+      const hasAnyKey = Boolean(
+        openrouterKey?.trim() ||
+        geminiKey?.trim() ||
+        openaiKey?.trim() ||
+        anthropicKey?.trim() ||
+        ollamaKey === 'true'
+      );
 
-      if (hasSkipped || !hasAnyKey) {
-        setIsReadOnly(true);
-      } else {
-        setIsReadOnly(false);
-      }
+      setIsReadOnly(!hasAnyKey);
     }
   }, []);
 

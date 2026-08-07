@@ -31,6 +31,7 @@ export function ClientHydrationGuard({ children }: { children: React.ReactNode }
       localStorage.getItem('framework-engine:gemini-key')
     );
     const hasOpenRouter = Boolean(
+      localStorage.getItem('framework-engine:api-key:openrouter') ||
       localStorage.getItem('framework-engine:openrouter-key')
     );
     const hasOllama = Boolean(
