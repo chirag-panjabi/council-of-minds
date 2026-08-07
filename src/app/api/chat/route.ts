@@ -79,6 +79,44 @@ export async function POST(req: NextRequest) {
 
     const RETRIABLE_STATUSES = [404, 429, 500, 502, 503, 504];
 
+    // OpenRouter Provider
+    if (provider === 'openrouter' || requestedModel.startsWith('openrouter/')) {
+      const targetModel = requestedModel === 'openrouter/auto' ? 'openrouter/auto' : requestedModel;
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`,
+          'HTTP-Referer': 'http://localhost:3000',
+          'X-Title': 'Council of Minds',
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages: fullMessages,
+          stream: true,
+          temperature,
+          stream_options: { include_usage: true },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        return NextResponse.json(
+          { error: redactSensitiveData(errorText) },
+          { status: response.status }
+        );
+      }
+
+      return new NextResponse(response.body, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+          'X-Response-Model': targetModel,
+        },
+      });
+    }
+
     // 1. OpenAI Provider
     if (provider === 'openai') {
       const candidates = getModelCandidates('openai', requestedModel || 'gpt-4o');

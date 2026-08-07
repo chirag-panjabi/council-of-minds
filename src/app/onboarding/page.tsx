@@ -16,7 +16,7 @@ export default function OnboardingPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
   // Step 2 & 3 State
-  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'gemini' | 'ollama'>('openai');
+  const [selectedProvider, setSelectedProvider] = useState<'openai' | 'anthropic' | 'gemini' | 'openrouter' | 'ollama'>('openai');
   const [selectedDefaultModel, setSelectedDefaultModel] = useState<string>('gpt-4o');
   const [apiKey, setApiKey] = useState('');
   const [showKey, setShowKey] = useState(false);
@@ -64,7 +64,9 @@ export default function OnboardingPage() {
         const latencyMs = Date.now() - startTime;
         const data = await res.json().catch(() => ({}));
         if (!res.ok || !data.success) {
-          throw new Error(data.error || `Key validation failed (${res.status})`);
+          const rawErr = data.error || `Key validation failed (${res.status})`;
+          const errMsg = typeof rawErr === 'object' ? (rawErr.message || JSON.stringify(rawErr)) : String(rawErr);
+          throw new Error(errMsg);
         }
         setQuickTestState({
           status: 'success',
@@ -75,7 +77,7 @@ export default function OnboardingPage() {
     } catch (err: any) {
       setQuickTestState({
         status: 'error',
-        message: err.message || 'Connection test failed',
+        message: typeof err?.message === 'object' ? JSON.stringify(err.message) : (err?.message || 'Connection test failed'),
       });
     }
   };
@@ -292,13 +294,17 @@ export default function OnboardingPage() {
             <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-6">
               <UnifiedKeyManager
                 onAppliedKeys={(keys) => {
-                  setApiKey(keys[selectedProvider as keyof typeof keys] || keys.openrouter);
+                  setSelectedProvider('openrouter');
+                  setApiKey(keys.openrouter);
+                  setSelectedDefaultModel('openrouter/auto');
+                  setQuickTestState({ status: 'idle' });
                 }}
               />
 
               {/* Provider Selection */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
                 {[
+                  { id: 'openrouter', label: 'OpenRouter' },
                   { id: 'openai', label: 'OpenAI' },
                   { id: 'anthropic', label: 'Anthropic' },
                   { id: 'gemini', label: 'Google Gemini' },

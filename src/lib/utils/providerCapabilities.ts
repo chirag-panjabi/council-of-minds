@@ -1,4 +1,4 @@
-export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'mock';
+export type ModelProvider = 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'openrouter' | 'mock';
 
 export interface ModelCapability {
   modelId: string;
@@ -33,6 +33,17 @@ export const KNOWN_CAPABILITIES: Record<string, Partial<ModelCapability>> = {
     maxContextTokens: 128000,
     maxOutputTokens: 4096,
     recommendedUse: 'Fast Low-Latency Dialogue',
+  },
+  // OpenRouter
+  'openrouter/auto': {
+    displayName: 'OpenRouter Auto Router',
+    provider: 'openrouter',
+    supportsVision: true,
+    supportsStreaming: true,
+    supportsSystemPrompt: true,
+    maxContextTokens: 128000,
+    maxOutputTokens: 4096,
+    recommendedUse: 'Universal Dynamic Model Routing',
   },
   'o3-mini': {
     displayName: 'o3-mini',

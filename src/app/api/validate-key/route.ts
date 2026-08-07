@@ -3,6 +3,18 @@ import { redactSensitiveData } from '@/lib/utils/redact';
 
 export const runtime = 'edge';
 
+function extractErrorMessage(rawText: string, status: number): string {
+  try {
+    const parsed = JSON.parse(rawText);
+    if (typeof parsed.error === 'string') return parsed.error;
+    if (parsed.error?.message && typeof parsed.error.message === 'string') return parsed.error.message;
+    if (parsed.message && typeof parsed.message === 'string') return parsed.message;
+  } catch {
+    // raw text fallback
+  }
+  return redactSensitiveData(rawText.slice(0, 150) || `Provider API request failed (${status})`);
+}
+
 export async function POST(req: NextRequest) {
   try {
     const provider = req.headers.get('x-provider') || 'openai';
@@ -15,13 +27,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (provider === 'openrouter') {
+      const res = await fetch('https://openrouter.ai/api/v1/auth/key', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${apiKey}` },
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        return NextResponse.json(
+          { error: extractErrorMessage(errorText, res.status) },
+          { status: res.status }
+        );
+      }
+
+      const data = await res.json().catch(() => ({}));
+      const label = data?.data?.label || 'OpenRouter Key';
+
+      return NextResponse.json({
+        success: true,
+        provider: 'openrouter',
+        modelCount: 100,
+        modelNames: ['openrouter/auto', 'anthropic/claude-3.5-sonnet', 'openai/gpt-4o', 'deepseek/deepseek-r1'],
+        label,
+      });
+    }
+
     if (provider === 'gemini') {
       const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`;
       const res = await fetch(url, { method: 'GET' });
 
       if (!res.ok) {
         const errorText = await res.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: res.status });
+        return NextResponse.json(
+          { error: extractErrorMessage(errorText, res.status) },
+          { status: res.status }
+        );
       }
 
       const data = await res.json();
@@ -46,7 +87,10 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok) {
         const errorText = await res.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: res.status });
+        return NextResponse.json(
+          { error: extractErrorMessage(errorText, res.status) },
+          { status: res.status }
+        );
       }
 
       const data = await res.json();
@@ -79,7 +123,10 @@ export async function POST(req: NextRequest) {
 
       if (!res.ok && res.status !== 200) {
         const errorText = await res.text();
-        return new NextResponse(redactSensitiveData(errorText), { status: res.status });
+        return NextResponse.json(
+          { error: extractErrorMessage(errorText, res.status) },
+          { status: res.status }
+        );
       }
 
       return NextResponse.json({

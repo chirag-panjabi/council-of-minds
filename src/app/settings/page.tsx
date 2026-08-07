@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const [openaiKey, setOpenaiKey] = useState('');
   const [anthropicKey, setAnthropicKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
+  const [openrouterKey, setOpenrouterKey] = useState('');
 
   const [ollamaUrl, setOllamaUrl] = useState('http://localhost:11434');
   const [isOllamaEnabled, setIsOllamaEnabled] = useState(false);
@@ -75,6 +76,7 @@ export default function SettingsPage() {
     setOpenaiKey(localStorage.getItem('framework-engine:api-key:openai') || '');
     setAnthropicKey(localStorage.getItem('framework-engine:api-key:anthropic') || '');
     setGeminiKey(localStorage.getItem('framework-engine:api-key:gemini') || '');
+    setOpenrouterKey(localStorage.getItem('framework-engine:api-key:openrouter') || '');
     setOllamaUrl(localStorage.getItem('framework-engine:ollama-url') || 'http://localhost:11434');
     setIsOllamaEnabled(localStorage.getItem('framework-engine:ollama-enabled') === 'true');
     setPersonalProfile(localStorage.getItem('framework-engine:personal-profile') || '');
@@ -85,6 +87,7 @@ export default function SettingsPage() {
     localStorage.setItem('framework-engine:api-key:openai', openaiKey.trim());
     localStorage.setItem('framework-engine:api-key:anthropic', anthropicKey.trim());
     localStorage.setItem('framework-engine:api-key:gemini', geminiKey.trim());
+    localStorage.setItem('framework-engine:api-key:openrouter', openrouterKey.trim());
     localStorage.setItem('framework-engine:ollama-url', ollamaUrl.trim());
     localStorage.setItem('framework-engine:ollama-enabled', isOllamaEnabled.toString());
     localStorage.setItem('framework-engine:personal-profile', personalProfile.trim());
@@ -171,11 +174,13 @@ export default function SettingsPage() {
           },
         }));
       } else {
+        const rawErr = data.error || `Validation failed (${res.status})`;
+        const errMsg = typeof rawErr === 'object' ? (rawErr.message || JSON.stringify(rawErr)) : String(rawErr);
         setConnectionInfo((prev) => ({
           ...prev,
           [provider]: {
             status: 'error',
-            errorMessage: data.error || `Validation failed (${res.status})`,
+            errorMessage: errMsg,
           },
         }));
       }
@@ -184,7 +189,7 @@ export default function SettingsPage() {
         ...prev,
         [provider]: {
           status: 'error',
-          errorMessage: e.message || 'Connection failed',
+          errorMessage: typeof e?.message === 'object' ? JSON.stringify(e.message) : (e?.message || 'Connection failed'),
         },
       }));
     }
