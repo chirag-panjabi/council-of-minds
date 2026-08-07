@@ -28,13 +28,17 @@ import {
   Sliders,
   FileText,
   Command,
+  Check,
+  Scale,
+  MessageSquare,
+  ShieldAlert,
 } from 'lucide-react';
 import Link from 'next/link';
 
 type DocSection = 'overview' | 'personas' | 'councils' | 'models' | 'shortcuts';
 
 export default function DocsPage() {
-  const [activeTab, setActiveTab] = useState<DocSection>('overview');
+  const [activeTab, setActiveTab] = useState<DocSection>('councils');
 
   return (
     <Shell>
@@ -55,10 +59,10 @@ export default function DocsPage() {
 
           <div className="flex items-center gap-3">
             <Link
-              href="/personas"
+              href="/personas/groups"
               className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
-              <Brain className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Persona Library
+              <Users className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Council Groups
             </Link>
           </div>
         </header>
@@ -121,7 +125,7 @@ export default function DocsPage() {
                     <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-accent)] font-semibold uppercase">
                       <Lock className="w-4 h-4" /> 1. Local Storage Security
                     </div>
-                    <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                    <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed font-mono">
                       API keys are saved exclusively in your web browser’s <code>localStorage</code>. Keys are only read in memory when constructing API requests and are never written to disk or logged by the backend proxy.
                     </p>
                     <div className="p-3 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded text-[11px] font-mono text-[var(--color-ink-muted)] space-y-1">
@@ -138,7 +142,7 @@ export default function DocsPage() {
                     <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-accent)] font-semibold uppercase">
                       <Database className="w-4 h-4" /> 2. IndexedDB Client Database
                     </div>
-                    <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                    <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed font-mono">
                       All personas, custom rules, council group rosters, and chat transcripts are stored locally using <strong>Dexie.js (IndexedDB)</strong> inside your browser sandbox.
                     </p>
                     <div className="p-3 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded text-[11px] font-mono text-[var(--color-ink-muted)] space-y-1">
@@ -157,7 +161,7 @@ export default function DocsPage() {
                   <div className="flex items-center gap-2 text-xs font-mono text-[var(--color-accent)] font-semibold uppercase">
                     <Radio className="w-4 h-4" /> Local Ollama Integration Guide
                   </div>
-                  <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed">
+                  <p className="text-xs text-[var(--color-ink-muted)] leading-relaxed font-mono">
                     To use local models (e.g. <code>llama3</code>, <code>mistral</code>, <code>deepseek-r1</code>) with zero external network access, start your local Ollama instance with CORS permissions enabled:
                   </p>
                   <pre className="p-3 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded text-[11px] font-mono text-[var(--color-accent)] overflow-x-auto">
@@ -266,55 +270,173 @@ export default function DocsPage() {
           )}
 
           {/* ========================================================================= */}
-          {/* 3. Multi-Agent Council Debates Protocol */}
+          {/* 3. Multi-Agent Council Debates Masterclass */}
           {/* ========================================================================= */}
           {activeTab === 'councils' && (
             <div className="space-y-8">
+              {/* Introduction Card */}
               <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-lg)] space-y-6">
                 <div className="flex items-center gap-3 pb-4 border-b border-[var(--color-border-hairline)]">
                   <div className="w-10 h-10 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[var(--color-accent)] font-semibold shrink-0">
                     <Users className="w-5 h-5" />
                   </div>
                   <div>
-                    <h2 className="font-display text-2xl text-[var(--color-ink)]">Multi-Agent Council Debates Protocol</h2>
-                    <p className="text-xs font-mono text-[var(--color-ink-muted)]">Roster assembly, parallel dispatch, and Neural Judge synthesis</p>
+                    <h2 className="font-display text-2xl text-[var(--color-ink)]">Multi-Agent Council Debates Masterclass</h2>
+                    <p className="text-xs font-mono text-[var(--color-ink-muted)]">Roster engineering, 3-phase debate workflow, Neural Judge synthesis, and battle-tested templates</p>
                   </div>
                 </div>
 
-                <p className="text-xs text-[var(--color-ink)] leading-relaxed font-mono">
-                  Single-agent AI prompts often suffer from blind spots and bias. <strong>Council Debates</strong> solve this by orchestrating a team of diverse personas to debate your strategic dilemma from complementary perspectives before issuing a synthesized verdict.
-                </p>
+                <div className="space-y-4 text-xs font-mono text-[var(--color-ink)] leading-relaxed">
+                  <p>
+                    Single-agent AI prompts frequently suffer from <strong>cognitive blind spots, confirmation bias, and uncritical agreement</strong>. When presented with a complex strategic question, a single model tends to offer an over-generalized response without stress-testing risky assumptions.
+                  </p>
+                  <p>
+                    <strong>Council of Minds</strong> solves this by implementing a <strong>Multi-Agent Debate & Synthesis Architecture</strong>. Instead of asking one model for advice, your prompt is dispatched to a specialized council of distinct personas—each with opposing cognitive frameworks, risk tolerances, and priorities.
+                  </p>
+                </div>
 
-                {/* 3-Phase Workflow Cards */}
-                <div className="space-y-4 pt-2">
-                  <h3 className="font-display text-lg text-[var(--color-ink)]">The 3-Phase Debate Workflow</h3>
-
-                  <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2 font-mono text-xs">
-                    <div className="flex items-center gap-2 text-[var(--color-accent)] font-semibold uppercase">
-                      <GitFork className="w-4 h-4" /> Phase 1: Parallel Individual Stances
-                    </div>
-                    <p className="text-[var(--color-ink-muted)] leading-relaxed">
-                      Your query is sent simultaneously to each council member. Every persona evaluates the dilemma through their specific framework (e.g. <em>Growth Strategist focuses on scale, Risk Manager flags liabilities, Engineering Lead checks feasibility</em>).
-                    </p>
+                {/* 3-Phase Debate Execution Pipeline */}
+                <div className="space-y-6 pt-4 border-t border-[var(--color-border-hairline)]">
+                  <div className="space-y-1">
+                    <h3 className="font-display text-xl text-[var(--color-ink)] font-normal font-sans">The 3-Phase Debate Pipeline</h3>
+                    <p className="text-xs font-mono text-[var(--color-ink-muted)]">How a user prompt progresses through asynchronous council debate rounds</p>
                   </div>
 
-                  <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2 font-mono text-xs">
-                    <div className="flex items-center gap-2 text-[var(--color-accent)] font-semibold uppercase">
-                      <Sliders className="w-4 h-4" /> Phase 2: Cross-Examination & Rebuttal
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    {/* Phase 1 */}
+                    <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 font-mono text-xs flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--color-accent)] font-semibold uppercase tracking-wider text-[11px]">Phase 1</span>
+                          <span className="px-2 py-0.5 bg-[var(--color-paper-3)] border border-[var(--color-border)] rounded text-[10px] text-[var(--color-ink-muted)]">Parallel Dispatch</span>
+                        </div>
+                        <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Individual Stances</h4>
+                        <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
+                          Your query is dispatched simultaneously to all member personas in the roster. Every persona independently evaluates the problem using its specific system directives and rules.
+                        </p>
+                      </div>
+                      <div className="p-3 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded text-[10px] text-[var(--color-ink-faint)] space-y-1">
+                        <div><strong>Execution:</strong> Async parallel stream</div>
+                        <div><strong>Output:</strong> Member Stance Panels</div>
+                      </div>
                     </div>
-                    <p className="text-[var(--color-ink-muted)] leading-relaxed">
-                      Personas examine opposing arguments, challenge flawed assumptions, and refine their recommendations based on points raised by fellow council members.
-                    </p>
+
+                    {/* Phase 2 */}
+                    <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 font-mono text-xs flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--color-accent)] font-semibold uppercase tracking-wider text-[11px]">Phase 2</span>
+                          <span className="px-2 py-0.5 bg-[var(--color-paper-3)] border border-[var(--color-border)] rounded text-[10px] text-[var(--color-ink-muted)]">Cross-Exam</span>
+                        </div>
+                        <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Rebuttal & Critique</h4>
+                        <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
+                          Personas inspect the stance outputs of fellow council members. They challenge unverified claims, flag financial/technical risks, and counter opposing recommendations.
+                        </p>
+                      </div>
+                      <div className="p-3 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded text-[10px] text-[var(--color-ink-faint)] space-y-1">
+                        <div><strong>Execution:</strong> Inter-persona evaluation</div>
+                        <div><strong>Output:</strong> Critique & Counter-points</div>
+                      </div>
+                    </div>
+
+                    {/* Phase 3 */}
+                    <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 font-mono text-xs flex flex-col justify-between border-l-2 border-l-[var(--color-accent)]">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--color-accent)] font-semibold uppercase tracking-wider text-[11px]">Phase 3</span>
+                          <span className="px-2 py-0.5 bg-[var(--color-accent-subtle)] text-[var(--color-accent)] rounded text-[10px] font-semibold">Synthesis</span>
+                        </div>
+                        <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Neural Judge Verdict</h4>
+                        <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
+                          The designated <strong>Synthesizer Persona (Neural Judge)</strong> correlates all stances, extracts consensus points, maps disagreements, and generates a final executive report.
+                        </p>
+                      </div>
+                      <div className="p-3 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded text-[10px] text-[var(--color-accent)] space-y-1">
+                        <div><strong>Execution:</strong> Consensus correlation</div>
+                        <div><strong>Output:</strong> Executive Verdict Report</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Pre-Built Battle-Tested Council Templates */}
+                <div className="space-y-4 pt-6 border-t border-[var(--color-border-hairline)]">
+                  <div className="space-y-1">
+                    <h3 className="font-display text-xl text-[var(--color-ink)] font-normal font-sans">Battle-Tested Council Roster Templates</h3>
+                    <p className="text-xs font-mono text-[var(--color-ink-muted)]">Pre-configured council rosters optimized for specific domain decisions</p>
                   </div>
 
-                  <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-2 font-mono text-xs">
-                    <div className="flex items-center gap-2 text-[var(--color-accent)] font-semibold uppercase">
-                      <Cpu className="w-4 h-4" /> Phase 3: Neural Judge Synthesis Report
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2 font-mono text-xs">
+                    {/* Template 1 */}
+                    <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--color-accent)] font-semibold uppercase tracking-wider text-[10px]">Strategic Board</span>
+                          <Users className="w-4 h-4 text-[var(--color-accent)]" />
+                        </div>
+                        <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Executive Leadership Board</h4>
+                        <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
+                          Ideal for business strategy, fundraising, pivot decisions, and market expansion dilemmas.
+                        </p>
+                        <div className="space-y-1.5 pt-2 text-[11px]">
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Growth Strategist</strong> (Scale & Opportunity)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Risk Manager</strong> (Financial Liabilities)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Tech Architect</strong> (Feasibility & Speed)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)] text-semibold" /> <strong>Synthesizer:</strong> Neural Judge</div>
+                        </div>
+                      </div>
                     </div>
-                    <p className="text-[var(--color-ink-muted)] leading-relaxed">
-                      The designated <strong>Synthesizer Persona (Neural Judge)</strong> correlates all stances, highlights key trade-offs, resolves disagreements, and generates a structured consensus report with actionable next steps.
-                    </p>
+
+                    {/* Template 2 */}
+                    <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--color-accent)] font-semibold uppercase tracking-wider text-[10px]">Product Board</span>
+                          <Sparkles className="w-4 h-4 text-[var(--color-accent)]" />
+                        </div>
+                        <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Product & UX Council</h4>
+                        <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
+                          Optimized for feature planning, UX redesigns, user onboarding flows, and customer retention strategies.
+                        </p>
+                        <div className="space-y-1.5 pt-2 text-[11px]">
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Product Manager</strong> (User Value & Metrics)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>UX Designer</strong> (Usability & Friction)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Customer Advocate</strong> (User Empathy)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Synthesizer:</strong> Product Director</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Template 3 */}
+                    <div className="p-5 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 flex flex-col justify-between">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[var(--color-accent)] font-semibold uppercase tracking-wider text-[10px]">Engineering Board</span>
+                          <Code className="w-4 h-4 text-[var(--color-accent)]" />
+                        </div>
+                        <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Software Architecture Board</h4>
+                        <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
+                          Designed for refactoring audits, database schema design, API contract reviews, and security hardening.
+                        </p>
+                        <div className="space-y-1.5 pt-2 text-[11px]">
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Security Auditor</strong> (Vulnerabilities)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Performance Engineer</strong> (Latency & LCP)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Clean Code Craftsman</strong> (Refactoring)</div>
+                          <div className="flex items-center gap-1.5 text-[var(--color-ink)]"><Check className="w-3 h-3 text-[var(--color-accent)]" /> <strong>Synthesizer:</strong> Principal Architect</div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+                </div>
+
+                {/* Group Management Guide */}
+                <div className="p-5 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded-[var(--radius-md)] space-y-3 font-mono text-xs">
+                  <div className="flex items-center gap-2 text-[var(--color-accent)] font-semibold uppercase">
+                    <Users className="w-4 h-4" /> Managing Council Groups (`/personas/groups`)
+                  </div>
+                  <p className="text-[var(--color-ink-muted)] leading-relaxed">
+                    Navigate to <strong>Council Groups</strong> in the sidebar to create, edit, or customize council rosters. You can add or remove members, swap out synthesizer personas, and create custom boards tailored to your exact project workflow!
+                  </p>
                 </div>
               </div>
             </div>
