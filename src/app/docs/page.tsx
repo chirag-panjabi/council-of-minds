@@ -32,13 +32,16 @@ import {
   Scale,
   MessageSquare,
   ShieldAlert,
+  Workflow,
+  FileCode,
+  CornerDownRight,
 } from 'lucide-react';
 import Link from 'next/link';
 
-type DocSection = 'overview' | 'personas' | 'councils' | 'models' | 'shortcuts';
+type DocSection = 'overview' | 'personas' | 'councils' | 'models' | 'prompts' | 'shortcuts';
 
 export default function DocsPage() {
-  const [activeTab, setActiveTab] = useState<DocSection>('councils');
+  const [activeTab, setActiveTab] = useState<DocSection>('prompts');
 
   return (
     <Shell>
@@ -53,16 +56,16 @@ export default function DocsPage() {
               Documentation & User Guide
             </h1>
             <p className="text-xs font-mono uppercase tracking-widest text-[var(--color-ink-muted)]">
-              Architecture • Persona Directives • Multi-Agent Protocols • Provider Keys
+              Architecture • Persona Directives • Multi-Agent Protocols • Prompt Flows
             </p>
           </div>
 
           <div className="flex items-center gap-3">
             <Link
-              href="/personas/groups"
+              href="/personas"
               className="btn-hallmark text-xs gap-1.5 focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)]"
             >
-              <Users className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Council Groups
+              <Brain className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Persona Library
             </Link>
           </div>
         </header>
@@ -74,7 +77,8 @@ export default function DocsPage() {
             { id: 'personas', label: '2. Persona Studio', icon: Brain },
             { id: 'councils', label: '3. Multi-Agent Councils', icon: Users },
             { id: 'models', label: '4. Dynamic Models', icon: Cpu },
-            { id: 'shortcuts', label: '5. Power User Guide', icon: Terminal },
+            { id: 'prompts', label: '5. Prompt Engineering & Flow', icon: Workflow },
+            { id: 'shortcuts', label: '6. Power User Guide', icon: Terminal },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -348,7 +352,7 @@ export default function DocsPage() {
                         </div>
                         <h4 className="font-display text-base text-[var(--color-ink)] font-sans">Neural Judge Verdict</h4>
                         <p className="text-[var(--color-ink-muted)] text-[11px] leading-relaxed">
-                          The designated <strong>Synthesizer Persona (Neural Judge)</strong> correlates all stances, extracts consensus points, maps disagreements, and generates a final executive report.
+                          The designated <strong>Synthesizer Persona (Neural Judge)</strong> correlates all stances, highlights key trade-offs, resolves disagreements, and generates a final executive report.
                         </p>
                       </div>
                       <div className="p-3 bg-[var(--color-paper-3)] border border-[var(--color-border-hairline)] rounded text-[10px] text-[var(--color-accent)] space-y-1">
@@ -505,7 +509,130 @@ export default function DocsPage() {
           )}
 
           {/* ========================================================================= */}
-          {/* 5. Power User Guide & Keyboard Shortcuts */}
+          {/* 5. Prompt Engineering & Execution Flow Masterclass */}
+          {/* ========================================================================= */}
+          {activeTab === 'prompts' && (
+            <div className="space-y-8">
+              <div className="p-6 bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] rounded-[var(--radius-lg)] space-y-6">
+                <div className="flex items-center gap-3 pb-4 border-b border-[var(--color-border-hairline)]">
+                  <div className="w-10 h-10 rounded-full bg-[var(--color-accent-subtle)] border border-[var(--color-accent)]/30 flex items-center justify-center text-[var(--color-accent)] font-semibold shrink-0">
+                    <Workflow className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h2 className="font-display text-2xl text-[var(--color-ink)]">Prompt Engineering & Execution Flow Masterclass</h2>
+                    <p className="text-xs font-mono text-[var(--color-ink-muted)] font-mono">System prompt assembly, dispatch conditions, context retention, and edge cases</p>
+                  </div>
+                </div>
+
+                {/* System Prompt Assembly Formula */}
+                <div className="space-y-4 font-mono text-xs text-[var(--color-ink)]">
+                  <h3 className="font-display text-lg font-normal font-sans">1. System Prompt Compilation Assembly</h3>
+                  <p className="text-[var(--color-ink-muted)] leading-relaxed">
+                    Whenever an AI request is constructed, the final system prompt is compiled by combining the base persona prompt directives with active rules from the Advanced Rules Engine:
+                  </p>
+
+                  <pre className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded text-[11px] text-[var(--color-accent)] overflow-x-auto">
+{`Final System Prompt = persona.systemPrompt.trim() + formatRulesBlock(persona.advancedRules)
+
+[ADVANCED RULES DIRECTIVES]
+• TONE RULES: [Active Tone Rules]
+• STYLE RULES: [Active Style Rules]
+• TABOO CONSTRAINTS: [Active Taboo Rules - Do not mention X, Y, Z]
+• FORMATTING: [Active Formatting Constraints - Use LaTeX / Markdown]`}</pre>
+                </div>
+
+                {/* Execution Flows by Condition Table */}
+                <div className="space-y-4 pt-4 border-t border-[var(--color-border-hairline)] font-mono text-xs">
+                  <h3 className="font-display text-lg font-normal text-[var(--color-ink)] font-sans">2. Execution Flows & Conditions</h3>
+
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                      <thead>
+                        <tr className="border-b border-[var(--color-border-hairline)] bg-[var(--color-paper)] text-[var(--color-accent)] uppercase text-[11px]">
+                          <th className="p-3">Interaction Mode</th>
+                          <th className="p-3">System Message Sent</th>
+                          <th className="p-3">User Prompt Payload</th>
+                          <th className="p-3">Context Slicing</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-[var(--color-border-hairline)] text-[var(--color-ink)] text-[11px]">
+                        <tr>
+                          <td className="p-3 font-semibold text-[var(--color-accent)]">1-on-1 Persona Chat</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">Persona System Prompt + Active Rules</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">User input + File attachment content</td>
+                          <td className="p-3 font-mono text-[var(--color-ink-faint)]">Sliced by retention (`last-5`, `last-10`, `all`)</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-semibold text-[var(--color-accent)]">Council Phase 1</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">Member Persona System Prompt + Rules</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">User dilemma prompt</td>
+                          <td className="p-3 font-mono text-[var(--color-ink-faint)]">Parallel dispatch to all members</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-semibold text-[var(--color-accent)]">Council Phase 2</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">Member Persona System Prompt + Rules</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">Phase 1 member stance outputs for critique</td>
+                          <td className="p-3 font-mono text-[var(--color-ink-faint)]">Inter-persona cross-examination</td>
+                        </tr>
+                        <tr>
+                          <td className="p-3 font-semibold text-[var(--color-accent)]">Council Phase 3</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">Synthesizer Persona Prompt (Neural Judge)</td>
+                          <td className="p-3 text-[var(--color-ink-muted)]">User Query + All Phase 1 Stances + Phase 2 Critiques</td>
+                          <td className="p-3 font-mono text-[var(--color-ink-faint)]">Consensus & Executive Verdict Report</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                {/* System Edge Cases Breakdown */}
+                <div className="space-y-4 pt-4 border-t border-[var(--color-border-hairline)] font-mono text-xs">
+                  <h3 className="font-display text-lg font-normal text-[var(--color-ink)] font-sans">3. System Edge Cases & Failure Recovery Protocol</h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-[11px]">
+                    <div className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded space-y-1.5">
+                      <div className="text-[var(--color-accent)] font-semibold flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 text-[var(--color-warning)]" /> Edge Case 1: Empty System Prompt
+                      </div>
+                      <p className="text-[var(--color-ink-muted)] leading-relaxed">
+                        If a user saves a persona with an empty system prompt, the engine automatically injects a fallback directive: <em>"You are an analytical thought partner and reasoning framework."</em>
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded space-y-1.5">
+                      <div className="text-[var(--color-accent)] font-semibold flex items-center gap-1.5">
+                        <ShieldAlert className="w-3.5 h-3.5 text-[var(--color-warning)]" /> Edge Case 2: Missing API Key (401)
+                      </div>
+                      <p className="text-[var(--color-ink-muted)] leading-relaxed">
+                        If the request header lacks an API key for the selected provider, the API proxy returns `401 Unauthorized`. The UI catches this error cleanly and presents the <strong>Configure Key</strong> modal prompt.
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded space-y-1.5">
+                      <div className="text-[var(--color-accent)] font-semibold flex items-center gap-1.5">
+                        <Radio className="w-3.5 h-3.5 text-[var(--color-warning)]" /> Edge Case 3: Ollama Connection Error
+                      </div>
+                      <p className="text-[var(--color-ink-muted)] leading-relaxed">
+                        If Ollama is offline or blocked by CORS at <code>http://localhost:11434</code>, the model catalog catches the network error and displays diagnostic instructions: <em>OLLAMA_ORIGINS="*" ollama serve</em>.
+                      </p>
+                    </div>
+
+                    <div className="p-4 bg-[var(--color-paper)] border border-[var(--color-border-hairline)] rounded space-y-1.5">
+                      <div className="text-[var(--color-accent)] font-semibold flex items-center gap-1.5">
+                        <GitFork className="w-3.5 h-3.5 text-[var(--color-accent)]" /> Edge Case 4: Official Persona Editing
+                      </div>
+                      <p className="text-[var(--color-ink-muted)] leading-relaxed">
+                        Official system personas (`isSystem: true`) are read-only. Editing an official persona automatically triggers <code>handleForkPersona()</code>, creating a user-owned custom copy with `custom-[timestamp]` ID.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ========================================================================= */}
+          {/* 6. Power User Guide & Keyboard Shortcuts */}
           {/* ========================================================================= */}
           {activeTab === 'shortcuts' && (
             <div className="space-y-8">
