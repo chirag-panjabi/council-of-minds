@@ -429,8 +429,9 @@ export default function OneOnOneChatPage() {
               if (dataStr === '[DONE]') continue;
               try {
                 const parsed = JSON.parse(dataStr);
-                if (parsed.text) {
-                  fullContent += parsed.text;
+                const chunkText = parsed.text || parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text || '';
+                if (chunkText) {
+                  fullContent += chunkText;
                 }
                 if (parsed.usage) {
                   promptTokens = parsed.usage.promptTokens || promptTokens;

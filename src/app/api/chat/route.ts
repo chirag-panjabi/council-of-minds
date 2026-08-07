@@ -107,7 +107,47 @@ export async function POST(req: NextRequest) {
         );
       }
 
-      return new NextResponse(response.body, {
+      // Stream Success with normalized SSE transformation
+      let buffer = '';
+
+      const transformStream = new TransformStream({
+        transform(chunk, controller) {
+          buffer += decoder.decode(chunk, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') {
+                controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+                continue;
+              }
+              try {
+                const parsed = JSON.parse(dataStr);
+                const text = parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text;
+                if (text) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({ text })}\n\n`));
+                }
+                if (parsed.usage) {
+                  controller.enqueue(encoder.encode(`data: ${JSON.stringify({
+                    usage: {
+                      promptTokens: parsed.usage.prompt_tokens || 0,
+                      completionTokens: parsed.usage.completion_tokens || 0,
+                    }
+                  })}\n\n`));
+                }
+              } catch {}
+            }
+          }
+        },
+        flush(controller) {
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        },
+      });
+
+      return new NextResponse(response.body!.pipeThrough(transformStream), {
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
