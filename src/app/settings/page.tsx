@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Shell } from '@/components/layout/Shell';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db, isOfficialPersona, DEFAULT_SYNTHESIZER_ID, formatPersonaOptionLabel } from '@/lib/db';
+import { sanitizeStoredKeys } from '@/lib/utils/formatters';
 import { useRouter } from 'next/navigation';
 import { Key, Eye, EyeOff, Shield, Server, Download, Upload, Trash2, CheckCircle2, Cpu, FileText, UserCheck, Scale, Zap, RotateCcw } from 'lucide-react';
 import { RestorePreviewModal, BackupManifest } from '@/components/settings/RestorePreviewModal';
@@ -72,6 +73,7 @@ export default function SettingsPage() {
   const [activeDiagnosticProvider, setActiveDiagnosticProvider] = useState<string | null>(null);
 
   useEffect(() => {
+    sanitizeStoredKeys();
     setOpenaiKey(localStorage.getItem('framework-engine:api-key:openai') || '');
     setAnthropicKey(localStorage.getItem('framework-engine:api-key:anthropic') || '');
     setGeminiKey(localStorage.getItem('framework-engine:api-key:gemini') || '');

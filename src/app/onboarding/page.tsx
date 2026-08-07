@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '@/lib/db';
+import { sanitizeStoredKeys } from '@/lib/utils/formatters';
 import { ShieldCheck, ArrowRight, ExternalLink, Eye, EyeOff, User, UserCheck, CheckCircle2, Lock, Cpu, Server, ChevronLeft, Zap } from 'lucide-react';
 
 /* Hallmark · genre: editorial · macrostructure: 12-letter · theme: newsprint · nav: N9 · footer: Ft6 */
@@ -24,6 +25,13 @@ export default function OnboardingPage() {
   const [systemProfile, setSystemProfile] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+  useEffect(() => {
+    sanitizeStoredKeys();
+    if (typeof window !== 'undefined' && selectedProvider !== 'ollama') {
+      setApiKey(localStorage.getItem(`framework-engine:api-key:${selectedProvider}`) || '');
+    }
+  }, []);
 
   const [quickTestState, setQuickTestState] = useState<{
     status: 'idle' | 'testing' | 'success' | 'error';

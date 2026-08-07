@@ -8,3 +8,33 @@ export function cleanSpeakerPrefix(text: string): string {
     .replace(/^(?:\[[^\]]+\]|\*\*\[[^\]]+\]\*\*|[\w\s]+\s*\([^)]*\)):\s*/i, '')
     .trim();
 }
+
+/**
+ * Sanitizes browser localStorage to clear misplaced OpenRouter keys (sk-or-...)
+ * from direct provider slots (openai, anthropic, gemini) while preserving valid openrouter keys.
+ */
+export function sanitizeStoredKeys(): void {
+  if (typeof window === 'undefined') return;
+
+  const openaiKey = localStorage.getItem('framework-engine:api-key:openai') || '';
+  const anthropicKey = localStorage.getItem('framework-engine:api-key:anthropic') || '';
+  const geminiKey = localStorage.getItem('framework-engine:api-key:gemini') || '';
+  const openrouterKey = localStorage.getItem('framework-engine:api-key:openrouter') || '';
+
+  // If openrouter key is empty but a direct slot has an sk-or- key, move it to openrouter
+  const misplacedOrKey = [openaiKey, anthropicKey, geminiKey].find((k) => k.startsWith('sk-or-'));
+  if (!openrouterKey && misplacedOrKey) {
+    localStorage.setItem('framework-engine:api-key:openrouter', misplacedOrKey);
+  }
+
+  // Clear misplaced OpenRouter keys from direct provider slots
+  if (openaiKey.startsWith('sk-or-')) {
+    localStorage.removeItem('framework-engine:api-key:openai');
+  }
+  if (anthropicKey.startsWith('sk-or-')) {
+    localStorage.removeItem('framework-engine:api-key:anthropic');
+  }
+  if (geminiKey.startsWith('sk-or-')) {
+    localStorage.removeItem('framework-engine:api-key:gemini');
+  }
+}
