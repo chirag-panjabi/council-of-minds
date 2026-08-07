@@ -346,7 +346,7 @@ export function ChatMessageItem({
               <span>{timestampStr}</span>
               <span>•</span>
               <span className="px-1.5 py-0.5 rounded bg-[var(--color-paper-2)] border border-[var(--color-border-hairline)] text-[9px] font-mono text-[var(--color-ink-muted)] font-medium">
-                {message.model || persona?.recommendedModel || 'gpt-4o'}
+                {message.model || 'openrouter/auto'}
               </span>
             </div>
         </div>

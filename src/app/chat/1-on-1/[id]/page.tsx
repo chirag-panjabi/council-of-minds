@@ -353,6 +353,7 @@ export default function OneOnOneChatPage() {
       personaId: persona.id,
       role: 'assistant',
       content: '',
+      model: selectedModel,
       timestamp: Date.now() + 1,
     };
 

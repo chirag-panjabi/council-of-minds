@@ -364,12 +364,17 @@ export default function CouncilChatPage() {
 
   const executePersonaTurn = async (speaker: Persona, conversationHistory: ChatMessage[]) => {
     const assistantMsgId = 'msg-' + Date.now() + '-' + speaker.id;
+
+    const turnProvider = selectedProvider || (selectedModel.startsWith('openrouter') || selectedModel.includes('/') ? 'openrouter' : selectedModel.startsWith('gemini') ? 'gemini' : selectedModel.startsWith('claude') ? 'anthropic' : selectedModel.startsWith('ollama') ? 'ollama' : 'openai');
+    const turnModel = selectedModel || 'openrouter/auto';
+
     const assistantMessageObj: ChatMessage = {
       id: assistantMsgId,
       chatId,
       personaId: speaker.id,
       role: 'assistant',
       content: '',
+      model: turnModel,
       timestamp: Date.now(),
     };
 
@@ -380,16 +385,6 @@ export default function CouncilChatPage() {
     }
 
     try {
-      const turnModel = speaker.recommendedModel || selectedModel;
-      const turnProvider = speaker.recommendedModel
-        ? (speaker.recommendedModel.startsWith('gemini')
-            ? 'gemini'
-            : speaker.recommendedModel.startsWith('claude')
-            ? 'anthropic'
-            : speaker.recommendedModel.startsWith('ollama') || speaker.recommendedModel.includes(':') || speaker.recommendedModel.includes('llama')
-            ? 'ollama'
-            : 'openai')
-        : (selectedProvider || 'openai');
       const apiKey = localStorage.getItem(`framework-engine:api-key:${turnProvider}`) || '';
 
       const roleType = personaGroup?.chairmanPersonaId === speaker.id ? 'chairman' : personaGroup?.skepticPersonaId === speaker.id ? 'skeptic' : personaGroup?.synthesizerPersonaId === speaker.id ? 'synthesizer' : 'member';
