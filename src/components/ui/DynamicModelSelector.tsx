@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Cpu, RefreshCw, Layers } from 'lucide-react';
+import { Cpu, RefreshCw, Layers, Key, AlertTriangle } from 'lucide-react';
+import Link from 'next/link';
 import { getModelCapability } from '@/lib/utils/providerCapabilities';
 
 /* Hallmark · component: DynamicModelSelector · genre: editorial · theme: studio */
@@ -106,7 +107,7 @@ export function DynamicModelSelector({
   };
 
   const [provider, setProvider] = useState<ModelProvider>(() => inferProvider(value));
-  const [models, setModels] = useState<ModelOption[]>(() => resolveModelOptions(inferProvider(value), [], value));
+  const [models, setModels] = useState<ModelOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -121,10 +122,24 @@ export function DynamicModelSelector({
     setIsLoading(true);
     setError(null);
 
-    try {
-      const apiKey = localStorage.getItem(`framework-engine:api-key:${targetProvider}`) || '';
-      const ollamaUrl = localStorage.getItem('framework-engine:ollama-url') || 'http://localhost:11434';
+    if (targetProvider === 'mock') {
+      setModels(resolveModelOptions('mock', [], value));
+      setIsLoading(false);
+      return;
+    }
 
+    const apiKey = typeof window !== 'undefined' ? localStorage.getItem(`framework-engine:api-key:${targetProvider}`) || '' : '';
+    const ollamaUrl = typeof window !== 'undefined' ? localStorage.getItem('framework-engine:ollama-url') || 'http://localhost:11434' : 'http://localhost:11434';
+
+    // Check if API key is missing for cloud providers
+    if (targetProvider !== 'ollama' && !apiKey.trim()) {
+      setModels([]);
+      setError('missing_key');
+      setIsLoading(false);
+      return;
+    }
+
+    try {
       const queryParams = new URLSearchParams({
         provider: targetProvider,
         key: apiKey,
@@ -139,6 +154,13 @@ export function DynamicModelSelector({
         fetchedModels = data.models || [];
       }
 
+      if (fetchedModels.length === 0 && targetProvider === 'ollama') {
+        setError('ollama_unreachable');
+        setModels([]);
+        setIsLoading(false);
+        return;
+      }
+
       const mergedOptions = resolveModelOptions(targetProvider, fetchedModels, value);
       setModels(mergedOptions);
 
@@ -150,8 +172,12 @@ export function DynamicModelSelector({
         }
       }
     } catch (err: any) {
-      setError(err.message || 'Error fetching models');
-      setModels(resolveModelOptions(targetProvider, [], value));
+      if (targetProvider === 'ollama') {
+        setError('ollama_unreachable');
+      } else {
+        setError('fetch_error');
+      }
+      setModels([]);
     } finally {
       setIsLoading(false);
     }
@@ -199,12 +225,18 @@ export function DynamicModelSelector({
           onChange={(e) => handleModelChange(e.target.value)}
           disabled={isLoading || models.length === 0}
           aria-label="Select dynamic live AI model"
-          className="bg-transparent text-xs font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer max-w-[160px] truncate"
+          className={`bg-transparent text-xs font-mono focus:outline-none cursor-pointer max-w-[160px] truncate ${
+            error ? 'text-[var(--color-error)] font-medium' : 'text-[var(--color-ink)]'
+          }`}
         >
           {isLoading ? (
             <option value="">Fetching live models...</option>
+          ) : error === 'missing_key' ? (
+            <option value="">⚠️ Key Required (Set in Settings)</option>
+          ) : error === 'ollama_unreachable' ? (
+            <option value="">🔌 Ollama Unreachable</option>
           ) : models.length === 0 ? (
-            <option value={value}>{value} (Offline)</option>
+            <option value="">⚠️ No Models Available</option>
           ) : (
             models.map((m) => {
               const cap = getModelCapability(m.id, m.provider);
@@ -223,14 +255,25 @@ export function DynamicModelSelector({
         <button
           type="button"
           onClick={() => fetchLiveModels(provider)}
-          disabled={isLoading}
+          disabled={isLoading || error === 'missing_key'}
           aria-label="Refresh live available models from provider"
-          className="p-0.5 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] transition-colors"
+          className="p-0.5 text-[var(--color-ink-muted)] hover:text-[var(--color-accent)] rounded focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] transition-colors disabled:opacity-30"
           title="Re-query live models from provider API"
         >
           <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin text-[var(--color-accent)]' : ''}`} />
         </button>
       </div>
+
+      {/* Set Key Quick Action Button */}
+      {error === 'missing_key' && (
+        <Link
+          href="/settings"
+          className="btn-hallmark text-[10px] py-1 px-1.5 bg-[var(--color-accent-subtle)] text-[var(--color-accent)] border-[var(--color-accent)]/30 hover:underline gap-1 shrink-0"
+          title="Configure API key for this provider in Settings"
+        >
+          <Key className="w-3 h-3" /> Set Key
+        </Link>
+      )}
     </div>
   );
 }
