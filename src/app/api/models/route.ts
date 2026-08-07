@@ -6,7 +6,7 @@ export const runtime = 'edge';
 export interface ModelOption {
   id: string;
   name: string;
-  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama';
+  provider: 'openai' | 'anthropic' | 'gemini' | 'ollama' | 'openrouter';
   description?: string;
 }
 
@@ -24,8 +24,54 @@ export async function GET(req: NextRequest) {
       | 'openai'
       | 'anthropic'
       | 'gemini'
-      | 'ollama';
+      | 'ollama'
+      | 'openrouter';
     const apiKey = searchParams.get('key') || req.headers.get('x-api-key') || '';
+
+    if (provider === 'openrouter') {
+      const headers: Record<string, string> = {};
+      if (apiKey) {
+        headers['Authorization'] = `Bearer ${apiKey}`;
+      }
+
+      try {
+        const res = await fetch('https://openrouter.ai/api/v1/models', { headers });
+        if (res.ok) {
+          const data = await res.json();
+          const rawModels = data.data || [];
+          const models: ModelOption[] = rawModels.map((m: any) => ({
+            id: m.id,
+            name: m.name || m.id,
+            provider: 'openrouter',
+            description: m.description,
+          }));
+
+          if (!models.some((m) => m.id === 'openrouter/auto')) {
+            models.unshift({
+              id: 'openrouter/auto',
+              name: 'OpenRouter Auto (Dynamic Router)',
+              provider: 'openrouter',
+            });
+          }
+
+          return NextResponse.json({ provider: 'openrouter', models });
+        }
+      } catch {
+        // Fallback below
+      }
+
+      return NextResponse.json({
+        provider: 'openrouter',
+        models: [
+          { id: 'openrouter/auto', name: 'OpenRouter Auto (Dynamic Router)', provider: 'openrouter' },
+          { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini (OpenRouter)', provider: 'openrouter' },
+          { id: 'anthropic/claude-3.5-sonnet', name: 'Claude 3.5 Sonnet (OpenRouter)', provider: 'openrouter' },
+          { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash (OpenRouter)', provider: 'openrouter' },
+          { id: 'deepseek/deepseek-chat', name: 'DeepSeek V3 (OpenRouter)', provider: 'openrouter' },
+          { id: 'meta-llama/llama-3.3-70b-instruct', name: 'Llama 3.3 70B (OpenRouter)', provider: 'openrouter' },
+        ],
+      });
+    }
 
     if (provider === 'gemini') {
       if (!apiKey) {
