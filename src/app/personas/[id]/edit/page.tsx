@@ -7,7 +7,7 @@ import { Shell } from '@/components/layout/Shell';
 import { db, isOfficialPersona } from '@/lib/db';
 import type { Persona, PersonaRevision } from '@/types';
 import { ArrowLeft, Save, Archive, Trash2, Send, Sparkles, Brain, CheckCircle2, Copy, Download, Cpu, Shield, GitFork, History } from 'lucide-react';
-import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
+import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { TagInput } from '@/components/personas/TagInput';
 import { AdvancedRulesBuilder, PersonaRule, formatRulesBlock, parseRulesFromPrompt } from '@/components/personas/AdvancedRulesBuilder';
 import { PersonaRevisionHistoryModal } from '@/components/personas/PersonaRevisionHistoryModal';
@@ -40,7 +40,8 @@ export default function EditPersonaPage() {
 
   // Live Test Sandbox State
   const [testPrompt, setTestPrompt] = useState('');
-  const [testModel, setTestModel] = useState('gpt-4o');
+  const [testModel, setTestModel] = useState('openrouter/auto');
+  const [testProvider, setTestProvider] = useState<ModelProvider>('openrouter');
   const [testResponse, setTestResponse] = useState('');
   const [advancedRules, setAdvancedRules] = useState<PersonaRule[]>([]);
   const [isTesting, setIsTesting] = useState(false);
@@ -59,7 +60,19 @@ export default function EditPersonaPage() {
         setAdvancedRules(rules);
 
         setRecommendedModel(p.recommendedModel || '');
-        setTestModel(p.recommendedModel || 'gpt-4o');
+        if (p.recommendedModel) {
+          setTestModel(p.recommendedModel);
+          const inferred = p.recommendedModel.startsWith('openrouter') || p.recommendedModel.includes('/')
+            ? 'openrouter'
+            : p.recommendedModel.startsWith('gemini')
+            ? 'gemini'
+            : p.recommendedModel.startsWith('claude')
+            ? 'anthropic'
+            : p.recommendedModel.startsWith('ollama') || p.recommendedModel.includes(':') || p.recommendedModel.includes('llama')
+            ? 'ollama'
+            : 'openai';
+          setTestProvider(inferred);
+        }
         setTags(p.tags || []);
         setIsArchived(p.isArchived || false);
       }
@@ -214,19 +227,18 @@ export default function EditPersonaPage() {
     setTestResponse('');
 
     try {
-      const provider = 'openai';
-      const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
+      const apiKey = localStorage.getItem(`framework-engine:api-key:${testProvider}`) || '';
 
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-provider': provider,
+          'x-provider': testProvider,
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
           model: testModel,
-          systemPrompt,
+          systemPrompt: systemPrompt + formatRulesBlock(advancedRules),
           messages: [{ role: 'user', content: testPrompt }],
         }),
       });
@@ -235,18 +247,34 @@ export default function EditPersonaPage() {
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
-      let fullContent = '';
+      let streamBuffer = '';
 
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          fullContent += decoder.decode(value);
-          setTestResponse(fullContent.replace(/<think>[\s\S]*?<\/think>/, '').trim());
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split('\n');
+          streamBuffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(dataStr);
+                const chunkText = parsed.text || parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text || '';
+                if (chunkText) {
+                  setTestResponse((prev) => prev + chunkText);
+                }
+              } catch {}
+            }
+          }
         }
       }
     } catch (err: any) {
-      setTestResponse(`Test Error: ${err.message}`);
+      setTestResponse(`[Test Error: ${err.message || 'Failed to communicate with provider model.'}]`);
     } finally {
       setIsTesting(false);
     }
@@ -491,20 +519,13 @@ export default function EditPersonaPage() {
                 <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
                   <Brain className="w-4 h-4" /> Test Prompt Sandbox
                 </div>
-                <div className="flex items-center gap-1 bg-[var(--color-paper)] border border-[var(--color-border)] px-1.5 py-0.5 rounded">
-                  <Cpu className="w-3 h-3 text-[var(--color-accent)]" />
-                  <select
-                    value={testModel}
-                    onChange={(e) => setTestModel(e.target.value)}
-                    className="bg-transparent text-[10px] font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
-                  >
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="ollama-local">Ollama Local</option>
-                  </select>
-                </div>
+                <DynamicModelSelector
+                  value={testModel}
+                  onChange={(newModelId, newProvider) => {
+                    setTestModel(newModelId);
+                    setTestProvider(newProvider);
+                  }}
+                />
               </div>
 
               <div className="space-y-2">

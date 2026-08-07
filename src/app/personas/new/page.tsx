@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Shell } from '@/components/layout/Shell';
 import { db } from '@/lib/db';
 import { ArrowLeft, Save, Sparkles, Wand2, Brain, Send, Cpu } from 'lucide-react';
-import { DynamicModelSelector } from '@/components/ui/DynamicModelSelector';
+import { DynamicModelSelector, ModelProvider } from '@/components/ui/DynamicModelSelector';
 import { TagInput } from '@/components/personas/TagInput';
 import { AdvancedRulesBuilder, PersonaRule, formatRulesBlock } from '@/components/personas/AdvancedRulesBuilder';
 import Link from 'next/link';
@@ -30,7 +30,8 @@ export default function NewPersonaPage() {
   // Test Sandbox State
   const [testPrompt, setTestPrompt] = useState('');
   const [testResponse, setTestResponse] = useState('');
-  const [testModel, setTestModel] = useState('gpt-4o');
+  const [testModel, setTestModel] = useState('openrouter/auto');
+  const [testProvider, setTestProvider] = useState<ModelProvider>('openrouter');
   const [isTesting, setIsTesting] = useState(false);
 
   const handleQuickGenerate = async () => {
@@ -85,21 +86,13 @@ export default function NewPersonaPage() {
     setTestResponse('');
 
     try {
-      const provider = testModel.startsWith('claude')
-        ? 'anthropic'
-        : testModel.startsWith('gemini')
-        ? 'google'
-        : testModel.startsWith('ollama')
-        ? 'ollama'
-        : 'openai';
-
-      const apiKey = localStorage.getItem(`framework-engine:api-key:${provider}`) || '';
+      const apiKey = localStorage.getItem(`framework-engine:api-key:${testProvider}`) || '';
 
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-provider': provider,
+          'x-provider': testProvider,
           'x-api-key': apiKey,
         },
         body: JSON.stringify({
@@ -113,11 +106,29 @@ export default function NewPersonaPage() {
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
+      let streamBuffer = '';
       if (reader) {
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          setTestResponse((prev) => prev + decoder.decode(value));
+          streamBuffer += decoder.decode(value, { stream: true });
+          const lines = streamBuffer.split('\n');
+          streamBuffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr === '[DONE]') continue;
+              try {
+                const parsed = JSON.parse(dataStr);
+                const chunkText = parsed.text || parsed.choices?.[0]?.delta?.content || parsed.choices?.[0]?.text || '';
+                if (chunkText) {
+                  setTestResponse((prev) => prev + chunkText);
+                }
+              } catch {}
+            }
+          }
         }
       }
     } catch (err: any) {
@@ -330,20 +341,13 @@ export default function NewPersonaPage() {
                 <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
                   <Brain className="w-4 h-4" /> Test Prompt Sandbox
                 </div>
-                <div className="flex items-center gap-1 bg-[var(--color-paper)] border border-[var(--color-border)] px-1.5 py-0.5 rounded">
-                  <Cpu className="w-3 h-3 text-[var(--color-accent)]" />
-                  <select
-                    value={testModel}
-                    onChange={(e) => setTestModel(e.target.value)}
-                    className="bg-transparent text-[10px] font-mono text-[var(--color-ink)] focus:outline-none cursor-pointer"
-                  >
-                    <option value="gpt-4o">GPT-4o</option>
-                    <option value="gpt-4o-mini">GPT-4o Mini</option>
-                    <option value="claude-3-5-sonnet">Claude 3.5 Sonnet</option>
-                    <option value="gemini-1.5-pro">Gemini 1.5 Pro</option>
-                    <option value="ollama-local">Ollama Local</option>
-                  </select>
-                </div>
+                <DynamicModelSelector
+                  value={testModel}
+                  onChange={(newModelId, newProvider) => {
+                    setTestModel(newModelId);
+                    setTestProvider(newProvider);
+                  }}
+                />
               </div>
 
               <div className="space-y-2">
