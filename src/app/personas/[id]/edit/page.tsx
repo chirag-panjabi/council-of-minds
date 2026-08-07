@@ -514,18 +514,21 @@ export default function EditPersonaPage() {
             </div>
 
             {/* Test Prompt Sandbox */}
-            <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider">
-                  <Brain className="w-4 h-4" /> Test Prompt Sandbox
+            <div className="p-5 bg-[var(--color-paper-2)] border border-[var(--color-border)] rounded-[var(--radius-lg)] space-y-4 overflow-hidden">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-[var(--color-border-hairline)]">
+                <div className="flex items-center gap-2 font-mono text-xs text-[var(--color-accent)] font-semibold uppercase tracking-wider whitespace-nowrap shrink-0">
+                  <Brain className="w-4 h-4 text-[var(--color-accent)]" />
+                  <span>Test Prompt Sandbox</span>
                 </div>
-                <DynamicModelSelector
-                  value={testModel}
-                  onChange={(newModelId, newProvider) => {
-                    setTestModel(newModelId);
-                    setTestProvider(newProvider);
-                  }}
-                />
+                <div className="w-full sm:w-auto overflow-x-auto">
+                  <DynamicModelSelector
+                    value={testModel}
+                    onChange={(newModelId, newProvider) => {
+                      setTestModel(newModelId);
+                      setTestProvider(newProvider);
+                    }}
+                  />
+                </div>
               </div>
 
               <div className="space-y-2">
