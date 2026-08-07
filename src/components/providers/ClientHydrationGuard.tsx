@@ -41,7 +41,7 @@ export function ClientHydrationGuard({ children }: { children: React.ReactNode }
     const isConfigured = hasOpenAI || hasAnthropic || hasGemini || hasOpenRouter || hasOllama;
 
     // Public pages that bypass onboarding redirect
-    const isPublicPage = pathname === '/onboarding' || pathname === '/privacy';
+    const isPublicPage = pathname === '/onboarding' || pathname === '/privacy' || pathname === '/docs';
 
     // If not configured, not skipped, and not completed, redirect unconfigured session to /onboarding
     if (!isConfigured && !hasSkipped && !hasCompleted && !isPublicPage) {

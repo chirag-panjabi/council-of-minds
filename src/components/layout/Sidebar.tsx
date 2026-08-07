@@ -15,6 +15,7 @@ import {
   Search,
   ChevronRight,
   ShieldAlert,
+  BookOpen,
   Keyboard,
   Menu,
   X,
@@ -465,6 +466,18 @@ export function Sidebar() {
           >
             <ShieldAlert className="w-4 h-4 text-[var(--color-accent)]" />
             <span>Privacy Memo</span>
+          </Link>
+
+          <Link
+            href="/docs"
+            className={`flex items-center gap-3 px-3 py-2 rounded-[var(--radius-sm)] text-xs transition-colors focus:outline-none focus:ring-1 focus:ring-[var(--color-focus)] ${
+              isActive('/docs')
+                ? 'bg-[var(--color-paper)] text-[var(--color-ink)] font-semibold'
+                : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] hover:bg-[var(--color-paper)]'
+            }`}
+          >
+            <BookOpen className="w-4 h-4 text-[var(--color-accent)]" />
+            <span>Documentation</span>
           </Link>
 
           <Link
