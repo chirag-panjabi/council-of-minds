@@ -129,6 +129,12 @@ export default function CouncilChatPage() {
   );
 
   useEffect(() => {
+    if (chatSession?.model) {
+      setSelectedModel(chatSession.model);
+    }
+    if (chatSession?.provider) {
+      setSelectedProvider(chatSession.provider);
+    }
     if (chatSession?.turnExecutionMode) {
       setTurnExecutionMode(chatSession.turnExecutionMode);
     }
@@ -800,9 +806,16 @@ export default function CouncilChatPage() {
             {/* Dynamic Real-Time Provider & Model Selector */}
             <DynamicModelSelector
               value={selectedModel}
-              onChange={(newModelId, newProvider) => {
+              onChange={async (newModelId, newProvider) => {
                 setSelectedModel(newModelId);
                 setSelectedProvider(newProvider);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('framework-engine:default-model', newModelId);
+                  localStorage.setItem('framework-engine:default-provider', newProvider);
+                }
+                if (chatId && chatId !== 'new') {
+                  await db.chats.update(chatId, { model: newModelId, provider: newProvider });
+                }
               }}
             />
 

@@ -61,6 +61,8 @@ export interface ChatSession {
   personaId?: string;
   personaIds?: string[];
   synthesizerId?: string;
+  model?: string;
+  provider?: ModelProvider;
   modelOverride?: string;
   contextRetention?: 'stateless' | 'summary' | 'hybrid' | 'infinite';
   turnExecutionMode?: 'round_robin' | 'dynamic_moderator' | 'free_dialectic';

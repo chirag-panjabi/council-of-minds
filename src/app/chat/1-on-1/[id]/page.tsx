@@ -86,9 +86,18 @@ export default function OneOnOneChatPage() {
   );
 
   useEffect(() => {
-    if (persona?.recommendedModel) {
+    if (chatSession?.model) {
+      setSelectedModel(chatSession.model);
+    } else if (persona?.recommendedModel) {
       setSelectedModel(persona.recommendedModel);
-      const inferredProvider: ModelProvider = persona.recommendedModel.startsWith('gemini')
+    }
+
+    if (chatSession?.provider) {
+      setSelectedProvider(chatSession.provider);
+    } else if (persona?.recommendedModel) {
+      const inferredProvider: ModelProvider = persona.recommendedModel.startsWith('openrouter') || persona.recommendedModel.includes('/')
+        ? 'openrouter'
+        : persona.recommendedModel.startsWith('gemini')
         ? 'gemini'
         : persona.recommendedModel.startsWith('claude')
         ? 'anthropic'
@@ -97,7 +106,11 @@ export default function OneOnOneChatPage() {
         : 'openai';
       setSelectedProvider(inferredProvider);
     }
-  }, [persona?.id, persona?.recommendedModel]);
+
+    if (chatSession?.contextRetention) {
+      setContextRetention(chatSession.contextRetention);
+    }
+  }, [chatSession, persona?.id, persona?.recommendedModel]);
 
   const [input, setInput] = useState('');
   const [selectedModel, setSelectedModel] = useState<string>(() => {
@@ -596,9 +609,16 @@ export default function OneOnOneChatPage() {
             {/* Dynamic Real-Time Provider & Model Selector */}
             <DynamicModelSelector
               value={selectedModel}
-              onChange={(newModelId, newProvider) => {
+              onChange={async (newModelId, newProvider) => {
                 setSelectedModel(newModelId);
                 setSelectedProvider(newProvider);
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('framework-engine:default-model', newModelId);
+                  localStorage.setItem('framework-engine:default-provider', newProvider);
+                }
+                if (chatId && chatId !== 'new') {
+                  await db.chats.update(chatId, { model: newModelId, provider: newProvider });
+                }
               }}
             />
 
